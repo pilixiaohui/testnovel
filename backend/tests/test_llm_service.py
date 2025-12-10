@@ -1,6 +1,7 @@
 import pytest
+from typing import List
 
-from app.models import SceneNode, SnowflakeRoot
+from app.models import CharacterSheet, SceneNode, SnowflakeRoot
 from app.services.llm_engine import LLMEngine
 
 
@@ -54,3 +55,36 @@ async def test_generate_scene_list(mocker):
 
     assert len(result) == 2
     assert all(isinstance(node, SceneNode) for node in result)
+
+
+@pytest.mark.asyncio
+async def test_generate_scene_list_prompt_shape(mocker):
+    engine = LLMEngine(client=None)
+    root = SnowflakeRoot(
+        logline="Test story",
+        three_disasters=["D1", "D2", "D3"],
+        ending="End",
+        theme="Testing",
+    )
+    characters = [
+        CharacterSheet(
+            name="Hero",
+            ambition="Save world",
+            conflict="Weakness",
+            epiphany="Growth",
+            voice_dna="Bold",
+        )
+    ]
+    mock_call = mocker.AsyncMock(return_value=[])
+    engine._call_model = mock_call  # type: ignore[attr-defined]
+
+    await engine.generate_scene_list(root, characters)
+
+    mock_call.assert_awaited_once()
+    kwargs = mock_call.await_args.kwargs
+    assert kwargs["response_model"] == List[SceneNode]
+    messages = kwargs["messages"]
+    assert messages[0]["role"] == "system"
+    assert "50-100 个场景节点" in messages[0]["content"]
+    assert root.logline in messages[1]["content"]
+    assert "characters:" in messages[1]["content"]

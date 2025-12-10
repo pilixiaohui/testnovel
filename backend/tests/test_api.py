@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 
-from app.main import app, get_llm_engine, get_snowflake_manager
+from app.main import app, get_llm_engine, get_snowflake_manager, get_topone_client
 from app.models import SceneNode, SnowflakeRoot
+from app.services.topone_client import ToponeClient
 
 
 class DummyEngine:
@@ -76,3 +77,30 @@ def test_negotiation_websocket():
         websocket.send_json({"hello": "world"})
         data = websocket.receive_json()
         assert data == {"ack": {"hello": "world"}}
+
+
+def test_topone_generate_endpoint(monkeypatch):
+    class StubTopone(ToponeClient):
+        async def generate_content(self, **kwargs):
+            self.kwargs = kwargs
+            return {"ok": True}
+
+    stub = StubTopone(api_key="k")
+    app.dependency_overrides[get_snowflake_manager] = lambda: None
+    app.dependency_overrides[get_llm_engine] = lambda: DummyEngine()
+    app.dependency_overrides[get_topone_client] = lambda: stub  # type: ignore[name-defined]
+
+    client = TestClient(app)
+    payload = {
+        "model": "gemini-2.5-flash",
+        "system_instruction": "sys",
+        "messages": [{"role": "user", "text": "hi"}],
+        "generation_config": {"temperature": 0.5},
+        "timeout": 15,
+    }
+    response = client.post("/api/v1/llm/topone/generate", json=payload)
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    assert stub.kwargs["model"] == "gemini-2.5-flash"
+    assert stub.kwargs["system_instruction"] == "sys"
+    app.dependency_overrides.clear()

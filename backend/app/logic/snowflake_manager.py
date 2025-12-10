@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from typing import TYPE_CHECKING, List, Sequence
 
 from app.models import CharacterSheet, SceneNode, SnowflakeRoot
 from app.services.llm_engine import LLMEngine
+
+if TYPE_CHECKING:  # 避免在未安装 kuzu 时导入报错
+    from app.storage.graph import GraphStorage
 
 
 class SnowflakeManager:
@@ -16,10 +19,13 @@ class SnowflakeManager:
         engine: LLMEngine,
         min_scenes: int = 50,
         max_scenes: int = 100,
+        storage: GraphStorage | None = None,
     ):
         self.engine = engine
         self.min_scenes = min_scenes
         self.max_scenes = max_scenes
+        self.storage = storage
+        self.last_persisted_root_id: str | None = None
 
     async def execute_step_1_logline(self, raw_idea: str) -> List[str]:
         options = await self.engine.generate_logline_options(raw_idea)
@@ -65,5 +71,10 @@ class SnowflakeManager:
                 raise ValueError("Scene expected_outcome is required")
             if not scene.conflict_type or not scene.conflict_type.strip():
                 raise ValueError("Scene conflict_type is required")
+
+        if self.storage:
+            self.last_persisted_root_id = self.storage.save_snowflake(
+                root=root, characters=characters, scenes=scenes
+            )
 
         return scenes

@@ -180,3 +180,45 @@ async def test_step4_scene_validation_count_bounds(mocker):
 
     with pytest.raises(ValueError):
         await manager.execute_step_4_scenes(mock_root, mock_characters)
+
+
+@pytest.mark.asyncio
+async def test_step4_scene_persistence(mocker):
+    mock_root = SnowflakeRoot(
+        logline="Hero saves world",
+        three_disasters=["A", "B", "C"],
+        ending="Win",
+        theme="Hope",
+    )
+    mock_characters = [
+        CharacterSheet(
+            name="Hero",
+            ambition="Save world",
+            conflict="Weakness",
+            epiphany="Strength",
+            voice_dna="Bold",
+        )
+    ]
+    mock_scenes = [
+        SceneNode(
+            expected_outcome="Outcome 1",
+            conflict_type="internal",
+            parent_act_id=None,
+        )
+    ]
+
+    mock_engine = mocker.AsyncMock()
+    mock_engine.generate_scene_list.return_value = mock_scenes
+    mock_storage = mocker.Mock()
+    mock_storage.save_snowflake.return_value = "root-123"
+
+    manager = SnowflakeManager(
+        engine=mock_engine, min_scenes=1, max_scenes=5, storage=mock_storage
+    )
+    result = await manager.execute_step_4_scenes(mock_root, mock_characters)
+
+    mock_storage.save_snowflake.assert_called_once_with(
+        root=mock_root, characters=mock_characters, scenes=mock_scenes
+    )
+    assert manager.last_persisted_root_id == "root-123"
+    assert result == mock_scenes
