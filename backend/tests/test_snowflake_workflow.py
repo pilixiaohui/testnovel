@@ -1,7 +1,12 @@
 import pytest
 
 from app.logic.snowflake_manager import SnowflakeManager
-from app.models import CharacterSheet, CharacterValidationResult, SnowflakeRoot
+from app.models import (
+    CharacterSheet,
+    CharacterValidationResult,
+    SceneNode,
+    SnowflakeRoot,
+)
 
 
 @pytest.mark.asyncio
@@ -36,7 +41,7 @@ async def test_step3_character_generation(mocker):
         valid=True, issues=[]
     )
 
-    manager = SnowflakeManager(engine=mock_engine)
+    manager = SnowflakeManager(engine=mock_engine, min_scenes=1, max_scenes=5)
     result = await manager.execute_step_3_characters(mock_root)
 
     assert len(result) == 2
@@ -65,8 +70,113 @@ async def test_step3_character_validation_failure(mocker):
         valid=False, issues=["ambition conflicts with theme"]
     )
 
-    manager = SnowflakeManager(engine=mock_engine)
+    manager = SnowflakeManager(engine=mock_engine, min_scenes=1, max_scenes=5)
 
     with pytest.raises(ValueError):
         await manager.execute_step_3_characters(mock_root)
 
+
+@pytest.mark.asyncio
+async def test_step4_scene_generation(mocker):
+    mock_root = SnowflakeRoot(
+        logline="Hero saves world",
+        three_disasters=["A", "B", "C"],
+        ending="Win",
+        theme="Hope",
+    )
+    mock_characters = [
+        CharacterSheet(
+            name="Hero",
+            ambition="Save world",
+            conflict="Weakness",
+            epiphany="Strength",
+            voice_dna="Bold",
+        )
+    ]
+    mock_scenes = [
+        SceneNode(
+            expected_outcome="Outcome 1",
+            conflict_type="internal",
+            parent_act_id=None,
+        )
+    ]
+
+    mock_engine = mocker.AsyncMock()
+    mock_engine.generate_scene_list.return_value = mock_scenes
+
+    manager = SnowflakeManager(engine=mock_engine, min_scenes=1, max_scenes=5)
+    result = await manager.execute_step_4_scenes(mock_root, mock_characters)
+
+    assert len(result) == 1
+    assert result[0].expected_outcome == "Outcome 1"
+
+
+@pytest.mark.asyncio
+async def test_step4_scene_validation_duplicate_id(mocker):
+    mock_root = SnowflakeRoot(
+        logline="Hero saves world",
+        three_disasters=["A", "B", "C"],
+        ending="Win",
+        theme="Hope",
+    )
+    mock_characters = [
+        CharacterSheet(
+            name="Hero",
+            ambition="Save world",
+            conflict="Weakness",
+            epiphany="Strength",
+            voice_dna="Bold",
+        )
+    ]
+    scene = SceneNode(
+        expected_outcome="Outcome 1",
+        conflict_type="internal",
+        parent_act_id=None,
+    )
+    # Force duplicate UUID
+    duplicate_id = scene.id
+    mock_scenes = [
+        scene,
+        SceneNode(
+            id=duplicate_id,
+            expected_outcome="Outcome 2",
+            conflict_type="external",
+            parent_act_id=None,
+        ),
+    ]
+
+    mock_engine = mocker.AsyncMock()
+    mock_engine.generate_scene_list.return_value = mock_scenes
+
+    manager = SnowflakeManager(engine=mock_engine, min_scenes=1, max_scenes=5)
+
+    with pytest.raises(ValueError):
+        await manager.execute_step_4_scenes(mock_root, mock_characters)
+
+
+@pytest.mark.asyncio
+async def test_step4_scene_validation_count_bounds(mocker):
+    mock_root = SnowflakeRoot(
+        logline="Hero saves world",
+        three_disasters=["A", "B", "C"],
+        ending="Win",
+        theme="Hope",
+    )
+    mock_characters = [
+        CharacterSheet(
+            name="Hero",
+            ambition="Save world",
+            conflict="Weakness",
+            epiphany="Strength",
+            voice_dna="Bold",
+        )
+    ]
+    mock_scenes = []
+
+    mock_engine = mocker.AsyncMock()
+    mock_engine.generate_scene_list.return_value = mock_scenes
+
+    manager = SnowflakeManager(engine=mock_engine, min_scenes=1, max_scenes=2)
+
+    with pytest.raises(ValueError):
+        await manager.execute_step_4_scenes(mock_root, mock_characters)

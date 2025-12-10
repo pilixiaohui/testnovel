@@ -4,15 +4,22 @@ from __future__ import annotations
 
 from typing import List, Sequence
 
-from app.models import CharacterSheet, SnowflakeRoot
+from app.models import CharacterSheet, SceneNode, SnowflakeRoot
 from app.services.llm_engine import LLMEngine
 
 
 class SnowflakeManager:
     """雪花写作法的业务 orchestrator。"""
 
-    def __init__(self, engine: LLMEngine):
+    def __init__(
+        self,
+        engine: LLMEngine,
+        min_scenes: int = 50,
+        max_scenes: int = 100,
+    ):
         self.engine = engine
+        self.min_scenes = min_scenes
+        self.max_scenes = max_scenes
 
     async def execute_step_1_logline(self, raw_idea: str) -> List[str]:
         options = await self.engine.generate_logline_options(raw_idea)
@@ -38,3 +45,25 @@ class SnowflakeManager:
 
         return characters
 
+    async def execute_step_4_scenes(
+        self, root: SnowflakeRoot, characters: Sequence[CharacterSheet]
+    ) -> List[SceneNode]:
+        scenes = await self.engine.generate_scene_list(root, characters)
+
+        if not self.min_scenes <= len(scenes) <= self.max_scenes:
+            raise ValueError(
+                f"Scene count {len(scenes)} outside required range "
+                f"{self.min_scenes}-{self.max_scenes}"
+            )
+
+        ids = [str(scene.id) for scene in scenes]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Scene IDs must be unique")
+
+        for scene in scenes:
+            if not scene.expected_outcome or not scene.expected_outcome.strip():
+                raise ValueError("Scene expected_outcome is required")
+            if not scene.conflict_type or not scene.conflict_type.strip():
+                raise ValueError("Scene conflict_type is required")
+
+        return scenes

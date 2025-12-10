@@ -1,6 +1,6 @@
 import pytest
 
-from app.models import SnowflakeRoot
+from app.models import SceneNode, SnowflakeRoot
 from app.services.llm_engine import LLMEngine
 
 
@@ -22,3 +22,35 @@ async def test_generate_structure(mocker):
     assert isinstance(result, SnowflakeRoot)
     assert result.logline == "Test story"
 
+
+@pytest.mark.asyncio
+async def test_generate_scene_list(mocker):
+    mock_scenes = [
+        SceneNode(
+            expected_outcome="Outcome 1",
+            conflict_type="internal",
+            parent_act_id=None,
+        ),
+        SceneNode(
+            expected_outcome="Outcome 2",
+            conflict_type="external",
+            parent_act_id=None,
+        ),
+    ]
+
+    mock_client = mocker.Mock()
+    mock_client.chat.completions.create.return_value = mock_scenes
+
+    engine = LLMEngine(client=mock_client)
+    root = SnowflakeRoot(
+        logline="Test story",
+        three_disasters=["D1", "D2", "D3"],
+        ending="End",
+        theme="Testing",
+    )
+    characters = []
+
+    result = await engine.generate_scene_list(root, characters)
+
+    assert len(result) == 2
+    assert all(isinstance(node, SceneNode) for node in result)

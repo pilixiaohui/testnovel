@@ -8,7 +8,7 @@ from typing import List, Sequence
 import instructor
 from google.generativeai import GenerativeModel
 
-from app.models import CharacterSheet, CharacterValidationResult, SnowflakeRoot
+from app.models import CharacterSheet, CharacterValidationResult, SceneNode, SnowflakeRoot
 
 
 class LLMEngine:
@@ -88,3 +88,25 @@ class LLMEngine:
             messages=messages,
         )
 
+    async def generate_scene_list(
+        self, root: SnowflakeRoot, characters: Sequence[CharacterSheet]
+    ) -> List[SceneNode]:
+        """Step 4：生成场景列表，供前端 React Flow 渲染。"""
+        messages = [
+            {
+                "role": "system",
+                "content": "生成 50-100 个场景节点，每个节点包含预期结果与冲突类型。",
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"logline: {root.logline}\n"
+                    f"three_disasters: {root.three_disasters}\n"
+                    f"characters: {[c.model_dump() for c in characters]}"
+                ),
+            },
+        ]
+        return await self._call_model(
+            response_model=List[SceneNode],
+            messages=messages,
+        )
