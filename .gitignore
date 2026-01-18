@@ -30,3 +30,4 @@ Git 代码上传问题解决手册.md
 .codex/
 .env
 backend/.env
+orchestrator/ui/frontend/node_modules/

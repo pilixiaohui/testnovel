@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "locked_at_iteration": 0,
+  "task_goal": "根据 doc/graph_refactor_plan.md 结合 doc/长篇小说生成系统设计.md 完成图数据库架构重构测试驱动开发",
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "category": "data_model",
+      "description": "Commit/SceneOrigin/SceneVersion/BranchHead 模型与关系建立",
+      "priority": "P0",
+      "source": "doc/graph_refactor_plan.md"
+    },
+    {
+      "id": "AC-2",
+      "category": "core_operations",
+      "description": "分支/提交/回溯核心操作实现",
+      "priority": "P0",
+      "source": "doc/graph_refactor_plan.md"
+    },
+    {
+      "id": "AC-3",
+      "category": "migration",
+      "description": "旧数据迁移与幂等性保证",
+      "priority": "P0",
+      "source": "doc/graph_refactor_plan.md"
+    },
+    {
+      "id": "AC-4",
+      "category": "testing",
+      "description": "TDD 覆盖与性能基准达标",
+      "priority": "P0",
+      "source": "doc/graph_refactor_plan.md"
+    }
+  ],
+  "out_of_scope": [
+    "HTTP API 端点（除非文档明确要求为 P0）",
+    "性能优化（除非低于基准阈值）",
+    "额外的辅助功能（如 gc/history 详情，除非 P0 要求）",
+    "批量提交 API（可作为 P1 后续迭代）",
+    "历史查询详情 API（可作为 P1 后续迭代）"
+  ],
+  "completion_criteria": {
+    "all_tasks_verified": true,
+    "all_tests_passing": true,
+    "performance_benchmarks_met": true,
+    "no_p0_blockers": true
+  }
+}

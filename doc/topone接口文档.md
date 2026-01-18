@@ -13,8 +13,6 @@ paths:
     post:
       summary: 文本生成
       deprecated: false
-      description: >-
-        官方文档：https://ai.google.dev/gemini-api/docs/text-generation?hl=zh-cn#multi-turn-conversations
       tags:
         - 聊天(Chat)/谷歌Gemini 接口/原生格式
       parameters:

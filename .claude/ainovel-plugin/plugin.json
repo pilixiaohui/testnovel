@@ -1,0 +1,11 @@
+{
+  "name": "ainovel-plugin",
+  "version": "1.0.0",
+  "description": "AI Novel project plugin with tech plan generator",
+  "skills": {
+    "tech-plan-generator": {
+      "file": "skills/tech-plan-generator.md",
+      "description": "Generate comprehensive technical plan documents following standardized structure"
+    }
+  }
+}

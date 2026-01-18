@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "report_rules": {
+    "apply_to": ["REVIEW", "TEST", "FINISH_REVIEW"],
+    "require_verdict": true,
+    "verdict_prefix": "结论：",
+    "verdict_allowed": ["PASS", "FAIL", "BLOCKED"],
+    "blocker_prefix": "阻塞：",
+    "blocker_clear_value": "无"
+  }
+}

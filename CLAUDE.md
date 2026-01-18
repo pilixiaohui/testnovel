@@ -1,0 +1,1 @@
+要求给出实现方案的时候需要参考 .claude/ainovel-plugin/skills/tech-plan-generator.md 要求生成写入md文档，要求使用绝对路径
