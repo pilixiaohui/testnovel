@@ -4,6 +4,7 @@ from typing import Literal, TypedDict
 
 NextAgent = Literal["TEST", "DEV", "REVIEW", "FINISH", "USER"]  # 关键变量：调度目标枚举
 ResumePhase = Literal["after_main", "after_subagent", "awaiting_user"]  # 关键变量：续跑阶段枚举
+TaskType = Literal["feature", "bugfix", "refactor", "chore"]  # 关键变量：任务类型标记（dev_plan 可选字段）
 
 
 class ResumeState(TypedDict):

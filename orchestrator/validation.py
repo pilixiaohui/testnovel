@@ -12,6 +12,7 @@ from .config import (
     DEV_PLAN_MAX_LINE_LENGTH,
     DEV_PLAN_MAX_TASKS,
     PROJECT_HISTORY_FILE,
+    REPORT_TEST_FILE,
     VERIFICATION_POLICY_FILE,
     ACCEPTANCE_SCOPE_FILE,
     REQUIRE_ALL_VERIFIED_FOR_FINISH,
@@ -19,6 +20,7 @@ from .config import (
 from .file_ops import _read_text, _require_file, _atomic_write_text
 from .prompt_builder import _task_file_for_agent
 from .types import NextAgent
+from .dev_plan import parse_overall_task_statuses
 
 
 def _validate_dev_plan_text(*, text: str, source: Path) -> None:
@@ -39,6 +41,8 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
     status_re = re.compile(r"^\s*(?:-\s*)?status:\s*([A-Z]+)\s*$")
     acceptance_re = re.compile(r"^\s*(?:-\s*)?acceptance:\s*(.*)$")
     evidence_re = re.compile(r"^\s*(?:-\s*)?evidence:\s*(.*)$")
+    phase_header_re = re.compile(r"^####\s+(测试阶段|实现阶段|审阅阶段)\s*$")
+    phase_map = {"测试阶段": "test", "实现阶段": "impl", "审阅阶段": "review"}
 
     tasks: list[dict[str, str | None]] = []  # 关键变量：累计解析出的任务块
     current: dict[str, str | None] | None = None  # 关键变量：当前任务块上下文
@@ -46,8 +50,22 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
     current_has_evidence = False  # 关键变量：是否出现 evidence 字段
     current_in_evidence = False  # 关键变量：是否处于 evidence 多行收集
     current_evidence_lines: list[str] = []  # 关键变量：evidence 多行内容缓存
+    current_phase: str | None = None  # 关键变量：当前阶段（test/impl/review）
+    phase_seen: set[str] = set()  # 关键变量：已出现阶段集合
+    phase_status: dict[str, str | None] = {"test": None, "impl": None, "review": None}  # 关键变量：各阶段 status
+    phase_has_evidence: dict[str, bool] = {"test": False, "impl": False, "review": False}  # 关键变量：各阶段 evidence 是否出现
+    phase_evidence_first_line: dict[str, str | None] = {"test": None, "impl": None, "review": None}  # 关键变量：各阶段 evidence 首行
+    phase_evidence_lines: dict[str, list[str]] = {"test": [], "impl": [], "review": []}  # 关键变量：各阶段 evidence 多行缓存
+    current_evidence_phase: str | None = None  # 关键变量：当前 evidence 属于哪个阶段
 
-    def finalize(task: dict[str, str | None]) -> None:
+    def finalize(
+        task: dict[str, str | None],
+        *,
+        phase_seen: set[str],
+        phase_status: dict[str, str | None],
+        phase_has_evidence: dict[str, bool],
+        phase_evidence_first_line: dict[str, str | None],
+    ) -> None:
         task_id = (task.get("task_id") or "<unknown>").strip()  # 关键变量：任务标识
         status = (task.get("status") or "").strip()  # 关键变量：任务状态
         if status not in DEV_PLAN_ALLOWED_STATUSES:  # 关键分支：状态非法直接失败
@@ -63,6 +81,30 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
             if not evidence:  # 关键分支：空证据直接失败
                 raise RuntimeError(f"dev_plan task {task_id} is VERIFIED but evidence is empty")
 
+        # 新格式（分阶段）：若出现任意阶段标题，则要求三阶段齐全且每阶段具备 status/evidence
+        if phase_seen:
+            required_phases = {"test", "impl", "review"}
+            missing = required_phases - phase_seen
+            if missing:
+                raise RuntimeError(f"dev_plan task {task_id} missing phases: {sorted(missing)}")
+            for phase in ("test", "impl", "review"):
+                p_status = (phase_status.get(phase) or "").strip()
+                if not p_status:
+                    raise RuntimeError(f"dev_plan task {task_id} missing status in phase {phase!r}")
+                if p_status not in DEV_PLAN_ALLOWED_STATUSES:
+                    raise RuntimeError(
+                        f"Invalid dev_plan status for {task_id} phase {phase!r}: {p_status!r}, "
+                        f"allowed: {sorted(DEV_PLAN_ALLOWED_STATUSES)}"
+                    )
+                if not phase_has_evidence.get(phase, False):
+                    raise RuntimeError(f"dev_plan task {task_id} missing evidence in phase {phase!r}")
+                if p_status == "VERIFIED":
+                    p_evidence = (phase_evidence_first_line.get(phase) or "").strip()
+                    if not p_evidence:
+                        raise RuntimeError(
+                            f"dev_plan task {task_id} phase {phase!r} is VERIFIED but evidence is empty"
+                        )
+
     for line in lines:  # 关键分支：逐行解析任务块
         header = task_header_re.match(line)  # 关键变量：任务头匹配结果
         if header:  # 关键分支：命中任务头
@@ -71,28 +113,61 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
                     block = "\n".join([l for l in current_evidence_lines if l.strip()]).strip()  # 关键变量：evidence 多行拼接
                     if block and not (current.get("evidence") or "").strip():  # 关键分支：补齐缺失 evidence
                         current["evidence"] = block
+                if current_evidence_phase is not None:
+                    phase_block = "\n".join([l for l in phase_evidence_lines[current_evidence_phase] if l.strip()]).strip()
+                    if (
+                        phase_block
+                        and current_evidence_phase in phase_evidence_first_line
+                        and not (phase_evidence_first_line[current_evidence_phase] or "").strip()
+                    ):
+                        phase_evidence_first_line[current_evidence_phase] = phase_block
                 current["has_acceptance"] = "1" if current_has_acceptance else None  # 关键变量：记录 acceptance 是否出现
                 current["has_evidence"] = "1" if current_has_evidence else None  # 关键变量：记录 evidence 是否出现
-                finalize(current)
+                finalize(
+                    current,
+                    phase_seen=phase_seen,
+                    phase_status=phase_status,
+                    phase_has_evidence=phase_has_evidence,
+                    phase_evidence_first_line=phase_evidence_first_line,
+                )
                 tasks.append(current)
             current = {"task_id": header.group(1).strip(), "title": header.group(2).strip(), "status": None, "evidence": None}  # 关键变量：新任务块
             current_has_acceptance = False  # 关键变量：重置 acceptance 标记
             current_has_evidence = False  # 关键变量：重置 evidence 标记
             current_in_evidence = False  # 关键变量：重置 evidence 解析状态
             current_evidence_lines = []  # 关键变量：清空 evidence 缓存
+            current_phase = None
+            phase_seen = set()
+            phase_status = {"test": None, "impl": None, "review": None}
+            phase_has_evidence = {"test": False, "impl": False, "review": False}
+            phase_evidence_first_line = {"test": None, "impl": None, "review": None}
+            phase_evidence_lines = {"test": [], "impl": [], "review": []}
+            current_evidence_phase = None
             continue
 
         if current is None:  # 关键分支：未进入任务块，忽略
             continue
 
+        phase_header = phase_header_re.match(line)
+        if phase_header:
+            current_phase = phase_map[phase_header.group(1)]
+            phase_seen.add(current_phase)
+            current_in_evidence = False
+            current_evidence_phase = None
+            continue
+
         m = status_re.match(line)  # 关键变量：status 匹配结果
         if m:  # 关键分支：命中 status 行
             current["status"] = m.group(1).strip()  # 关键变量：写入任务状态
+            if current_phase is not None:
+                phase_status[current_phase] = current["status"]
             current_in_evidence = False  # 关键变量：状态行结束 evidence 解析
+            current_evidence_phase = None
             continue
         if acceptance_re.match(line):  # 关键分支：命中 acceptance 行
             current_has_acceptance = True  # 关键变量：标记 acceptance 已出现
             current_in_evidence = False  # 关键变量：acceptance 行结束 evidence 解析
+            current_evidence_phase = None
             continue
         m = evidence_re.match(line)  # 关键变量：evidence 匹配结果
         if m:  # 关键分支：命中 evidence 行
@@ -100,9 +175,16 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
             current["evidence"] = m.group(1)  # 关键变量：首行 evidence 内容
             current_in_evidence = True  # 关键变量：进入 evidence 多行解析
             current_evidence_lines = []  # 关键变量：重置 evidence 缓存
+            current_evidence_phase = current_phase
+            if current_phase is not None:
+                phase_has_evidence[current_phase] = True
+                phase_evidence_first_line[current_phase] = m.group(1)
+                phase_evidence_lines[current_phase] = []
             continue
         if current_in_evidence:  # 关键分支：收集 evidence 多行内容
             current_evidence_lines.append(line)  # 关键变量：追加 evidence 行
+            if current_evidence_phase is not None:
+                phase_evidence_lines[current_evidence_phase].append(line)
             continue
 
     if current is not None:  # 关键分支：收尾处理最后一个任务块
@@ -110,9 +192,23 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
             block = "\n".join([l for l in current_evidence_lines if l.strip()]).strip()  # 关键变量：evidence 多行拼接
             if block and not (current.get("evidence") or "").strip():  # 关键分支：补齐缺失 evidence
                 current["evidence"] = block
+        if current_evidence_phase is not None:
+            phase_block = "\n".join([l for l in phase_evidence_lines[current_evidence_phase] if l.strip()]).strip()
+            if (
+                phase_block
+                and current_evidence_phase in phase_evidence_first_line
+                and not (phase_evidence_first_line[current_evidence_phase] or "").strip()
+            ):
+                phase_evidence_first_line[current_evidence_phase] = phase_block
         current["has_acceptance"] = "1" if current_has_acceptance else None  # 关键变量：记录 acceptance 是否出现
         current["has_evidence"] = "1" if current_has_evidence else None  # 关键变量：记录 evidence 是否出现
-        finalize(current)
+        finalize(
+            current,
+            phase_seen=phase_seen,
+            phase_status=phase_status,
+            phase_has_evidence=phase_has_evidence,
+            phase_evidence_first_line=phase_evidence_first_line,
+        )
         tasks.append(current)
 
     if len(tasks) > DEV_PLAN_MAX_TASKS:  # 关键分支：任务过多直接失败
@@ -155,7 +251,10 @@ def _validate_dev_plan() -> None:
     """
     对 `memory/dev_plan.md` 做最小结构校验（快速失败）：
     - 每个任务块以 `### <TASK_ID>: ...` 开头
-    - 任务块内必须包含：`status:`、`acceptance:`、`evidence:`（允许可选的前导 `-`）
+    - 任务块内必须包含：`acceptance:`、`evidence:`（允许可选的前导 `-`）
+    - status 支持两种格式（向后兼容）：
+      - 旧格式：任务块内至少 1 行 `status: <STATUS>`
+      - 新格式：包含 `#### 测试阶段/实现阶段/审阅阶段`，且每个阶段内都有 `status:` + `evidence:`
     - status 只能是 TODO/DOING/BLOCKED/DONE/VERIFIED
     - VERIFIED 必须包含非空 evidence
     - 任务总数不超过 DEV_PLAN_MAX_TASKS（保持"最多几十条"）
@@ -170,37 +269,8 @@ def _get_non_verified_tasks() -> list[tuple[str, str]]:
     返回格式：[(task_id, status), ...]
     """
     _require_file(DEV_PLAN_FILE)
-    text = _read_text(DEV_PLAN_FILE)
-    lines = text.splitlines()
-
-    task_header_re = re.compile(r"^###\s+([^:]+):\s*(.*)$")
-    status_re = re.compile(r"^\s*(?:-\s*)?status:\s*([A-Z]+)\s*$")
-
-    non_verified: list[tuple[str, str]] = []
-    current_task_id: str | None = None
-    current_status: str | None = None
-
-    for line in lines:
-        header = task_header_re.match(line)
-        if header:
-            # 保存上一个任务的状态
-            if current_task_id is not None and current_status is not None:
-                if current_status != "VERIFIED":
-                    non_verified.append((current_task_id, current_status))
-            current_task_id = header.group(1).strip()
-            current_status = None
-            continue
-
-        m = status_re.match(line)
-        if m and current_task_id is not None:
-            current_status = m.group(1).strip()
-
-    # 处理最后一个任务
-    if current_task_id is not None and current_status is not None:
-        if current_status != "VERIFIED":
-            non_verified.append((current_task_id, current_status))
-
-    return non_verified
+    tasks = parse_overall_task_statuses(_read_text(DEV_PLAN_FILE))
+    return [(task_id, status) for task_id, status in tasks if status != "VERIFIED"]
 
 
 def _check_dev_plan_finish_ready() -> tuple[bool, str]:
@@ -232,29 +302,39 @@ def _check_finish_readiness() -> tuple[bool, str, list[str]]:
     dev_plan_text = _read_text(DEV_PLAN_FILE)
     blockers: list[str] = []
 
-    if "status: BLOCKED" in dev_plan_text:
-        blockers.append("存在 BLOCKED 状态任务")
-    if "status: DOING" in dev_plan_text:
-        blockers.append("存在 DOING 状态任务")
-
     if REQUIRE_ALL_VERIFIED_FOR_FINISH:
-        # TODO 任务可接受（可能是未来计划）；DONE/DOING/BLOCKED 必须先收敛到 VERIFIED。
-        non_verified_count = 0
-        for line in dev_plan_text.splitlines():
-            stripped = line.strip()
-            if not stripped.startswith("status:") and not stripped.startswith("- status:"):
+        tasks = parse_overall_task_statuses(dev_plan_text)
+        for _, status in tasks:
+            if status in {"VERIFIED", "TODO", "DONE", "DOING", "BLOCKED"}:
                 continue
-            status = stripped.split(":", 1)[1].strip()
-            if status in {"VERIFIED", "TODO"}:
-                continue
-            if status in {"DONE", "DOING", "BLOCKED"}:
-                non_verified_count += 1
-                continue
-            # 其它值已由 dev_plan 校验兜住；到这里属于 dev_plan 结构异常
+            # 其它值应已由 dev_plan 校验兜住；到这里属于 dev_plan 结构异常
             raise RuntimeError(f"Unexpected dev_plan status: {status!r}")
+        blocked_tasks = [tid for tid, status in tasks if status == "BLOCKED"]
+        doing_tasks = [tid for tid, status in tasks if status == "DOING"]
+        done_tasks = [tid for tid, status in tasks if status == "DONE"]
 
+        if blocked_tasks:
+            blockers.append("存在 BLOCKED 状态任务")
+        if doing_tasks:
+            blockers.append("存在 DOING 状态任务")
+
+        # TODO 任务可接受（可能是未来计划）；DONE/DOING/BLOCKED 必须先收敛到 VERIFIED。
+        non_verified_count = len(blocked_tasks) + len(doing_tasks) + len(done_tasks)
         if non_verified_count > 0:
             blockers.append(f"存在 {non_verified_count} 个非 VERIFIED 任务（DONE/DOING/BLOCKED）")
+
+        test_requirements = _parse_test_requirements()
+        if test_requirements is not None:
+            min_coverage, _must_pass_before_review = test_requirements
+            test_report_text = _read_text(REPORT_TEST_FILE)
+            verdict = _extract_report_verdict(report_text=test_report_text)
+            coverage = _extract_report_coverage_percent(report_text=test_report_text)
+            if verdict != "PASS":
+                blockers.append("覆盖率门禁：最新 TEST 结论非 PASS")
+            if coverage is None:
+                blockers.append("覆盖率门禁：report_test.md 缺少 coverage: <N>%")
+            elif coverage < min_coverage:
+                blockers.append(f"覆盖率门禁：coverage {coverage:.1f}% < {min_coverage}%")
 
     is_ready = not blockers
     reason = "; ".join(blockers) if blockers else "所有条件满足"
@@ -299,20 +379,8 @@ def _archive_verified_tasks(
         if idx >= keep_from:
             continue
 
-        block = lines[start:end]
-        current_task = None
-        statuses: list[str] = []
-        for raw in block:
-            line = raw.strip()
-            if line.startswith("### "):
-                current_task = line
-                continue
-            if current_task is None:
-                continue
-            if line.startswith("status:") or line.startswith("- status:"):
-                statuses.append(line.split(":", 1)[1].strip())
-                current_task = None
-                continue
+        block = "\n".join(lines[start:end])
+        statuses = [status for _, status in parse_overall_task_statuses(block)]
 
         # 无任务的 milestone 不归档（避免误删结构）
         if not statuses:
@@ -367,6 +435,28 @@ def _load_verification_policy() -> dict[str, object]:
     return payload
 
 
+def _parse_test_requirements() -> tuple[int, bool] | None:
+    """
+    Parse optional test/coverage gate settings.
+
+    Returns:
+      (min_coverage, must_pass_before_review) or None if the gate is disabled.
+    """
+    payload = _load_verification_policy()
+    req = payload.get("test_requirements")
+    if req is None:
+        return None
+    if not isinstance(req, dict):
+        raise ValueError("verification_policy.test_requirements must be an object")
+    min_coverage = req.get("min_coverage")
+    if not isinstance(min_coverage, int) or not (0 <= min_coverage <= 100):
+        raise ValueError("verification_policy.test_requirements.min_coverage must be an int between 0 and 100")
+    must_pass_before_review = req.get("must_pass_before_review")
+    if not isinstance(must_pass_before_review, bool):
+        raise ValueError("verification_policy.test_requirements.must_pass_before_review must be boolean")
+    return min_coverage, must_pass_before_review
+
+
 def _parse_report_rules() -> tuple[set[str], bool, str, set[str], str, str]:
     payload = _load_verification_policy()
     rules = payload.get("report_rules")
@@ -408,6 +498,31 @@ def _parse_report_rules() -> tuple[set[str], bool, str, set[str], str, str]:
         blocker_prefix.strip(),
         blocker_clear_value.strip(),
     )
+
+
+_COVERAGE_LINE_RE = re.compile(r"^\s*coverage:\s*([0-9]+(?:\.[0-9]+)?)%\s*$", re.IGNORECASE)
+
+
+def _extract_report_verdict(*, report_text: str) -> str | None:
+    _, require_verdict, verdict_prefix, verdict_allowed, _, _ = _parse_report_rules()
+    if not require_verdict:
+        return None
+    for line in report_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(verdict_prefix):
+            verdict = stripped.split(verdict_prefix, 1)[1].strip()
+            if verdict not in verdict_allowed:
+                raise RuntimeError(f"Invalid verdict {verdict!r} in report")
+            return verdict
+    return None
+
+
+def _extract_report_coverage_percent(*, report_text: str) -> float | None:
+    for line in report_text.splitlines():
+        m = _COVERAGE_LINE_RE.match(line)
+        if m:
+            return float(m.group(1))
+    return None
 
 
 def _validate_report_consistency(*, report_path: Path, agent: str) -> None:

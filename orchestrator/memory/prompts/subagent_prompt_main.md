@@ -15,14 +15,19 @@
 - `orchestrator/workspace/review/current_task.md`：REVIEW 工单（覆盖写入，REVIEW 子代理仅以此为唯一任务来源）
 - `orchestrator/reports/report_test.md`：测试代理输出（测试结果与阻塞证据）
 - `orchestrator/reports/report_dev.md`：开发代理输出（实现变更与自测证据）
+- `orchestrator/reports/report_stage_changes.json`：上一轮子代理阶段的“代码变更摘要”（编排器生成，用于强制 TDD 规则）
 - `orchestrator/reports/report_review.md`：审阅代理输出（证据来源，用于更新 dev_plan/判断是否需继续取证；不能单独作为整体完成信号）
 - `orchestrator/reports/report_finish_review.md`：FINISH 触发的最终审阅报告（必须用于判定是否最终 FINISH）
 
 ## Dev Plan 规则（强制）
 - `orchestrator/memory/dev_plan.md` 必须“小而硬”：最多几十条任务，按 Milestone → Task 分层。
-- 每个任务块必须包含：`status / acceptance / evidence` 三个字段。
+- 每个任务块必须包含：`acceptance / evidence` 字段。
+- status 支持两种格式（向后兼容）：
+  - 旧格式：任务块内至少 1 行 `status: <TODO|DOING|BLOCKED|DONE|VERIFIED>`
+  - 新格式：包含 `#### 测试阶段/实现阶段/审阅阶段`，且每个阶段内都有 `status:` + `evidence:`；整体任务状态以任务块内最后一个 `status:` 为准
 - status 只允许：TODO / DOING / BLOCKED / DONE / VERIFIED。
 - 只有 **REVIEW 的证据** 才能把 DONE → VERIFIED（evidence 必须引用 Iteration 与验证方式）。
+- 允许（可选但推荐）为任务补充标记字段以支持 TDD：`task_type: <feature|bugfix|refactor|chore>`、`test_required: true|false`。
 - **收紧写入接口**：禁止直接写 `orchestrator/memory/dev_plan.md`（禁止补丁/差分方式增量编辑）；如需更新，只在 JSON 字段 `dev_plan_next` 中提供“完整 dev_plan”，由编排器落盘并提交。
 - dev_plan 内容只能是最终 Markdown 正文，禁止包含任何工具/日志/补丁边界文本（例如 `*** Begin Patch` / `*** End Patch` / `Note to=...` / `tool serena...`）。
 
@@ -54,6 +59,7 @@
    - 必须包含一行：`assigned_agent: <TEST|DEV|REVIEW>`（与 `next_agent` 保持一致）
    - 必须是**可执行、可验收、边界清晰**的任务简报（不要写宏大愿景/不要超出本轮必要范围）
    - 工单必须包含“验收标准”小节，写明 TDD 要求：先写/补齐测试，红-绿-重构；若任务类型不适用，必须说明原因
+   - 若 `verification_policy.json` 启用了 `test_requirements`：TEST 工单必须明确覆盖率命令（例如 `pytest -q --cov=... --cov-report=term-missing`）并要求报告单独输出 `coverage: <N>%`；缺失视为工单不合规
    - 工单不得要求子代理直接写入 `orchestrator/reports/*`；子代理的报告将由编排器自动落盘
 5. **输出调度信号**：最后只输出 **1 行 JSON**（无其它任何文本、无 Markdown 代码块）：
    - `{"next_agent":"TEST","reason":"...","history_append":"...","task":"...","dev_plan_next":null}`
@@ -67,16 +73,26 @@
 2. 如果满足“全面落地完成用户给定的任务（硬条件）”：输出 `FINISH`。
 
 2.1. 如果 `report_finish_review.md` 明确 FAIL/阻塞：必须选择采纳或忽略；采纳则按问题归属选择 DEV/TEST/REVIEW；忽略则可 FINISH 并写明 override。
-3. 如果 `report_review.md`/`report_test.md`/`report_dev.md` 明确出现失败或阻塞：
-   - 需要修改代码才能修复 → `DEV`
-   - 需要补测/验证 → `TEST`
-   - 需要补充取证/复核 → `REVIEW`
-4. 如果 `dev_plan` 中存在 DONE 但未 VERIFIED 的任务，或证据不足以升级为 VERIFIED：优先 `REVIEW` 取证。
-5. 如果 `dev_plan` 中存在 TODO/DOING/BLOCKED：
-   - 明确需要实现 → `DEV`
-   - 明确需要测试 → `TEST`
-   - 其余情况 → `REVIEW`
-6. 如果信息不足以给出可执行工单：输出 `REVIEW` 并在工单中写明缺失的证据与定位需求（快速失败）。
+3. 【建议】代码变更后优先测试（TDD）→ `TEST`：
+   - 若 `report_stage_changes.json` 显示上一轮子代理为 `DEV` 且 `code_changed=true`：建议本轮先派发 `TEST`
+   - 若选择跳过测试，必须在 reason 中说明原因
+4. 【条件】新功能/修复优先测试 → `TEST`：
+   - 若 dev_plan 存在 `test_required: true` 的 TODO/DOING/BLOCKED 任务，且最近 TEST 未 PASS（或启用覆盖率门禁但覆盖率未达标）：先 `TEST` 写/补测试（预期失败），再 `DEV` 实现让测试通过
+   - 若最近 TEST 已 PASS 且覆盖率达标：允许跳过测试，但必须在 reason 中说明
+5. 若 `verification_policy.json` 启用了 `test_requirements.must_pass_before_review`：建议 REVIEW 前先获得 TEST PASS（若启用覆盖率门禁则需达标）；如需直接 REVIEW，必须在 reason 中说明。
+6. 报告 FAIL/阻塞 → 按问题归属派发：
+   - 测试失败 → `DEV`（修复代码）
+   - 测试缺失 → `TEST`（补齐测试）
+   - 证据不足/需定位 → `REVIEW`（取证）
+7. DONE 未 VERIFIED → 先 `TEST` 后 `REVIEW`：
+   - TEST：运行测试并报告结果
+   - REVIEW：基于测试结果取证并推动 DONE → VERIFIED（证据必须来自 REVIEW）
+8. TODO/DOING/BLOCKED → 按类型派发（默认测试先行）：
+   - 新功能 → `TEST`
+   - Bug 修复 → `TEST`
+   - 重构/风险评估 → `REVIEW`
+   - 已具备测试、仅需实现收敛 → `DEV`
+9. 如果信息不足以给出可执行工单：输出 `REVIEW` 并在工单中写明缺失的证据与定位需求（快速失败）。
 
 ## 约束
 - JSON 字段必须使用 `snake_case`

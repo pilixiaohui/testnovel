@@ -1,5 +1,9 @@
 {
   "version": 1,
+  "test_requirements": {
+    "min_coverage": 80,
+    "must_pass_before_review": true
+  },
   "report_rules": {
     "apply_to": ["REVIEW", "TEST", "FINISH_REVIEW"],
     "require_verdict": true,

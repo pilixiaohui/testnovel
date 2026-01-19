@@ -35,6 +35,7 @@ REPORT_DEV_FILE = CONFIG.report_dev_file  # 关键变量：DEV 报告
 REPORT_REVIEW_FILE = CONFIG.report_review_file  # 关键变量：REVIEW 报告
 REPORT_FINISH_REVIEW_FILE = CONFIG.report_finish_review_file  # 关键变量：FINISH_REVIEW 报告
 REPORT_MAIN_DECISION_FILE = CONFIG.report_main_decision_file  # 关键变量：MAIN 决策输出
+REPORT_STAGE_CHANGES_FILE = REPORTS_DIR / "report_stage_changes.json"  # 关键变量：子代理阶段代码变更摘要（编排器生成）
 REPORT_ITERATION_SUMMARY_FILE = CONFIG.report_iteration_summary_file  # 关键变量：每轮摘要输出
 REPORT_ITERATION_SUMMARY_HISTORY_FILE = CONFIG.report_iteration_summary_history_file  # 关键变量：摘要历史输出
 ORCHESTRATOR_LOG_FILE = REPORTS_DIR / "orchestrator.log"  # 关键变量：编排器日志

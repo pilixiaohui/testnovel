@@ -5,6 +5,7 @@ from pathlib import Path
 from .config import CONFIG, PROJECT_HISTORY_FILE, PROMPTS_DIR
 from .file_ops import _read_text, _rel_path, _require_file
 from .types import NextAgent
+from .dev_plan import parse_overall_task_statuses
 
 
 def _inject_text(*, path: Path, content: str, note: str | None = None) -> str:
@@ -95,24 +96,13 @@ def _summarize_dev_plan_status(dev_plan_text: str) -> str:
     从 dev_plan 中提取任务状态摘要，用于 FINISH_CHECK 场景。
     返回格式：每个任务一行，包含任务 ID 和状态。
     """
-    lines = dev_plan_text.splitlines()
-    summary_lines: list[str] = []
-    current_task: str | None = None
-
-    for line in lines:
-        stripped = line.strip()
-        # 匹配任务标题（### M*-T*: ...）
-        if stripped.startswith("### ") and "-T" in stripped:
-            current_task = stripped[4:].split(":")[0].strip()  # 提取任务 ID
-        # 匹配状态行
-        elif stripped.startswith("- status:") and current_task:
-            status = stripped.replace("- status:", "").strip()
-            summary_lines.append(f"- {current_task}: {status}")
-            current_task = None
-
-    if not summary_lines:
+    try:
+        tasks = parse_overall_task_statuses(dev_plan_text)
+    except RuntimeError:
         return "(无法解析任务状态)"
-    return "\n".join(summary_lines)
+    if not tasks:
+        return "(无法解析任务状态)"
+    return "\n".join([f"- {task_id}: {status}" for task_id, status in tasks])
 
 
 def _extract_finish_review_verdict(finish_review_text: str) -> str:
