@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import uuid
 from pathlib import Path
@@ -12,15 +11,19 @@ from .config import (
     DEV_PLAN_MAX_LINE_LENGTH,
     DEV_PLAN_MAX_TASKS,
     PROJECT_HISTORY_FILE,
-    REPORT_TEST_FILE,
-    VERIFICATION_POLICY_FILE,
-    ACCEPTANCE_SCOPE_FILE,
     REQUIRE_ALL_VERIFIED_FOR_FINISH,
 )
 from .file_ops import _read_text, _require_file, _atomic_write_text
 from .prompt_builder import _task_file_for_agent
 from .types import NextAgent
 from .dev_plan import parse_overall_task_statuses
+from .parsing import (
+    extract_report_blockers,
+    extract_report_iteration,
+    extract_report_verdict,
+    parse_parsing_rules,
+    parse_report_rules,
+)
 
 
 def _validate_dev_plan_text(*, text: str, source: Path) -> None:
@@ -323,19 +326,6 @@ def _check_finish_readiness() -> tuple[bool, str, list[str]]:
         if non_verified_count > 0:
             blockers.append(f"存在 {non_verified_count} 个非 VERIFIED 任务（DONE/DOING/BLOCKED）")
 
-        test_requirements = _parse_test_requirements()
-        if test_requirements is not None:
-            min_coverage, _must_pass_before_review = test_requirements
-            test_report_text = _read_text(REPORT_TEST_FILE)
-            verdict = _extract_report_verdict(report_text=test_report_text)
-            coverage = _extract_report_coverage_percent(report_text=test_report_text)
-            if verdict != "PASS":
-                blockers.append("覆盖率门禁：最新 TEST 结论非 PASS")
-            if coverage is None:
-                blockers.append("覆盖率门禁：report_test.md 缺少 coverage: <N>%")
-            elif coverage < min_coverage:
-                blockers.append(f"覆盖率门禁：coverage {coverage:.1f}% < {min_coverage}%")
-
     is_ready = not blockers
     reason = "; ".join(blockers) if blockers else "所有条件满足"
     return is_ready, reason, blockers
@@ -419,146 +409,37 @@ def _archive_verified_tasks(
     return len(to_archive)
 
 
-def _load_verification_policy() -> dict[str, object]:
-    _require_file(VERIFICATION_POLICY_FILE)  # 关键分支：验证策略必须存在
-    raw = _read_text(VERIFICATION_POLICY_FILE).strip()  # 关键变量：配置原文
-    if not raw:  # 关键分支：空配置直接失败
-        raise RuntimeError(f"Empty verification_policy: {VERIFICATION_POLICY_FILE}")
-    try:  # 关键分支：解析 JSON
-        payload = json.loads(raw)
-    except json.JSONDecodeError as exc:  # 关键分支：非法 JSON 直接失败
-        raise ValueError(
-            f"verification_policy JSON 解析失败: {VERIFICATION_POLICY_FILE}: {exc}"
-        ) from exc
-    if not isinstance(payload, dict):  # 关键分支：必须为对象
-        raise ValueError("verification_policy must be a JSON object")
-    return payload
-
-
-def _parse_test_requirements() -> tuple[int, bool] | None:
-    """
-    Parse optional test/coverage gate settings.
-
-    Returns:
-      (min_coverage, must_pass_before_review) or None if the gate is disabled.
-    """
-    payload = _load_verification_policy()
-    req = payload.get("test_requirements")
-    if req is None:
-        return None
-    if not isinstance(req, dict):
-        raise ValueError("verification_policy.test_requirements must be an object")
-    min_coverage = req.get("min_coverage")
-    if not isinstance(min_coverage, int) or not (0 <= min_coverage <= 100):
-        raise ValueError("verification_policy.test_requirements.min_coverage must be an int between 0 and 100")
-    must_pass_before_review = req.get("must_pass_before_review")
-    if not isinstance(must_pass_before_review, bool):
-        raise ValueError("verification_policy.test_requirements.must_pass_before_review must be boolean")
-    return min_coverage, must_pass_before_review
-
-
-def _parse_report_rules() -> tuple[set[str], bool, str, set[str], str, str]:
-    payload = _load_verification_policy()
-    rules = payload.get("report_rules")
-    if not isinstance(rules, dict):
-        raise ValueError("verification_policy.report_rules must be an object")
-    apply_to = rules.get("apply_to")
-    if not isinstance(apply_to, list) or not apply_to:
-        raise ValueError("verification_policy.report_rules.apply_to must be a non-empty list")
-    apply_to_set: set[str] = set()
-    for item in apply_to:
-        if not isinstance(item, str) or not item.strip():
-            raise ValueError("verification_policy.report_rules.apply_to entries must be strings")
-        apply_to_set.add(item.strip())
-    require_verdict = rules.get("require_verdict")
-    if not isinstance(require_verdict, bool):
-        raise ValueError("verification_policy.report_rules.require_verdict must be boolean")
-    verdict_prefix = rules.get("verdict_prefix")
-    if not isinstance(verdict_prefix, str) or not verdict_prefix.strip():
-        raise ValueError("verification_policy.report_rules.verdict_prefix must be a non-empty string")
-    verdict_allowed = rules.get("verdict_allowed")
-    if not isinstance(verdict_allowed, list) or not verdict_allowed:
-        raise ValueError("verification_policy.report_rules.verdict_allowed must be a non-empty list")
-    verdict_allowed_set: set[str] = set()
-    for item in verdict_allowed:
-        if not isinstance(item, str) or not item.strip():
-            raise ValueError("verification_policy.report_rules.verdict_allowed entries must be strings")
-        verdict_allowed_set.add(item.strip())
-    blocker_prefix = rules.get("blocker_prefix")
-    if not isinstance(blocker_prefix, str) or not blocker_prefix.strip():
-        raise ValueError("verification_policy.report_rules.blocker_prefix must be a non-empty string")
-    blocker_clear_value = rules.get("blocker_clear_value")
-    if not isinstance(blocker_clear_value, str) or not blocker_clear_value.strip():
-        raise ValueError("verification_policy.report_rules.blocker_clear_value must be a non-empty string")
-    return (
-        apply_to_set,
-        require_verdict,
-        verdict_prefix.strip(),
-        verdict_allowed_set,
-        blocker_prefix.strip(),
-        blocker_clear_value.strip(),
-    )
-
-
-_COVERAGE_LINE_RE = re.compile(r"^\s*coverage:\s*([0-9]+(?:\.[0-9]+)?)%\s*$", re.IGNORECASE)
-
-
-def _extract_report_verdict(*, report_text: str) -> str | None:
-    _, require_verdict, verdict_prefix, verdict_allowed, _, _ = _parse_report_rules()
-    if not require_verdict:
-        return None
-    for line in report_text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(verdict_prefix):
-            verdict = stripped.split(verdict_prefix, 1)[1].strip()
-            if verdict not in verdict_allowed:
-                raise RuntimeError(f"Invalid verdict {verdict!r} in report")
-            return verdict
-    return None
-
-
-def _extract_report_coverage_percent(*, report_text: str) -> float | None:
-    for line in report_text.splitlines():
-        m = _COVERAGE_LINE_RE.match(line)
-        if m:
-            return float(m.group(1))
-    return None
+# 注意：报告解析与格式校验由 parsing.py 统一实现
 
 
 def _validate_report_consistency(*, report_path: Path, agent: str) -> None:
-    apply_to, require_verdict, verdict_prefix, verdict_allowed, blocker_prefix, blocker_clear_value = _parse_report_rules()
-    if agent not in apply_to:  # 关键分支：不在范围内则跳过
+    report_rules = parse_report_rules()
+    if agent not in report_rules.apply_to:  # 关键分支：不在范围内则跳过
         return
-    if not require_verdict:  # 关键分支：未要求 verdict 则跳过
-        return
+    parsing_rules = parse_parsing_rules()
     content = _read_text(report_path)  # 关键变量：报告全文
-    lines = content.splitlines()
-    verdict_line = next((line.strip() for line in lines if line.strip().startswith(verdict_prefix)), None)
-    if verdict_line is None:
-        raise RuntimeError(f"Report missing verdict line {verdict_prefix!r}: {report_path}")
-    verdict = verdict_line.split(verdict_prefix, 1)[1].strip()
-    if verdict not in verdict_allowed:
-        raise RuntimeError(f"Invalid verdict {verdict!r} in {report_path}, allowed: {sorted(verdict_allowed)}")
-    blocker_line = next((line.strip() for line in lines if line.strip().startswith(blocker_prefix)), None)
-    if blocker_line is None:
-        raise RuntimeError(f"Report missing blocker line {blocker_prefix!r}: {report_path}")
-    blocker = blocker_line.split(blocker_prefix, 1)[1].strip()
-    if verdict == "PASS" and blocker != blocker_clear_value:
-        raise RuntimeError(
-            f"Report verdict PASS but blockers not cleared ({blocker!r}) in {report_path}"
-        )
-    if verdict in {"FAIL", "BLOCKED"} and blocker == blocker_clear_value:
-        raise RuntimeError(
-            f"Report verdict {verdict} but blockers marked clear in {report_path}"
-        )
+    extract_report_verdict(
+        report_text=content,
+        report_rules=report_rules,
+        parsing_rules=parsing_rules,
+        source=report_path,
+    )
+    extract_report_blockers(
+        report_text=content,
+        report_rules=report_rules,
+        parsing_rules=parsing_rules,
+        source=report_path,
+    )
 
 
 def _validate_report_iteration(*, report_path: Path, iteration: int) -> None:
     _require_file(report_path)  # 关键分支：报告必须存在
-    needle = f"iteration: {iteration}"  # 关键变量：本轮迭代标识
     content = _read_text(report_path)  # 关键变量：报告全文
-    if needle not in content:  # 关键分支：报告未标注迭代
-        raise RuntimeError(f"Report missing iteration marker {needle!r}: {report_path}")
+    parsed = extract_report_iteration(report_text=content, parsing_rules=parse_parsing_rules())
+    if parsed != iteration:
+        raise RuntimeError(
+            f"Report iteration mismatch: expected {iteration}, got {parsed} in {report_path}"
+        )
 
 
 def _validate_session_id(session_id: str) -> None:

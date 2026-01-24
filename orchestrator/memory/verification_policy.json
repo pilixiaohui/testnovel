@@ -11,5 +11,10 @@
     "verdict_allowed": ["PASS", "FAIL", "BLOCKED"],
     "blocker_prefix": "阻塞：",
     "blocker_clear_value": "无"
+  },
+  "parsing_rules": {
+    "critical_fields": ["iteration"],
+    "optional_fields": ["verdict", "blockers"],
+    "use_defaults_on_failure": true
   }
 }

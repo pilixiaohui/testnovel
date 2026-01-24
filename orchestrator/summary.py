@@ -1,89 +1,106 @@
 from __future__ import annotations
 
 import json
-import re
 
 from pathlib import Path
 
 from .decision import _load_json_object, _parse_main_decision_payload
 from .file_ops import _rel_path
-from .types import IterationSummary, SubagentSummary, SummaryStep
+from .types import IterationSummary, ProgressInfo, SubagentSummary, SummaryStep
 
 _ALLOWED_ACTORS = {"MAIN", "ORCHESTRATOR", "TEST", "DEV", "REVIEW"}
 
 
-def _try_extract_steps_from_raw_json(raw_json: str) -> list[dict] | None:
-    """
-    尝试从原始 JSON 字符串中提取并修复畸形的 steps 数组。
-
-    当 LLM 错误地将多个 step 合并到一个对象时，例如：
-    "steps":[{"step":1,"actor":"MAIN","detail":"...","step":2,"actor":"DEV","detail":"..."}]
-
-    我们尝试用正则表达式提取所有 step/actor/detail 组合并重建数组。
-    """
-    # 查找 steps 数组的位置
-    steps_match = re.search(r'"steps"\s*:\s*\[', raw_json)
-    if not steps_match:
+def _parse_progress(payload: object) -> ProgressInfo | None:
+    if payload is None:
         return None
+    if not isinstance(payload, dict):
+        raise ValueError("摘要 progress 必须是对象或 null")
 
-    # 从 steps 开始位置提取到对应的 ]
-    start = steps_match.end() - 1  # 包含 [
-    bracket_count = 0
-    end = start
-    for i, char in enumerate(raw_json[start:], start):
-        if char == '[':
-            bracket_count += 1
-        elif char == ']':
-            bracket_count -= 1
-            if bracket_count == 0:
-                end = i + 1
-                break
+    def _require_int(name: str) -> int:
+        value = payload.get(name)
+        if not isinstance(value, int) or value < 0:
+            raise ValueError(f"摘要 progress.{name} 必须为非负整数")
+        return value
 
-    steps_str = raw_json[start:end]
+    def _require_float(name: str) -> float:
+        value = payload.get(name)
+        if not isinstance(value, (int, float)):
+            raise ValueError(f"摘要 progress.{name} 必须为数字")
+        if not (0 <= float(value) <= 100):
+            raise ValueError(f"摘要 progress.{name} 必须在 0-100 之间")
+        return float(value)
 
-    # 使用正则提取所有 step/actor/detail 组合
-    # 匹配模式：找到所有 "step":N,"actor":"...","detail":"..." 的组合
-    pattern = r'"step"\s*:\s*(\d+)\s*,\s*"actor"\s*:\s*"([^"]+)"\s*,\s*"detail"\s*:\s*"([^"]*(?:\\.[^"]*)*)"'
-    matches = re.findall(pattern, steps_str)
+    total_tasks = _require_int("total_tasks")
+    completed_tasks = _require_int("completed_tasks")
+    verified_tasks = _require_int("verified_tasks")
+    in_progress_tasks = _require_int("in_progress_tasks")
+    blocked_tasks = _require_int("blocked_tasks")
+    todo_tasks = _require_int("todo_tasks")
+    completion_percentage = _require_float("completion_percentage")
+    verification_percentage = _require_float("verification_percentage")
 
-    if len(matches) < 3:
-        # 尝试另一种顺序：actor/detail/step
-        pattern2 = r'"actor"\s*:\s*"([^"]+)"\s*,\s*"detail"\s*:\s*"([^"]*(?:\\.[^"]*)*)"\s*,\s*"step"\s*:\s*(\d+)'
-        matches2 = re.findall(pattern2, steps_str)
-        if len(matches2) >= 3:
-            matches = [(m[2], m[0], m[1]) for m in matches2]
+    current_milestone = payload.get("current_milestone")
+    if current_milestone is not None:
+        if not isinstance(current_milestone, str) or not current_milestone.strip():
+            raise ValueError("摘要 progress.current_milestone 必须为非空字符串或 null")
 
-    if len(matches) < 3:
-        # 尝试更宽松的匹配：分别提取 step、actor、detail
-        step_pattern = r'"step"\s*:\s*(\d+)'
-        actor_pattern = r'"actor"\s*:\s*"([^"]+)"'
-        detail_pattern = r'"detail"\s*:\s*"([^"]*(?:\\.[^"]*)*)"'
+    milestones_payload = payload.get("milestones")
+    if not isinstance(milestones_payload, list):
+        raise ValueError("摘要 progress.milestones 必须是数组")
+    milestones = []
+    for idx, item in enumerate(milestones_payload, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"摘要 progress.milestones[{idx}] 必须是对象")
+        milestone_id = item.get("milestone_id")
+        milestone_name = item.get("milestone_name")
+        if not isinstance(milestone_id, str) or not milestone_id.strip():
+            raise ValueError(f"摘要 progress.milestones[{idx}].milestone_id 必须为非空字符串")
+        if not isinstance(milestone_name, str) or not milestone_name.strip():
+            raise ValueError(f"摘要 progress.milestones[{idx}].milestone_name 必须为非空字符串")
+        total = item.get("total_tasks")
+        completed = item.get("completed_tasks")
+        verified = item.get("verified_tasks")
+        percentage = item.get("percentage")
+        if not isinstance(total, int) or total < 0:
+            raise ValueError(f"摘要 progress.milestones[{idx}].total_tasks 必须为非负整数")
+        if not isinstance(completed, int) or completed < 0:
+            raise ValueError(f"摘要 progress.milestones[{idx}].completed_tasks 必须为非负整数")
+        if not isinstance(verified, int) or verified < 0:
+            raise ValueError(f"摘要 progress.milestones[{idx}].verified_tasks 必须为非负整数")
+        if not isinstance(percentage, (int, float)) or not (0 <= float(percentage) <= 100):
+            raise ValueError(f"摘要 progress.milestones[{idx}].percentage 必须在 0-100 之间")
+        milestones.append(
+            {
+                "milestone_id": milestone_id.strip(),
+                "milestone_name": milestone_name.strip(),
+                "total_tasks": total,
+                "completed_tasks": completed,
+                "verified_tasks": verified,
+                "percentage": float(percentage),
+            }
+        )
 
-        steps_nums = re.findall(step_pattern, steps_str)
-        actors = re.findall(actor_pattern, steps_str)
-        details = re.findall(detail_pattern, steps_str)
+    if total_tasks == 0 and any(
+        value != 0
+        for value in (completed_tasks, verified_tasks, in_progress_tasks, blocked_tasks, todo_tasks)
+    ):
+        raise ValueError("摘要 progress total_tasks=0 但其他计数非 0")
+    if completed_tasks > total_tasks or verified_tasks > total_tasks:
+        raise ValueError("摘要 progress 计数超过 total_tasks")
 
-        # 如果三者数量相等且 >= 3，则组合
-        if len(steps_nums) == len(actors) == len(details) >= 3:
-            matches = list(zip(steps_nums, actors, details))
-
-    if len(matches) < 3:
-        return None
-
-    # 重建 steps 数组
-    fixed_steps = []
-    for step_num, actor, detail in matches:
-        fixed_steps.append({
-            "step": int(step_num),
-            "actor": actor,
-            "detail": detail,
-        })
-
-    # 限制在 3-8 范围内
-    if len(fixed_steps) > 8:
-        fixed_steps = fixed_steps[:8]
-
-    return fixed_steps if 3 <= len(fixed_steps) <= 8 else None
+    return {
+        "total_tasks": total_tasks,
+        "completed_tasks": completed_tasks,
+        "verified_tasks": verified_tasks,
+        "in_progress_tasks": in_progress_tasks,
+        "blocked_tasks": blocked_tasks,
+        "todo_tasks": todo_tasks,
+        "completion_percentage": completion_percentage,
+        "verification_percentage": verification_percentage,
+        "current_milestone": current_milestone.strip() if isinstance(current_milestone, str) else None,
+        "milestones": milestones,
+    }
 
 
 def _parse_iteration_summary(
@@ -157,19 +174,12 @@ def _parse_iteration_summary(
 
     steps_payload = payload.get("steps")
     if not isinstance(steps_payload, list) or not (3 <= len(steps_payload) <= 8):
-        # 尝试从原始 JSON 中修复畸形的 steps 数组
-        fixed_steps = _try_extract_steps_from_raw_json(raw_json)
-        if fixed_steps is not None:
-            steps_payload = fixed_steps
-            # 同时更新 payload 以便后续使用
-            payload["steps"] = fixed_steps
-        else:
-            actual_len = len(steps_payload) if isinstance(steps_payload, list) else "非列表"
-            raise ValueError(
-                f"摘要 steps 必须是长度 3-8 的列表（实际长度：{actual_len}）。"
-                "请确保 steps 是独立对象组成的数组，例如：[{\"step\":1,...},{\"step\":2,...}]，"
-                "而不是将多个 step 合并到一个对象中。"
-            )
+        actual_len = len(steps_payload) if isinstance(steps_payload, list) else "非列表"
+        raise ValueError(
+            f"摘要 steps 必须是长度 3-8 的列表（实际长度：{actual_len}）。"
+            "请确保 steps 是独立对象组成的数组，例如：[{\"step\":1,...},{\"step\":2,...}]，"
+            "而不是将多个 step 合并到一个对象中。"
+        )
     steps: list[SummaryStep] = []
     for idx, item in enumerate(steps_payload, start=1):
         if not isinstance(item, dict):
@@ -188,6 +198,8 @@ def _parse_iteration_summary(
     summary_text = payload.get("summary")
     if not isinstance(summary_text, str) or not summary_text.strip():
         raise ValueError("摘要 summary 必须为非空字符串")
+
+    progress = _parse_progress(payload.get("progress"))
 
     artifacts_payload = payload.get("artifacts")
     if not isinstance(artifacts_payload, dict):
@@ -212,6 +224,7 @@ def _parse_iteration_summary(
         "subagent": subagent,
         "steps": steps,
         "summary": summary_text.strip(),
+        "progress": progress,
         "artifacts": expected_artifacts,
     }
 

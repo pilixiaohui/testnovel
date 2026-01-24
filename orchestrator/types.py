@@ -63,6 +63,44 @@ class SubagentSummary(TypedDict):
     report_summary: str  # 关键变量：报告摘要
 
 
+class MilestoneProgress(TypedDict):
+    milestone_id: str  # 关键变量：里程碑编号
+    milestone_name: str  # 关键变量：里程碑名称
+    total_tasks: int  # 关键变量：里程碑任务总数
+    completed_tasks: int  # 关键变量：里程碑完成任务数
+    verified_tasks: int  # 关键变量：里程碑已验证任务数
+    percentage: float  # 关键变量：里程碑完成百分比
+
+
+class TaskProgress(TypedDict):
+    task_id: str  # 关键变量：任务编号
+    title: str  # 关键变量：任务标题
+    status: str  # 关键变量：任务状态
+    milestone_id: str  # 关键变量：任务所属里程碑
+
+
+class ProgressInfo(TypedDict):
+    total_tasks: int  # 关键变量：任务总数
+    completed_tasks: int  # 关键变量：已完成任务数（DONE + VERIFIED）
+    verified_tasks: int  # 关键变量：已验证任务数
+    in_progress_tasks: int  # 关键变量：进行中任务数
+    blocked_tasks: int  # 关键变量：阻塞任务数
+    todo_tasks: int  # 关键变量：待办任务数
+    completion_percentage: float  # 关键变量：完成百分比
+    verification_percentage: float  # 关键变量：验证百分比
+    current_milestone: str | None  # 关键变量：当前里程碑
+    milestones: list[MilestoneProgress]  # 关键变量：里程碑进度列表
+    tasks: list[TaskProgress]  # 关键变量：任务列表
+
+
+class UploadedDocument(TypedDict):
+    filename: str  # 关键变量：文件名
+    path: str  # 关键变量：相对路径
+    category: str  # 关键变量：分类
+    size: int  # 关键变量：文件大小（字节）
+    upload_time: str  # 关键变量：上传时间戳
+
+
 class IterationSummary(TypedDict):
     iteration: int  # 关键变量：迭代号
     main_session_id: str | None  # 关键变量：MAIN 会话 id
@@ -71,7 +109,18 @@ class IterationSummary(TypedDict):
     subagent: SubagentSummary  # 关键变量：子代理摘要
     steps: list[SummaryStep]  # 关键变量：步骤列表
     summary: str  # 关键变量：本轮摘要
+    progress: ProgressInfo | None  # 关键变量：进度信息（可选）
     artifacts: dict  # 关键变量：关键产物路径
+
+
+class ReportSummary(TypedDict):
+    iteration: int  # 关键变量：迭代号
+    agent: str  # 关键变量：代理名称
+    verdict: str  # 关键变量：结论
+    blockers: list[str]  # 关键变量：阻塞项
+    key_changes: list[str]  # 关键变量：关键变更
+    evidence: str  # 关键变量：证据摘要
+    timestamp: str  # 关键变量：时间戳
 
 
 class UiState(TypedDict, total=False):

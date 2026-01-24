@@ -29,6 +29,44 @@ export type SummaryStep = {
   detail: string;
 };
 
+export type MilestoneProgress = {
+  milestone_id: string;
+  milestone_name: string;
+  total_tasks: number;
+  completed_tasks: number;
+  verified_tasks: number;
+  percentage: number;
+};
+
+export type TaskProgress = {
+  task_id: string;
+  title: string;
+  status: string;
+  milestone_id: string;
+};
+
+export type ProgressInfo = {
+  total_tasks: number;
+  completed_tasks: number;
+  verified_tasks: number;
+  in_progress_tasks: number;
+  blocked_tasks: number;
+  todo_tasks: number;
+  completion_percentage: number;
+  verification_percentage: number;
+  current_milestone: string | null;
+  milestones: MilestoneProgress[];
+  tasks: TaskProgress[];
+};
+
+export type UploadedDocument = {
+  filename: string;
+  path: string;
+  category: string;
+  size: number;
+  upload_time: string;
+};
+
 export type SubagentSummary = {
   agent: string;
   task_summary: string;
@@ -41,6 +79,7 @@ export type IterationSummary = {
   subagent: SubagentSummary;
   steps: SummaryStep[];
   summary: string;
+  progress?: ProgressInfo | null;
   artifacts?: Record<string, unknown>;
 };
 

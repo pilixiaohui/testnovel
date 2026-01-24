@@ -4,11 +4,7 @@ import hashlib
 import subprocess
 from pathlib import Path
 
-import pytest
-
-from orchestrator.dev_plan import find_open_test_required_task_ids
 from orchestrator.repo_changes import capture_dirty_file_digests, diff_dirty_file_digests
-from orchestrator.workflow import _load_stage_changes, _validate_tdd_main_decision, _write_stage_changes
 
 
 def _git(cwd: Path, *args: str) -> None:
@@ -103,104 +99,3 @@ def test_capture_dirty_file_digests_exclude_prefixes(tmp_path: Path) -> None:
         exclude_prefixes=("orchestrator/memory/",),
     )
     assert snap == {}
-
-
-def test_stage_changes_write_and_load(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    import orchestrator.workflow as w
-
-    stage_file = tmp_path / "report_stage_changes.json"
-    monkeypatch.setattr(w, "REPORT_STAGE_CHANGES_FILE", stage_file)
-
-    _write_stage_changes(
-        iteration=3,
-        agent="DEV",
-        changed_files=["a.py", "README.md", "cfg.toml"],
-    )
-    payload = _load_stage_changes()
-    assert payload["schema_version"] == 1
-    assert payload["iteration"] == 3
-    assert payload["agent"] == "DEV"
-    assert payload["changed_files"] == ["a.py", "README.md", "cfg.toml"]
-    assert payload["code_changed"] is True
-    assert payload["code_changed_files"] == ["a.py", "cfg.toml"]
-
-
-def test_validate_tdd_main_decision() -> None:
-    warnings = _validate_tdd_main_decision(
-        next_agent="REVIEW",
-        must_test_after_dev=True,
-        test_required_task_ids=[],
-        last_test_verdict=None,
-        min_coverage=None,
-        coverage_ok=True,
-    )
-    assert warnings
-
-    warnings = _validate_tdd_main_decision(
-        next_agent="TEST",
-        must_test_after_dev=True,
-        test_required_task_ids=[],
-        last_test_verdict=None,
-        min_coverage=None,
-        coverage_ok=True,
-    )
-    assert warnings == []
-
-    with pytest.raises(ValueError):
-        _validate_tdd_main_decision(
-            next_agent="DEV",
-            must_test_after_dev=False,
-            test_required_task_ids=["M1-T1"],
-            last_test_verdict=None,
-            min_coverage=None,
-            coverage_ok=True,
-        )
-
-    warnings = _validate_tdd_main_decision(
-        next_agent="DEV",
-        must_test_after_dev=False,
-        test_required_task_ids=["M1-T1"],
-        last_test_verdict="PASS",
-        min_coverage=None,
-        coverage_ok=True,
-    )
-    assert warnings
-
-    with pytest.raises(ValueError):
-        _validate_tdd_main_decision(
-            next_agent="DEV",
-            must_test_after_dev=False,
-            test_required_task_ids=["M1-T1"],
-            last_test_verdict="PASS",
-            min_coverage=80,
-            coverage_ok=False,
-        )
-
-    warnings = _validate_tdd_main_decision(
-        next_agent="USER",
-        must_test_after_dev=False,
-        test_required_task_ids=["M1-T1"],
-        last_test_verdict=None,
-        min_coverage=None,
-        coverage_ok=True,
-    )
-    assert warnings == []
-
-
-def test_find_open_test_required_task_ids_first_status_drives_gate() -> None:
-    dev_plan = """# Dev Plan
-
-### M1-T1: A
-- status: TODO
-- test_required: true
-
-### M1-T2: B
-- status: DONE
-- test_required: true
-
-### M1-T3: C
-- test_required: true
-- status: DONE
-- status: TODO
-"""
-    assert find_open_test_required_task_ids(dev_plan) == ["M1-T1"]

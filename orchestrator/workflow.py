@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import time
 
+from datetime import datetime
+
 from collections.abc import Callable
 from pathlib import Path
 from .backup import _backup_subagent_artifacts, _clear_dev_plan_stage_file, _commit_staged_dev_plan_if_present
@@ -10,9 +12,12 @@ from .codex_runner import (
     _clear_saved_main_state,
     _load_saved_main_iteration,
     _load_saved_main_session_id,
+    _load_subagent_session_id,
     _run_codex_exec,
     _save_main_iteration,
     _save_main_session_id,
+    _save_subagent_session_id,
+    _clear_all_subagent_sessions,
 )
 from .config import (
     CODEX_STATE_DIR,
@@ -29,6 +34,7 @@ from .config import (
     PROJECT_HISTORY_FILE,
     PROJECT_ROOT,
     PROMPTS_DIR,
+    PROJECT_ENV_FILE,
     REPORT_DEV_FILE,
     REPORT_MAIN_DECISION_FILE,
     REPORT_ITERATION_SUMMARY_FILE,
@@ -36,8 +42,8 @@ from .config import (
     REPORT_REVIEW_FILE,
     REPORT_FINISH_REVIEW_FILE,
     REPORT_TEST_FILE,
-    REPORT_STAGE_CHANGES_FILE,
     REPORTS_DIR,
+    REPORT_SUMMARY_CACHE_FILE,
     REVIEW_TASK_FILE,
     TEST_TASK_FILE,
     WORKSPACE_DIR,
@@ -49,9 +55,10 @@ from .config import (
     LEGACY_ISSUES_REPORT_FILE,
     KEEP_RECENT_MILESTONES,
     MAX_DEV_PLAN_SIZE,
-    MIN_HISTORY_WINDOW,
-    MAX_HISTORY_WINDOW,
     MAX_PROMPT_SIZE,
+    SUBAGENT_HISTORY_LOOKBACK,
+    UPLOADED_DOCS_DIR,
+    UPLOADED_DOCS_CATEGORIES,
 )
 from .decision import _parse_main_output, _prompt_user_for_decision
 from .summary import _append_iteration_summary_history, _load_iteration_summary_history, _parse_iteration_summary
@@ -61,6 +68,9 @@ from .file_ops import (
     _append_log_line,
     _assert_files_unchanged,
     _atomic_write_text,
+    _extract_latest_task_goal,
+    _extract_latest_user_decision,
+    _extract_recent_user_decisions,
     _read_text,
     _require_file,
     _rel_path,
@@ -69,24 +79,20 @@ from .file_ops import (
     _write_text_if_missing,
 )
 from .prompt_builder import (
-    _extract_finish_review_verdict,
     _inject_file,
-    _inject_project_history_recent,
+    _inject_report_with_level,
     _load_system_prompt,
     _task_file_for_agent,
 )
 from .errors import TemporaryError
 from .state import RunControl, UiRuntime, UserInterrupted
-from .types import MainOutput, ResumeState
-from .repo_changes import capture_dirty_file_digests, diff_dirty_file_digests
-from .dev_plan import count_overall_task_statuses, find_open_test_required_task_ids
+from .types import MainOutput, ResumeState, MainDecisionUser
+from .dev_plan import count_overall_task_statuses, parse_overall_task_statuses
+from .parsing import extract_report_verdict, parse_report_rules
 from .validation import (
     _assert_main_side_effects,
     _check_finish_readiness,
     _archive_verified_tasks,
-    _extract_report_coverage_percent,
-    _extract_report_verdict,
-    _parse_test_requirements,
     _validate_dev_plan,
     _validate_dev_plan_text,
     _validate_history_append,
@@ -105,6 +111,8 @@ def _ensure_initial_md_files() -> None:
     """
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：黑板 memory 目录
     PROMPTS_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：提示词目录
+    for category in UPLOADED_DOCS_CATEGORIES:  # 关键变量：上传文档目录
+        (UPLOADED_DOCS_DIR / category).mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：报告目录
     (WORKSPACE_DIR / "test").mkdir(parents=True, exist_ok=True)  # 关键变量：TEST 工单目录
     (WORKSPACE_DIR / "dev").mkdir(parents=True, exist_ok=True)  # 关键变量：DEV 工单目录
@@ -131,7 +139,6 @@ def _ensure_initial_md_files() -> None:
     _write_text_if_missing(REPORT_DEV_FILE, ProjectTemplates.report_file("DEV"))  # 关键变量：DEV 报告模板
     _write_text_if_missing(REPORT_REVIEW_FILE, ProjectTemplates.report_file("REVIEW"))  # 关键变量：REVIEW 报告模板
     _write_text_if_missing(REPORT_FINISH_REVIEW_FILE, ProjectTemplates.report_file("FINISH_REVIEW"))  # 关键变量：FINISH_REVIEW 报告模板
-    _write_text_if_missing(REPORT_STAGE_CHANGES_FILE, ProjectTemplates.stage_changes_report())  # 关键变量：阶段变更摘要（JSON）
 
     # NOTE: prompts are NOT initialized here.
     # `orchestrator/memory/prompts/subagent_prompt_{main,test,dev,review,summary,finish_review}.md` are the single source of truth and must exist.
@@ -163,23 +170,26 @@ def _reset_report_files() -> None:
         REPORT_FINISH_REVIEW_FILE,
         ProjectTemplates.report_file("FINISH_REVIEW"),
     )  # 关键变量：FINISH_REVIEW 报告模板
-    _atomic_write_text(
-        REPORT_STAGE_CHANGES_FILE,
-        ProjectTemplates.stage_changes_report(),
-    )  # 关键变量：阶段变更摘要（JSON）模板
     if REPORT_ITERATION_SUMMARY_FILE.exists():  # 关键分支：清理上轮摘要
         REPORT_ITERATION_SUMMARY_FILE.unlink()
     if REPORT_ITERATION_SUMMARY_HISTORY_FILE.exists():  # 关键分支：清理摘要历史
         REPORT_ITERATION_SUMMARY_HISTORY_FILE.unlink()
+    if REPORT_MAIN_DECISION_FILE.exists():  # 关键分支：清理 MAIN 决策文件
+        REPORT_MAIN_DECISION_FILE.unlink()
+    if REPORT_SUMMARY_CACHE_FILE.exists():  # 关键分支：清理报告摘要缓存
+        REPORT_SUMMARY_CACHE_FILE.unlink()
 
 
-def _purge_directory(*, root: Path, keep_dirs: tuple[Path, ...] = ()) -> None:
+def _purge_directory(*, root: Path, keep_dirs: tuple[Path, ...] = (), keep_files: tuple[Path, ...] = ()) -> None:
     if not root.exists():  # 关键分支：目录不存在则创建
         root.mkdir(parents=True, exist_ok=True)
         return
     keep_dirs = tuple(keep_dirs)
+    keep_files = tuple(keep_files)
     for path in sorted(root.rglob("*"), reverse=True):  # 关键分支：逆序删除，先文件后目录
         if any(path.is_relative_to(keep) for keep in keep_dirs):  # 关键分支：跳过保留目录
+            continue
+        if path in keep_files:  # 关键分支：跳过保留文件
             continue
         if path.is_dir():  # 关键分支：目录直接删除
             path.rmdir()
@@ -189,13 +199,18 @@ def _purge_directory(*, root: Path, keep_dirs: tuple[Path, ...] = ()) -> None:
 
 def _reset_workflow_state() -> None:
     """
-    将工作流状态重置为“无进度”的初始态（覆盖写入+清理状态文件）。
+    将工作流状态重置为"无进度"的初始态（覆盖写入+清理状态文件）。
     """
     _clear_saved_main_state()  # 关键变量：清空 MAIN 会话与迭代
+    _clear_all_subagent_sessions()  # 关键变量：清空所有子代理会话
     _clear_dev_plan_stage_file()  # 关键变量：清理 dev_plan 草案
     _purge_directory(root=WORKSPACE_DIR)  # 关键变量：清理 workspace
     _purge_directory(root=REPORTS_DIR)  # 关键变量：清理 reports
-    _purge_directory(root=MEMORY_DIR, keep_dirs=(PROMPTS_DIR,))  # 关键变量：清理 memory（保留提示词）
+    _purge_directory(
+        root=MEMORY_DIR,
+        keep_dirs=(PROMPTS_DIR, UPLOADED_DOCS_DIR),
+        keep_files=(PROJECT_ENV_FILE,),
+    )  # 关键变量：清理 memory（保留提示词、已上传文档、项目环境配置）
     _ensure_initial_md_files()  # 关键变量：重建初始黑板文件
 
 
@@ -305,10 +320,10 @@ def _guarded_blackboard_paths() -> list[Path]:
         REPORT_DEV_FILE,  # 关键变量：DEV 报告
         REPORT_REVIEW_FILE,  # 关键变量：REVIEW 报告
         REPORT_FINISH_REVIEW_FILE,  # 关键变量：FINISH_REVIEW 报告
-        REPORT_STAGE_CHANGES_FILE,  # 关键变量：阶段变更摘要（编排器生成）
         REPORT_MAIN_DECISION_FILE,  # 关键变量：MAIN 决策输出
         REPORT_ITERATION_SUMMARY_FILE,  # 关键变量：每轮摘要输出
         REPORT_ITERATION_SUMMARY_HISTORY_FILE,  # 关键变量：摘要历史输出
+        REPORT_SUMMARY_CACHE_FILE,  # 关键变量：报告摘要缓存
     ]
 
 
@@ -316,7 +331,7 @@ _RESUME_SCHEMA_VERSION = 1  # 关键变量：续跑状态版本
 
 
 def _resume_blackboard_paths(*, phase: str, next_agent: str) -> tuple[list[Path], list[Path]]:
-    required = [PROJECT_HISTORY_FILE, DEV_PLAN_FILE, REPORT_MAIN_DECISION_FILE, REPORT_STAGE_CHANGES_FILE]
+    required = [PROJECT_HISTORY_FILE, DEV_PLAN_FILE, REPORT_MAIN_DECISION_FILE]
     if next_agent in {"TEST", "DEV", "REVIEW"}:
         required.append(_task_file_for_agent(next_agent))
         if phase == "after_subagent":
@@ -342,112 +357,6 @@ _RESUME_AGENTS = {"TEST", "DEV", "REVIEW", "USER"}  # 关键变量：可恢复�
 
 _MAX_STAGE_RETRIES = 2  # 关键变量：可重试次数
 _BACKOFF_BASE_SECONDS = 1.0  # 关键变量：退避基数
-
-# 子代理阶段“是否发生代码变更”的判定（用于强制 TDD：DEV 变更后必须 TEST）
-_STAGE_CHANGE_SCHEMA_VERSION = 1
-_STAGE_CHANGE_EXCLUDE_PREFIXES: tuple[str, ...] = (
-    "orchestrator/memory/",
-    "orchestrator/reports/",
-    "orchestrator/workspace/",
-    ".codex/",
-    ".serena/",
-    ".pytest_cache/",
-    "__pycache__/",
-)
-_CODE_CHANGE_SUFFIXES: set[str] = {
-    ".py",
-    ".ts",
-    ".tsx",
-    ".js",
-    ".jsx",
-    ".vue",
-    ".json",
-    ".toml",
-    ".yml",
-    ".yaml",
-    ".ini",
-    ".cfg",
-}
-
-
-def _is_code_change_path(rel_path: str) -> bool:
-    return Path(rel_path).suffix.lower() in _CODE_CHANGE_SUFFIXES
-
-
-def _load_stage_changes() -> dict[str, object]:
-    _require_file(REPORT_STAGE_CHANGES_FILE)
-    raw = _read_text(REPORT_STAGE_CHANGES_FILE).strip()
-    if not raw:
-        raise RuntimeError(f"stage changes file is empty: {_rel_path(REPORT_STAGE_CHANGES_FILE)}")
-    try:
-        payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"stage changes JSON parse failed: {_rel_path(REPORT_STAGE_CHANGES_FILE)}: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise RuntimeError("stage changes JSON must be an object")
-    schema_version = payload.get("schema_version")
-    if schema_version != _STAGE_CHANGE_SCHEMA_VERSION:
-        raise RuntimeError(
-            f"stage changes schema_version invalid: {schema_version!r}, expected {_STAGE_CHANGE_SCHEMA_VERSION}"
-        )
-    return payload
-
-
-def _write_stage_changes(*, iteration: int, agent: str, changed_files: list[str]) -> None:
-    if agent not in {"TEST", "DEV", "REVIEW"}:
-        raise ValueError(f"Invalid stage agent for stage_changes: {agent!r}")
-    code_changed_files = [p for p in changed_files if _is_code_change_path(p)]
-    payload = {
-        "schema_version": _STAGE_CHANGE_SCHEMA_VERSION,
-        "iteration": iteration,
-        "agent": agent,
-        "changed_files": changed_files,
-        "code_changed": bool(code_changed_files),
-        "code_changed_files": code_changed_files,
-    }
-    REPORT_STAGE_CHANGES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _atomic_write_text(
-        REPORT_STAGE_CHANGES_FILE,
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-    )
-
-
-def _validate_tdd_main_decision(
-    *,
-    next_agent: str,
-    must_test_after_dev: bool,
-    test_required_task_ids: list[str],
-    last_test_verdict: str | None,
-    min_coverage: int | None,
-    coverage_ok: bool,
-) -> list[str]:
-    warnings: list[str] = []
-    if must_test_after_dev and next_agent not in {"TEST", "USER"}:
-        warnings.append(
-            "TDD 提示：上一轮 DEV 有代码变更但未派发 TEST。若选择跳过测试，请在 reason 中说明。"
-        )
-    if test_required_task_ids and next_agent not in {"TEST", "USER"}:
-        shown = ", ".join(test_required_task_ids[:12])
-        more = " ..." if len(test_required_task_ids) > 12 else ""
-        if last_test_verdict == "PASS" and (min_coverage is None or coverage_ok):
-            coverage_hint = (
-                f"且覆盖率达标(min_coverage={min_coverage}%)" if min_coverage is not None else ""
-            )
-            warnings.append(
-                "TDD 提示：dev_plan 存在 test_required=true 的未完成任务，"
-                f"但最近 TEST 已 PASS {coverage_hint}，允许跳过测试；"
-                f"如需跳过，请在 reason 中说明。tasks=[{shown}{more}]"
-            )
-        else:
-            requirement = "TEST PASS"
-            if min_coverage is not None:
-                requirement = f"TEST PASS + 覆盖率达标(min_coverage={min_coverage}%)"
-            raise ValueError(
-                "违反 TDD 强制规则：dev_plan 存在 test_required=true 的未完成任务，"
-                f"当前未满足 {requirement}，本轮 MAIN 必须派发 TEST（或 USER 重大抉择）。"
-                f"tasks=[{shown}{more}]"
-            )
-    return warnings
 
 
 def _sleep_backoff(*, label: str, attempt: int) -> None:
@@ -581,6 +490,59 @@ def _resolve_report_path(next_agent: str) -> Path:
     return CONFIG.get_report_file(next_agent)
 
 
+def _build_subagent_history_context(*, target_agent: str) -> str:
+    if SUBAGENT_HISTORY_LOOKBACK <= 0:
+        return ""
+    agent_map = {
+        "DEV": ["TEST"],
+        "TEST": ["DEV"],
+        "REVIEW": ["TEST", "DEV"],
+    }
+    related_agents = agent_map.get(target_agent)
+    if not related_agents:
+        return ""
+    summaries: list[str] = []
+    for agent in related_agents:
+        reports = _find_recent_reports(agent=agent, lookback=SUBAGENT_HISTORY_LOOKBACK)
+        for report_path in reports:
+            summaries.append(
+                _inject_report_with_level(
+                    report_path=report_path,
+                    agent=agent,
+                    level=2,
+                    label_suffix=" - 最近相关摘要",
+                )
+            )
+    if not summaries:
+        return ""
+    return "\n\n".join(["## 历史上下文摘要", "以下是最近相关报告摘要，供参考。", *summaries])
+
+
+def _find_recent_reports(*, agent: str, lookback: int) -> list[Path]:
+    if lookback < 1:
+        return []
+    history = _load_iteration_summary_history(REPORT_ITERATION_SUMMARY_HISTORY_FILE)
+    found: list[Path] = []
+    for summary in reversed(history):
+        subagent = summary.get("subagent")
+        if not isinstance(subagent, dict):
+            raise RuntimeError("iteration summary missing subagent")
+        if subagent.get("agent") != agent:
+            continue
+        artifacts = summary.get("artifacts")
+        if not isinstance(artifacts, dict):
+            raise RuntimeError("iteration summary missing artifacts")
+        report_rel = artifacts.get("report_file")
+        if not isinstance(report_rel, str) or not report_rel.strip():
+            raise RuntimeError("iteration summary report_file invalid")
+        report_path = (PROJECT_ROOT / report_rel).resolve()
+        report_path.relative_to(PROJECT_ROOT)
+        _require_file(report_path)
+        found.append(report_path)
+        if len(found) >= lookback:
+            break
+    return list(reversed(found))
+
 def _run_subagent_stage(
     *,
     iteration: int,
@@ -589,21 +551,41 @@ def _run_subagent_stage(
     approval_policy: str,
     ui: UiRuntime | None,
     control: RunControl | None,
+    report_path_override: Path | None = None,
+    history_context: str | None = None,
+    extra_prompt_parts: list[str] | None = None,
 ) -> tuple[str, Path, Path]:
     if ui is not None:  # 关键分支：UI 更新子代理运行态
         ui.state.update(phase=f"running_{next_agent.lower()}", current_agent=next_agent)
+
+    # 加载子代理的历史会话 ID（用于 resume）
+    resume_session_id = _load_subagent_session_id(next_agent)
+    is_resume = resume_session_id is not None
+
     injected_global_context = _inject_file(GLOBAL_CONTEXT_FILE)  # 关键变量：注入全局上下文
-    injected_verification_policy = _inject_file(VERIFICATION_POLICY_FILE)  # 关键变量：注入验证策略（覆盖率门禁/报告规则）
+    injected_verification_policy = _inject_file(VERIFICATION_POLICY_FILE)  # 关键变量：注入验证策略（报告规则/场景约束）
     injected_dev_plan = _inject_file(DEV_PLAN_FILE)  # 关键变量：注入 dev_plan（TEST/DEV/REVIEW 需要）
     task_file = _task_file_for_agent(next_agent)  # 关键变量：当前子代理工单
     injected_task = _inject_file(task_file)  # 关键变量：注入工单内容
-    report_path = _resolve_report_path(next_agent)  # 关键变量：报告路径
+    report_path = report_path_override or _resolve_report_path(next_agent)  # 关键变量：报告路径
+    if history_context is None:
+        history_context = _build_subagent_history_context(target_agent=next_agent)
 
     # 构建子代理提示词（按需注入上下文）
-    prompt_parts = [
+    prompt_parts = []
+
+    # 如果是 resume 模式，先发送 /compact 命令压缩上下文
+    if is_resume:
+        prompt_parts.append(
+            "/compact\n\n"
+            "上下文已压缩。现在开始执行新的任务。\n"
+            "---"
+        )
+
+    prompt_parts.extend([
         _load_system_prompt(next_agent.lower()),
         injected_global_context,
-    ]
+    ])
 
     # TEST: 注入 verification_policy + dev_plan（理解任务背景）
     if next_agent == "TEST":
@@ -618,6 +600,12 @@ def _run_subagent_stage(
     elif next_agent == "REVIEW":
         prompt_parts.append(injected_verification_policy)
         prompt_parts.append(injected_dev_plan)
+
+    if history_context:
+        prompt_parts.append(history_context)
+
+    if extra_prompt_parts:
+        prompt_parts.extend(extra_prompt_parts)
 
     prompt_parts.extend([
         injected_task,
@@ -640,6 +628,7 @@ def _run_subagent_stage(
                 approval_policy=approval_policy,
                 label=next_agent,
                 control=control,
+                resume_session_id=resume_session_id,  # 关键变量：子代理 resume 会话
             )
             _assert_files_unchanged(sub_guard_before, label=next_agent)  # 关键分支：防止子代理越权写入
             try:
@@ -650,6 +639,8 @@ def _run_subagent_stage(
             sub_session_id = sub_run["session_id"]  # 关键变量：子代理会话 id
             if sub_session_id is None:  # 关键分支：必须拿到会话 id
                 raise TemporaryError(f"Failed to capture {next_agent} session id from codex output")
+            # 保存子代理会话 ID（用于后续 resume）
+            _save_subagent_session_id(next_agent, sub_session_id)
             _backup_subagent_artifacts(
                 agent=next_agent,
                 session_id=sub_session_id,
@@ -665,45 +656,6 @@ def _run_subagent_stage(
             )
             _sleep_backoff(label=next_agent, attempt=attempt)
             attempt += 1
-
-
-def _run_subagent_stage_tracked(
-    *,
-    iteration: int,
-    next_agent: str,
-    sandbox_mode: str,
-    approval_policy: str,
-    ui: UiRuntime | None,
-    control: RunControl | None,
-) -> tuple[str, Path, Path]:
-    """
-    `_run_subagent_stage` + 记录 repo 变更摘要（用于强制 TDD：DEV 变更后必须 TEST）。
-    """
-    repo_dirty_before = capture_dirty_file_digests(
-        project_root=PROJECT_ROOT,
-        exclude_prefixes=_STAGE_CHANGE_EXCLUDE_PREFIXES,
-    )
-    sub_session_id, task_file, report_path = _run_subagent_stage(
-        iteration=iteration,
-        next_agent=next_agent,
-        sandbox_mode=sandbox_mode,
-        approval_policy=approval_policy,
-        ui=ui,
-        control=control,
-    )
-    repo_dirty_after = capture_dirty_file_digests(
-        project_root=PROJECT_ROOT,
-        exclude_prefixes=_STAGE_CHANGE_EXCLUDE_PREFIXES,
-    )
-    changed_files = diff_dirty_file_digests(repo_dirty_before, repo_dirty_after)
-    _write_stage_changes(iteration=iteration, agent=next_agent, changed_files=changed_files)
-    code_changed_files = [p for p in changed_files if _is_code_change_path(p)]
-    _append_log_line(
-        "orchestrator: stage_changes "
-        f"iter={iteration} agent={next_agent} "
-        f"changed_files={len(changed_files)} code_changed_files={len(code_changed_files)}\n"
-    )
-    return sub_session_id, task_file, report_path
 
 
 
@@ -873,6 +825,7 @@ def _run_summary_stage(
         [
             _load_system_prompt("summary"),
             _inject_file(REPORT_MAIN_DECISION_FILE),
+            _inject_file(DEV_PLAN_FILE),
             _inject_file(task_file),
             _inject_file(report_path),
             f"[iteration]: {iteration}",
@@ -985,7 +938,7 @@ def _resume_pending_iteration(
 
     if phase == "after_main":  # 关键分支：补跑子代理与摘要
         _append_log_line(f"orchestrator: 续跑子代理 iter={iteration} agent={next_agent}\n")
-        sub_session_id, task_file, report_path = _run_subagent_stage_tracked(
+        sub_session_id, task_file, report_path = _run_subagent_stage(
             iteration=iteration,
             next_agent=next_agent,
             sandbox_mode=sandbox_mode,
@@ -1102,86 +1055,90 @@ def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, st
     return history_entry, task_content, dev_plan_next
 
 
-def _extract_report_iteration(report_path: Path) -> int | None:
-    """
-    从报告文件中提取 iteration 号。
-    返回 None 如果无法解析或文件为空。
-    """
-    if not report_path.exists():
-        return None
-    try:
-        content = _read_text(report_path)
-        for line in content.splitlines()[:10]:  # 只检查前10行
-            line = line.strip()
-            if line.startswith("iteration:"):
-                iter_str = line.split(":", 1)[1].strip()
-                return int(iter_str)
-    except (ValueError, IndexError):
-        pass
-    return None
+def _count_dev_plan_status_changes(*, before: str, after: str) -> int:
+    before_map = dict(parse_overall_task_statuses(before))
+    after_map = dict(parse_overall_task_statuses(after))
+    all_task_ids = set(before_map) | set(after_map)
+    return sum(1 for task_id in all_task_ids if before_map.get(task_id) != after_map.get(task_id))
 
 
-def _inject_file_with_iteration(path: Path, label_suffix: str = "") -> str:
-    """
-    注入文件内容，并在标签中标注 iteration 号（如果可解析）。
-    """
-    _require_file(path)
-    content = _read_text(path).rstrip()
+def _history_has_milestone_tag(tag: str) -> bool:
+    _require_file(PROJECT_HISTORY_FILE)
+    return tag in _read_text(PROJECT_HISTORY_FILE)
 
-    # 尝试提取 iteration
-    iteration = _extract_report_iteration(path)
 
-    display = _rel_path(path)
-    if iteration is not None:
-        label = f"{display} (iteration {iteration}){label_suffix}"
-    elif label_suffix:
-        label = f"{display}{label_suffix}"
-    else:
-        label = display
-
-    header = f"============= Injected File: {label} ============="
-    footer = f"============= End Injected File: {label} ============="
-    return "\n".join([header, content, footer])
+def _mark_history_entry_milestone(*, iteration: int, entry: str, labels: list[str]) -> str:
+    if not labels:
+        return entry
+    lines = entry.splitlines()
+    header_prefix = f"## Iteration {iteration}:"
+    for idx, line in enumerate(lines):
+        if line.strip().startswith(header_prefix):
+            if "[MILESTONE]" in line:
+                return entry
+            suffix = " / ".join(labels)
+            lines[idx] = f"{line} [MILESTONE] {suffix}".rstrip()
+            return "\n".join(lines)
+    raise RuntimeError("history entry missing iteration header for milestone tagging")
 
 
 def _build_main_prompt(
     *,
     iteration: int,
     user_task: str,
-    history_window_iterations: int,
-    history_window_max_tokens: int | None,
     extra_instructions: list[str] | None = None,
+    last_user_decision_iteration: int | None = None,
 ) -> str:
-    injected_global_context = _inject_file(GLOBAL_CONTEXT_FILE)  # 关键变量：注入全局上下文
-    injected_project_history = _inject_project_history_recent(
-        last_iterations=history_window_iterations,
-        max_tokens=history_window_max_tokens,
-    )  # 关键变量：注入历史窗口
-    injected_dev_plan = _inject_file(DEV_PLAN_FILE)  # 关键变量：注入 dev_plan
+    """
+    构建 MAIN 代理提示词。
 
-    # 注入报告时标注 iteration，帮助 MAIN 理解报告时效性
-    injected_report_test = _inject_file_with_iteration(REPORT_TEST_FILE, " - 最近一次测试结果")
-    injected_report_dev = _inject_file_with_iteration(REPORT_DEV_FILE, " - 最近一次开发变更")
-    injected_stage_changes = _inject_file(REPORT_STAGE_CHANGES_FILE)  # 关键变量：注入阶段变更摘要
-    injected_report_review = _inject_file_with_iteration(REPORT_REVIEW_FILE, " - 最近一次审阅结果")
-    injected_report_finish_review = _inject_file_with_iteration(REPORT_FINISH_REVIEW_FILE, " - 最终审阅结果")
+    设计原则：
+    - MAIN 代理使用 resume 模式，拥有完整对话历史
+    - 仅注入：系统提示词 + 当前迭代号 + 用户任务 + 历史用户决策
+    - 注入所有最近的用户决策，避免重复询问已解决的问题
+    """
+    effective_task = user_task.strip() if user_task else ""
+    if not effective_task:
+        effective_task = _extract_latest_task_goal()
+    if not effective_task:
+        effective_task = "(未找到任务目标，请检查 project_history.md)"
 
     parts = [
         _load_system_prompt("main"),
-        injected_global_context,
-        injected_project_history,
-        injected_dev_plan,
-        injected_report_test,
-        injected_report_dev,
-        injected_stage_changes,
-        injected_report_review,
-        injected_report_finish_review,
         f"[iteration]: {iteration}",
-        f"[user_task]: {user_task}" if user_task else "[user_task]: (use orchestrator/memory/global_context.md)",
+        f"[user_task]: {effective_task}",
     ]
+
+    # 注入所有最近的用户决策（防止重复询问）
+    recent_decisions = _extract_recent_user_decisions(lookback=5)
+    if recent_decisions:
+        decisions_lines = []
+        for d in recent_decisions:
+            line = f"- Iteration {d['iteration']}: {d['decision_title']} → 用户选择 {d['user_choice']}"
+            if d.get('user_comment'):
+                line += f"，说明：{d['user_comment']}"
+            decisions_lines.append(line)
+        decisions_text = "\n".join(decisions_lines)
+        parts.append(f"[历史用户决策（防重复询问）]:\n{decisions_text}")
+
+    # 若上一轮是用户决策，额外强调
+    if last_user_decision_iteration is not None:
+        user_decision = _extract_latest_user_decision(iteration=last_user_decision_iteration)
+        if user_decision:
+            parts.append(f"[上一轮用户决策结果]:\n{user_decision}")
+            parts.append(
+                "重要：用户已在上一轮做出决策，请根据用户的选择（user_choice）和补充说明（user_comment）继续推进任务。"
+                "不要再次询问相同的问题。"
+            )
+
     if extra_instructions:
         parts.extend(extra_instructions)
-    parts.append('请严格按提示词中的"必须执行的动作（强制顺序）"完成：生成 history_append/task/dev_plan_next，并最后输出 JSON。')
+    parts.append(
+        '[强制输出要求]\n'
+        '你的最终输出必须且只能是 1 行纯 JSON（无 Markdown 代码块、无额外文本）。\n'
+        '格式：{"next_agent":"TEST|DEV|REVIEW|USER|FINISH","reason":"...","history_append":"...","task":"...","dev_plan_next":null}\n'
+        '禁止无限探索文件而不输出 JSON。立即完成分析并输出决策。'
+    )
     return "\n\n".join(parts)
 
 
@@ -1193,9 +1150,15 @@ def _build_finish_check_prompt(
     check_msg: str,
 ) -> str:
     """
-    构建简化的 FINISH_CHECK 提示词，仅包含决策所需的最小上下文。
-    相比完整的 _build_main_prompt，省略了 TEST/DEV/REVIEW 报告和完整的 project_history。
+    构建 FINISH_CHECK 提示词，默认注入完整报告并支持超限降级。
     """
+    # 确保 user_task 始终有值：优先使用参数，否则从 project_history.md 提取
+    effective_task = user_task.strip() if user_task else ""
+    if not effective_task:  # 关键分支：参数为空时从历史提取
+        effective_task = _extract_latest_task_goal()
+    if not effective_task:  # 关键分支：仍为空则使用占位提示
+        effective_task = "(未找到任务目标，请检查 project_history.md)"
+
     # 读取 acceptance_scope 摘要（而非完整内容）
     scope = json.loads(_read_text(ACCEPTANCE_SCOPE_FILE))
     if not isinstance(scope, dict):
@@ -1213,47 +1176,6 @@ def _build_finish_check_prompt(
     )
     dev_plan_summary = f"任务状态计数: {status_counts}"
 
-    # 读取并摘要 FINISH_REVIEW 结论
-    finish_review_text = _read_text(REPORT_FINISH_REVIEW_FILE)
-    finish_review_verdict = _extract_finish_review_verdict(finish_review_text)
-
-    # 上一轮子代理阶段变更摘要（用于 TDD 提示）
-    stage_changes = _load_stage_changes()
-    stage_agent = stage_changes.get("agent")
-    stage_iter = stage_changes.get("iteration")
-    stage_code_changed = stage_changes.get("code_changed")
-    stage_code_files = stage_changes.get("code_changed_files")
-    if stage_agent is not None and not isinstance(stage_agent, str):
-        raise RuntimeError(f"stage_changes.agent invalid: {stage_agent!r}")
-    if not isinstance(stage_iter, int):
-        raise RuntimeError(f"stage_changes.iteration invalid: {stage_iter!r}")
-    if not isinstance(stage_code_changed, bool):
-        raise RuntimeError(f"stage_changes.code_changed invalid: {stage_code_changed!r}")
-    if not isinstance(stage_code_files, list) or not all(isinstance(p, str) for p in stage_code_files):
-        raise RuntimeError(f"stage_changes.code_changed_files invalid: {stage_code_files!r}")
-    stage_files_shown = ", ".join(stage_code_files[:12])
-    stage_files_more = " ..." if len(stage_code_files) > 12 else ""
-    stage_summary = (
-        f"last_subagent: {stage_agent or 'none'} (iter {stage_iter}); "
-        f"code_changed={stage_code_changed}; "
-        f"code_changed_files=[{stage_files_shown}{stage_files_more}]"
-    )
-
-    # 覆盖率门禁摘要（若启用）
-    test_requirements = _parse_test_requirements()
-    coverage_summary = "coverage_policy: disabled"
-    if test_requirements is not None:
-        min_coverage, _must_pass_before_review = test_requirements
-        test_report_text = _read_text(REPORT_TEST_FILE)
-        last_test_verdict = _extract_report_verdict(report_text=test_report_text) or "missing"
-        last_test_coverage = _extract_report_coverage_percent(report_text=test_report_text)
-        coverage_ok = last_test_coverage is not None and last_test_coverage >= min_coverage
-        cov_str = f"{last_test_coverage:.1f}%" if last_test_coverage is not None else "missing"
-        coverage_summary = (
-            f"coverage_policy: min_coverage={min_coverage}% "
-            f"last_test_verdict={last_test_verdict} last_test_coverage={cov_str} coverage_ok={coverage_ok}"
-        )
-
     # 构建精简的系统提示（仅保留 FINISH_CHECK 相关规则）
     finish_check_system_prompt = """你是 MAIN 代理，正在执行 FINISH_CHECK 复核。
 
@@ -1261,8 +1183,6 @@ def _build_finish_check_prompt(
 根据 FINISH_REVIEW 的结论，决定是否最终完成任务。
 
 ## 决策规则
-0. 若上一轮子代理为 DEV 且发生代码变更：建议先派发 TEST 验证；如仍选择 FINISH，需在 reason 中说明。
-0. 若启用覆盖率门禁且覆盖率不达标：禁止 FINISH，必须派发 TEST（补齐/增强测试并运行覆盖率，直到达标）。
 1. 若 FINISH_REVIEW 结论为 PASS 且满足 readiness（所有非 TODO 任务均 VERIFIED）：输出 `FINISH`
 2. 若 FINISH_REVIEW 结论为 FAIL/BLOCKED：
    - 采纳：根据问题类型选择 DEV/TEST/REVIEW 并生成工单
@@ -1281,7 +1201,7 @@ def _build_finish_check_prompt(
     # 构建上下文部分
     context_parts = [
         f"[iteration]: {iteration}",
-        f"[user_task]: {user_task}" if user_task else "[user_task]: (use orchestrator/memory/global_context.md)",
+        f"[user_task]: {effective_task}",
         "",
         "## 验收范围摘要",
         scope_summary,
@@ -1289,14 +1209,6 @@ def _build_finish_check_prompt(
         "## Dev Plan 任务状态摘要",
         dev_plan_summary,
         "",
-        "## FINISH_REVIEW 结论摘要",
-        finish_review_verdict,
-        "",
-        "## 覆盖率门禁摘要",
-        coverage_summary,
-        "",
-        "## 上一轮子代理阶段变更摘要",
-        stage_summary,
     ]
 
     # 添加警告信息
@@ -1304,13 +1216,71 @@ def _build_finish_check_prompt(
         context_parts.append("")
         context_parts.append(f"⚠️ 警告：{check_msg}")
 
-    # 组装最终提示词
-    parts = [
-        finish_check_system_prompt,
-        "\n".join(context_parts),
-        "请根据以上信息输出 JSON 决策。",
-    ]
-    return "\n\n".join(parts)
+    def build_prompt(*, review_level: int, dev_level: int) -> str:
+        injected_test = _inject_report_with_level(
+            report_path=REPORT_TEST_FILE,
+            agent="TEST",
+            level=3,
+            label_suffix=" - FINISH_CHECK",
+        )
+        injected_dev = _inject_report_with_level(
+            report_path=REPORT_DEV_FILE,
+            agent="DEV",
+            level=dev_level,
+            label_suffix=" - FINISH_CHECK",
+        )
+        injected_review = _inject_report_with_level(
+            report_path=REPORT_REVIEW_FILE,
+            agent="REVIEW",
+            level=review_level,
+            label_suffix=" - FINISH_CHECK",
+        )
+        injected_finish_review = _inject_report_with_level(
+            report_path=REPORT_FINISH_REVIEW_FILE,
+            agent="FINISH_REVIEW",
+            level=3,
+            label_suffix=" - FINISH_CHECK",
+        )
+        return "\n\n".join(
+            [
+                finish_check_system_prompt,
+                injected_test,
+                injected_dev,
+                injected_review,
+                injected_finish_review,
+                "\n".join(context_parts),
+                "请根据以上信息输出 JSON 决策。",
+            ]
+        )
+
+    review_level = 3
+    dev_level = 3
+    prompt = build_prompt(review_level=review_level, dev_level=dev_level)
+
+    if len(prompt) > MAX_PROMPT_SIZE:
+        review_level = 1
+        _append_log_line(
+            "orchestrator: finish_check_prompt downgrade review to summary due to size\n"
+        )
+        prompt = build_prompt(review_level=review_level, dev_level=dev_level)
+
+    if len(prompt) > MAX_PROMPT_SIZE:
+        dev_level = 1
+        _append_log_line(
+            "orchestrator: finish_check_prompt downgrade dev to summary due to size\n"
+        )
+        prompt = build_prompt(review_level=review_level, dev_level=dev_level)
+
+    if len(prompt) > MAX_PROMPT_SIZE:
+        raise RuntimeError(
+            f"FINISH_CHECK prompt too large len={len(prompt)} > {MAX_PROMPT_SIZE}"
+        )
+
+    _append_log_line(
+        "orchestrator: finish_check_prompt_size "
+        f"len={len(prompt)} review_level={review_level} dev_level={dev_level}\n"
+    )
+    return prompt
 
 
 def _generate_legacy_issues_report(
@@ -1382,43 +1352,6 @@ def _generate_legacy_issues_report(
     print(f"遗留问题报告已生成: {_rel_path(LEGACY_ISSUES_REPORT_FILE)}")
 
 
-def _calculate_adaptive_history_window(
-    *,
-    iteration: int,
-    dev_plan_size: int,
-    base_window: int,
-    min_window: int,
-    max_window: int,
-) -> int:
-    """
-    根据当前状态动态调整 history_window，避免上下文累积导致 MAIN prompt 过载。
-    """
-    if base_window < 1:
-        raise ValueError("base_window must be >= 1")
-    if min_window < 1:
-        raise ValueError("min_window must be >= 1")
-    if max_window < min_window:
-        raise ValueError("max_window must be >= min_window")
-
-    # 规则 1: dev_plan 越大，窗口越小
-    if dev_plan_size > 300:
-        window = min_window
-    elif dev_plan_size > 200:
-        window = base_window - 3
-    elif dev_plan_size > 150:
-        window = base_window - 2
-    else:
-        window = base_window
-
-    # 规则 2: 迭代越多，窗口越小（防止累积）
-    if iteration > 20:
-        window = min(window, min_window + 2)
-    elif iteration > 15:
-        window = min(window, min_window + 4)
-
-    return max(min_window, min(window, max_window))
-
-
 def _preflight() -> None:
     CODEX_STATE_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：Codex 状态目录
     legacy_roots = [PROJECT_ROOT / "memory", PROJECT_ROOT / "workspace", PROJECT_ROOT / "reports"]  # 关键变量：旧黑板路径
@@ -1445,7 +1378,6 @@ def _preflight() -> None:
     _require_file(REPORT_DEV_FILE)  # 关键变量：DEV 报告必须存在
     _require_file(REPORT_REVIEW_FILE)  # 关键变量：REVIEW 报告必须存在
     _require_file(REPORT_FINISH_REVIEW_FILE)  # 关键变量：FINISH_REVIEW 报告必须存在
-    _require_file(REPORT_STAGE_CHANGES_FILE)  # 关键变量：阶段变更摘要必须存在
 
     for agent in ("main", "test", "dev", "review", "summary", "finish_review"):  # 关键分支：逐个检查提示词
         _require_file(PROMPTS_DIR / f"subagent_prompt_{agent}.md")  # 关键变量：提示词必须存在
@@ -1499,6 +1431,8 @@ def workflow_loop(
     )
     if new_task:  # 关键分支：新任务需要清理旧状态
         _clear_saved_main_state()  # 关键变量：清空 MAIN 会话与迭代
+        _clear_all_subagent_sessions()  # 关键变量：清空所有子代理会话
+        _clear_dev_plan_stage_file()  # 关键变量：清理 dev_plan 草案
         _reset_workspace_task_files(iteration=0)  # 关键变量：重置工单
         _reset_report_files()  # 关键变量：重置报告
 
@@ -1528,6 +1462,12 @@ def workflow_loop(
 
     finish_attempts = 0  # 关键变量：FINISH 尝试计数（用于强制收敛）
     max_finish_attempts = MAX_FINISH_ATTEMPTS  # 关键变量：最大 FINISH 尝试次数
+    # 关键变量：上一轮用户决策的迭代号
+    # 若 workflow 重启且上一轮是用户决策，需要恢复该状态以便注入用户选择
+    last_user_decision_iteration: int | None = None
+    if last_iteration > 0 and _history_has_user_decision(iteration=last_iteration):
+        last_user_decision_iteration = last_iteration
+        print(f"Restored user decision from iteration {last_iteration}")
     for iteration in range(start_iteration, end_iteration + 1):  # 关键分支：迭代循环
         if control is not None and control.cancel_event.is_set():  # 关键分支：用户中断优先
             raise UserInterrupted("User interrupted before starting iteration")
@@ -1535,6 +1475,7 @@ def workflow_loop(
         print(banner, end="")
         _append_log_line(banner)
         log_event("iteration_start", trace_id=trace_id, iteration=iteration)
+        finish_attempted = False  # 关键变量：本轮是否触发 FINISH 尝试
         if ui is not None:  # 关键分支：UI 同步 MAIN 运行态
             ui.state.update(phase="running_main", iteration=iteration, current_agent="MAIN")
 
@@ -1559,191 +1500,34 @@ def workflow_loop(
                     dev_plan_size=dev_plan_size,
                 )
 
-        # Phase 3: 动态调整 history_window
-        adaptive_window = _calculate_adaptive_history_window(
-            iteration=iteration,
-            dev_plan_size=dev_plan_size,
-            base_window=history_window_iterations,
-            min_window=MIN_HISTORY_WINDOW,
-            max_window=MAX_HISTORY_WINDOW,
-        )
-        log_event(
-            "adaptive_history_window",
-            trace_id=trace_id,
-            iteration=iteration,
-            dev_plan_size=dev_plan_size,
-            history_window_iterations=adaptive_window,
-        )
-
         # 1) MAIN：输出包含 history/task/dev_plan_next 的调度 JSON
         _clear_dev_plan_stage_file()  # 关键变量：清理上轮 dev_plan 草案
         dev_plan_text = _read_text(DEV_PLAN_FILE)
         dev_plan_before_hash = _sha256_text(dev_plan_text)  # 关键变量：dev_plan 运行前哈希
-        stage_changes = _load_stage_changes()  # 关键变量：上一轮子代理阶段变更摘要（用于 TDD 提示）
         extra_instructions: list[str] = []
-        must_test_after_dev = False
-        test_required_task_ids = find_open_test_required_task_ids(
-            dev_plan_text,
-            statuses={"TODO", "DOING", "BLOCKED"},
-        )
-        test_requirements = _parse_test_requirements()
-        min_coverage: int | None = None
-        must_pass_before_review = False
-        last_test_verdict: str | None = None
-        last_test_coverage: float | None = None
-        coverage_ok = True
-        coverage_gate_triggered = False
-        must_test_before_review = False
-
-        if test_requirements is not None or test_required_task_ids:
-            test_report_text = _read_text(REPORT_TEST_FILE)
-            last_test_verdict = _extract_report_verdict(report_text=test_report_text)
-            last_test_coverage = _extract_report_coverage_percent(report_text=test_report_text)
-
-        if test_requirements is not None:
-            min_coverage, must_pass_before_review = test_requirements
-            coverage_ok = last_test_coverage is not None and last_test_coverage >= min_coverage
-
-            # NOTE: only enforce "coverage >= threshold" after tests are green; failing tests are handled by normal rules.
-            coverage_gate_triggered = last_test_verdict == "PASS" and not coverage_ok
-
-            status_counts = count_overall_task_statuses(
-                dev_plan_text,
-                known_statuses={"VERIFIED", "DONE", "DOING", "BLOCKED", "TODO"},
-            )
-            has_done_tasks = status_counts.get("DONE", 0) > 0
-            must_test_before_review = must_pass_before_review and has_done_tasks and last_test_verdict != "PASS"
-
-            extra_instructions.append(
-                f"[coverage_policy]: min_coverage={min_coverage}; must_pass_before_review={must_pass_before_review}"
-            )
-            extra_instructions.append(
-                f"[last_test_verdict]: {last_test_verdict or 'missing'}"
-            )
-            if last_test_coverage is None:
-                extra_instructions.append(
-                    "[last_test_coverage]: missing (expected line: `coverage: <N>%` in report_test.md)"
-                )
-            else:
-                extra_instructions.append(f"[last_test_coverage]: {last_test_coverage:.1f}%")
-        stage_agent = stage_changes.get("agent")
-        code_changed = stage_changes.get("code_changed")
-        code_changed_files = stage_changes.get("code_changed_files")
-        if stage_agent is not None and not isinstance(stage_agent, str):
-            raise RuntimeError(f"stage_changes.agent invalid: {stage_agent!r}")
-        if not isinstance(code_changed, bool):
-            raise RuntimeError(f"stage_changes.code_changed invalid: {code_changed!r}")
-        if not isinstance(code_changed_files, list) or not all(isinstance(p, str) for p in code_changed_files):
-            raise RuntimeError(f"stage_changes.code_changed_files invalid: {code_changed_files!r}")
-
-        if stage_agent == "DEV" and code_changed:
-            must_test_after_dev = True
-            shown = ", ".join(code_changed_files[:12])
-            more = " ..." if len(code_changed_files) > 12 else ""
-            extra_instructions.append(
-                "【TDD 建议】检测到上一轮 DEV 产生代码变更，建议本轮优先派发 TEST 进行验证。"
-                "如需跳过测试，请在 reason 中说明。"
-            )
-            if shown:
-                extra_instructions.append(f"[DEV code_changed_files]: {shown}{more}")
-        if test_required_task_ids:
-            shown = ", ".join(test_required_task_ids[:12])
-            more = " ..." if len(test_required_task_ids) > 12 else ""
-            if last_test_verdict == "PASS" and (min_coverage is None or coverage_ok):
-                coverage_hint = (
-                    f"且覆盖率达标(min_coverage={min_coverage}%)" if min_coverage is not None else ""
-                )
-                extra_instructions.append(
-                    "【TDD 提示】检测到 dev_plan 存在 test_required=true 的未完成任务，"
-                    f"但最近 TEST 已 PASS {coverage_hint}，允许跳过测试；如需跳过，请在 reason 中说明。"
-                )
-            else:
-                requirement = "TEST PASS"
-                if min_coverage is not None:
-                    requirement = f"TEST PASS + 覆盖率达标(min_coverage={min_coverage}%)"
-                extra_instructions.append(
-                    "【TDD 强制规则】检测到 dev_plan 存在 test_required=true 的未完成任务，"
-                    f"当前未满足 {requirement}，因此本轮必须先派发 TEST（除非你触发 USER 重大抉择）。"
-                    "你必须输出 next_agent=TEST，并给出可执行的 TEST 工单：先写/补齐测试用例（预期失败），"
-                    "再推动后续 DEV 实现让测试通过（红-绿-重构）。"
-                )
-            extra_instructions.append(f"[test_required_tasks]: {shown}{more}")
-        if must_test_before_review:
-            extra_instructions.append(
-                "【覆盖率/测试建议】配置要求 must_pass_before_review=true 且 dev_plan 存在 DONE 任务，"
-                "但当前 report_test.md 未给出 PASS 结论。建议先派发 TEST 再进入 REVIEW；"
-                "如需直接 REVIEW，请在 reason 中说明。"
-            )
-        if coverage_gate_triggered:
-            extra_instructions.append(
-                f"【覆盖率提示】当前测试为 PASS 但覆盖率不达标（min_coverage={min_coverage}%）。"
-                "建议优先派发 TEST：补齐/增强测试并以覆盖率方式运行测试，确保覆盖率达标；"
-                "并在 report_test.md 中单独输出一行 `coverage: <N>%`（用于门禁判定）。"
-                "如需先 REVIEW/DEV，请在 reason 中说明。"
-            )
         main_prompt = _build_main_prompt(
             iteration=iteration,
             user_task=user_task,
-            history_window_iterations=adaptive_window,
-            history_window_max_tokens=history_window_max_tokens,
             extra_instructions=extra_instructions,
+            last_user_decision_iteration=last_user_decision_iteration,
         )
+        # 重置用户决策迭代号（仅在紧接用户决策后的第一轮注入）
+        last_user_decision_iteration = None
         prompt_len = len(main_prompt)
+        # 精简版 prompt 不再需要动态缩减逻辑，但保留超限检查
         if prompt_len > MAX_PROMPT_SIZE:
-            _append_log_line(
-                f"orchestrator: WARNING - MAIN prompt too large len={prompt_len} > {MAX_PROMPT_SIZE}\n"
+            raise RuntimeError(
+                f"MAIN prompt too large len={prompt_len} > {MAX_PROMPT_SIZE}. "
+                "This should not happen with simplified prompt."
             )
-            # 再次尝试用最小窗口缩减历史注入（仍过大则直接失败，避免空输出崩溃）
-            if adaptive_window != MIN_HISTORY_WINDOW:
-                adaptive_window = MIN_HISTORY_WINDOW
-                main_prompt = _build_main_prompt(
-                    iteration=iteration,
-                    user_task=user_task,
-                    history_window_iterations=adaptive_window,
-                    history_window_max_tokens=history_window_max_tokens,
-                    extra_instructions=extra_instructions,
-                )
-                prompt_len = len(main_prompt)
-            if prompt_len > MAX_PROMPT_SIZE:
-                raise RuntimeError(
-                    f"MAIN prompt too large len={prompt_len} > {MAX_PROMPT_SIZE}. "
-                    "Please archive dev_plan and/or reduce injected history."
-                )
         log_event(
             "main_prompt_size",
             trace_id=trace_id,
             iteration=iteration,
             prompt_len=prompt_len,
-            history_window_iterations=adaptive_window,
         )
         main_guard_paths = [path for path in _guarded_blackboard_paths() if path != REPORT_MAIN_DECISION_FILE]  # 关键变量：MAIN 可写排除清单
         main_started = time.monotonic()
-
-        def post_validate_main(output: MainOutput) -> None:
-            decision = output["decision"]
-            next_agent = decision["next_agent"]
-            warnings = _validate_tdd_main_decision(
-                next_agent=next_agent,
-                must_test_after_dev=must_test_after_dev,
-                test_required_task_ids=test_required_task_ids,
-                last_test_verdict=last_test_verdict,
-                min_coverage=min_coverage,
-                coverage_ok=coverage_ok,
-            )
-            if warnings:
-                log_event(
-                    "tdd_warning",
-                    trace_id=trace_id,
-                    iteration=iteration,
-                    next_agent=next_agent,
-                    warnings=warnings,
-                )
-                for warning in warnings:
-                    _append_log_line(f"orchestrator: WARNING - {warning}\n")
-            if test_requirements is not None and next_agent == "FINISH" and not coverage_ok:
-                raise ValueError(
-                    f"违反覆盖率门禁：FINISH 前覆盖率必须达标（min_coverage={min_coverage}%）。"
-                )
 
         main_output, captured_session_id = _run_main_decision_stage(
             prompt=main_prompt,
@@ -1753,7 +1537,7 @@ def workflow_loop(
             approval_policy=approval_policy,
             control=control,
             resume_session_id=main_session_id,
-            post_validate=post_validate_main,
+            post_validate=None,
         )
         if main_session_id is None:  # 关键分支：首次运行需要保存会话 id
             session_id = captured_session_id  # 关键变量：首次会话 id
@@ -1781,6 +1565,7 @@ def workflow_loop(
 
         if decision["next_agent"] == "FINISH":  # 关键分支：触发最终审阅
             finish_attempts += 1
+            finish_attempted = True
             _append_log_line(
                 f"orchestrator: FINISH attempt {finish_attempts}/{max_finish_attempts}\n"
             )
@@ -1855,7 +1640,7 @@ def workflow_loop(
                 approval_policy=approval_policy,
                 control=control,
                 resume_session_id=main_session_id,
-                post_validate=post_validate_main,
+                post_validate=None,
             )
             log_event(
                 "stage_complete",
@@ -1872,6 +1657,33 @@ def workflow_loop(
             decision = main_output["decision"]  # 关键变量：最终决策字段
 
         history_entry, task_content, dev_plan_next = _prepare_main_output(iteration=iteration, output=main_output)  # 关键变量：结构化输出
+        milestone_labels: list[str] = []
+        if decision["next_agent"] == "USER":
+            milestone_labels.append("用户决策")
+        if finish_attempted:
+            milestone_labels.append(f"FINISH 尝试 #{finish_attempts}")
+        if dev_plan_next is not None:
+            changed = _count_dev_plan_status_changes(before=dev_plan_text, after=dev_plan_next)
+            if changed > 5:
+                milestone_labels.append(f"dev_plan 重大更新({changed})")
+        # 提取 TEST 报告的 verdict 用于里程碑标记
+        last_test_verdict: str | None = None
+        if REPORT_TEST_FILE.exists():
+            try:
+                test_report_text = _read_text(REPORT_TEST_FILE)
+                last_test_verdict = extract_report_verdict(
+                    report_text=test_report_text,
+                    report_rules=parse_report_rules(),
+                )
+            except Exception:
+                pass  # 提取失败时忽略，不影响主流程
+        if last_test_verdict == "PASS" and not _history_has_milestone_tag("首次测试通过"):
+            milestone_labels.append("首次测试通过")
+        history_entry = _mark_history_entry_milestone(
+            iteration=iteration,
+            entry=history_entry,
+            labels=milestone_labels,
+        )
         if dev_plan_next is not None:  # 关键分支：有计划草案才落盘
             DEV_PLAN_STAGED_FILE.parent.mkdir(parents=True, exist_ok=True)
             _atomic_write_text(
@@ -1925,11 +1737,12 @@ def workflow_loop(
         if decision["next_agent"] == "USER":  # 关键分支：等待用户抉择
             _prompt_user_for_decision(iteration=iteration, decision=decision, ui=ui)
             _clear_resume_state()
+            last_user_decision_iteration = iteration  # 关键变量：记录用户决策迭代号，供下一轮注入
             continue
 
         # 2) 子代理：只读工单并输出报告（报告由 --output-last-message 落盘）
         sub_started = time.monotonic()
-        sub_session_id, task_file, report_path = _run_subagent_stage_tracked(
+        sub_session_id, task_file, report_path = _run_subagent_stage(
             iteration=iteration,
             next_agent=decision["next_agent"],
             sandbox_mode=sandbox_mode,
@@ -1944,6 +1757,7 @@ def workflow_loop(
             stage=decision["next_agent"],
             duration_ms=int((time.monotonic() - sub_started) * 1000),
         )
+
         _write_resume_state(
             iteration=iteration,
             phase="after_subagent",

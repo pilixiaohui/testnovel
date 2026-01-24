@@ -5,11 +5,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from ..codex_runner import _clear_saved_main_state
 from ..config import ORCHESTRATOR_LOG_FILE, PROJECT_ROOT, RESUME_STATE_FILE, _list_editable_md_files, _resolve_editable_md_path
-from ..file_ops import _append_log_line, _append_new_task_goal_to_history, _append_user_message_to_history
+from ..documents import add_doc_to_finish_review_config, delete_uploaded_doc, list_uploaded_docs, store_uploaded_doc
+from ..log_summary import load_log_summary_config, save_log_summary_config, summarize_logs
+from ..progress import get_progress_info
+from ..file_ops import _append_log_line, _append_new_task_goal_to_history, _append_user_message_to_history, _reset_dev_plan_file, _reset_project_history_file
 from ..state import RunControl, UiRuntime, UiStateStore
 from ..types import UserDecisionResponse
 from ..workflow import _reset_workflow_state
@@ -143,6 +146,29 @@ def _start_ui_server(
                 return send_json(self, payload)
             if parsed.path == "/api/md_files":  # 关键分支：可编辑 md 列表
                 return send_json(self, _list_editable_md_files())
+            if parsed.path == "/api/uploaded_docs":  # 关键分支：已上传文档列表
+                return send_json(self, list_uploaded_docs())
+            if parsed.path == "/api/progress":  # 关键分支：进度查询
+                try:
+                    progress = get_progress_info()
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, progress)
+            if parsed.path == "/api/log_summary/config":  # 关键分支：日志摘要配置读取
+                try:
+                    config = load_log_summary_config()
+                except FileNotFoundError as exc:
+                    return send_json(self, {"error": str(exc)}, status=404)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                return send_json(
+                    self,
+                    {
+                        "base_url": config.base_url,
+                        "api_key": config.api_key,
+                        "model": config.model,
+                    },
+                )
             if parsed.path == "/api/file":  # 关键分支：读取指定文件
                 qs = parse_qs(parsed.query)
                 path_raw = (qs.get("path") or [""])[0]  # 关键变量：请求路径
@@ -187,6 +213,31 @@ def _start_ui_server(
 
         def do_POST(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
+            if parsed.path == "/api/log_summary/config":  # 关键分支：日志摘要配置写入
+                try:
+                    payload = read_json_body(self)
+                    config = save_log_summary_config(payload)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                return send_json(
+                    self,
+                    {
+                        "base_url": config.base_url,
+                        "api_key": config.api_key,
+                        "model": config.model,
+                    },
+                )
+            if parsed.path == "/api/log_summary":  # 关键分支：日志摘要生成
+                try:
+                    payload = read_json_body(self)
+                    logs = payload.get("logs")
+                    if not isinstance(logs, str):
+                        raise ValueError("logs must be a string")
+                    config = load_log_summary_config()
+                    summary = summarize_logs(logs=logs, config=config)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                return send_json(self, {"summary": summary})
             if parsed.path == "/api/control/start":  # 关键分支：启动运行
                 if not control.request_start_with_options(new_task=False):  # 关键分支：已有运行/请求
                     return send_json(self, {"error": "already running or start pending"}, status=409)
@@ -202,10 +253,16 @@ def _start_ui_server(
                 if not isinstance(task_goal, str) or not task_goal.strip():  # 关键分支：目标为空
                     return send_json(self, {"error": "task_goal is required"}, status=400)
                 goal = task_goal.strip()  # 关键变量：清洗后的目标
+                reset_dev_plan = bool(payload.get("reset_dev_plan", False))  # 关键变量：是否重置 dev_plan
+                reset_project_history = bool(payload.get("reset_project_history", False))  # 关键变量：是否重置 project_history
 
                 def before_enqueue() -> None:
+                    if reset_project_history:  # 关键分支：重置 project_history
+                        _reset_project_history_file()
                     _append_new_task_goal_to_history(goal=goal)  # 关键变量：记录新任务目标
                     _clear_saved_main_state()  # 关键变量：清理会话状态
+                    if reset_dev_plan:  # 关键分支：重置 dev_plan
+                        _reset_dev_plan_file()
 
                 try:  # 关键分支：启动前回调与排队
                     ok = control.request_start_with_options(new_task=True, before_enqueue=before_enqueue)  # 关键变量：发起新任务
@@ -216,6 +273,10 @@ def _start_ui_server(
                 state.update(phase="starting", current_agent="orchestrator", main_session_id=None, iteration=0)  # 关键变量：UI 重置状态
                 _append_log_line("orchestrator: new_task_start_requested\n")
                 _append_log_line(f"orchestrator: new_task_goal_appended len={len(goal)}\n")
+                if reset_dev_plan:
+                    _append_log_line("orchestrator: dev_plan reset by user\n")
+                if reset_project_history:
+                    _append_log_line("orchestrator: project_history reset by user\n")
                 return send_json(self, {"ok": True})
             if parsed.path == "/api/control/interrupt":  # 关键分支：中断运行
                 control.interrupt()  # 关键变量：发出中断信号
@@ -273,6 +334,40 @@ def _start_ui_server(
                 _append_log_line(f"user_decision: {option_id.strip()}\n")
                 return send_json(self, {"ok": True})
 
+            if parsed.path == "/api/upload_doc":  # 关键分支：上传文档
+                try:  # 关键分支：解析请求体
+                    payload = read_json_body(self)  # 关键变量：请求体
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                filename = payload.get("filename")  # 关键变量：文件名
+                content = payload.get("content")  # 关键变量：Base64 内容
+                category = payload.get("category")  # 关键变量：分类
+                try:  # 关键分支：执行上传
+                    stored_path = store_uploaded_doc(filename=filename, content_b64=content, category=category)
+                except ValueError as exc:  # 关键分支：输入非法
+                    return send_json(self, {"error": str(exc)}, status=400)
+                except Exception as exc:  # noqa: BLE001  # 关键分支：服务异常
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, {"success": True, "path": stored_path})
+
+            if parsed.path == "/api/add_to_finish_review":  # 关键分支：加入验收配置
+                try:  # 关键分支：解析请求体
+                    payload = read_json_body(self)  # 关键变量：请求体
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                doc_path = payload.get("doc_path")  # 关键变量：文档路径
+                if not isinstance(doc_path, str) or not doc_path.strip():  # 关键分支：路径为空
+                    return send_json(self, {"error": "doc_path is required"}, status=400)
+                try:  # 关键分支：写入配置
+                    stored = add_doc_to_finish_review_config(doc_path.strip())
+                except FileNotFoundError as exc:  # 关键分支：文件不存在
+                    return send_json(self, {"error": str(exc)}, status=404)
+                except ValueError as exc:  # 关键分支：输入非法
+                    return send_json(self, {"error": str(exc)}, status=400)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, {"success": True, "path": stored})
+
             if parsed.path == "/api/file":  # 关键分支：保存 md 文件
                 if control.is_busy():  # 关键分支：运行中禁止编辑
                     return send_json(
@@ -297,6 +392,24 @@ def _start_ui_server(
                 _append_log_line(f"file_saved: {path.relative_to(PROJECT_ROOT).as_posix()}\n")
                 return send_json(self, {"ok": True, "path": path.relative_to(PROJECT_ROOT).as_posix()})
 
+            return send_text(self, "not found", status=404)
+
+        def do_DELETE(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            if parsed.path.startswith("/api/uploaded_docs/"):  # 关键分支：删除已上传文档
+                rel_path = parsed.path[len("/api/uploaded_docs/") :]
+                rel_path = unquote(rel_path)
+                if not rel_path:
+                    return send_json(self, {"error": "doc path is required"}, status=400)
+                try:
+                    delete_uploaded_doc(rel_path)
+                except FileNotFoundError as exc:  # 关键分支：文件不存在
+                    return send_json(self, {"error": str(exc)}, status=404)
+                except ValueError as exc:  # 关键分支：路径非法
+                    return send_json(self, {"error": str(exc)}, status=400)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, {"success": True})
             return send_text(self, "not found", status=404)
 
     server = ThreadingHTTPServer((host, port), Handler)  # 关键变量：HTTP 服务实例

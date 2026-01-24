@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "summaries": {
+    "orchestrator/reports/report_test.md": {
+      "mtime": 1769241934.489421,
+      "summary": {
+        "iteration": 14,
+        "agent": "TEST",
+        "verdict": "PASS",
+        "blockers": [],
+        "key_changes": [
+          "project/backend/scripts/performance_benchmark.py:297",
+          "project/backend/scripts/performance_benchmark.py:206",
+          "project/backend/scripts/performance_benchmark.py:241",
+          "doc/PERFORMANCE_REPORT.md:9",
+          "doc/PERFORMANCE_REPORT.md:39",
+          "project/backend/tests/performance/test_benchmark.py:36",
+          "project/backend/tests/performance/test_entity_resolution.py:32",
+          "doc/graph_refactor_final_plan.md:413"
+        ],
+        "evidence": "环境检查: `docker ps` -> Memgraph 容器运行中（backend-memgraph-1）",
+        "timestamp": "2026-01-24T16:05:34"
+      }
+    },
+    "orchestrator/reports/report_dev.md": {
+      "mtime": 1769244351.5716734,
+      "summary": {
+        "iteration": 15,
+        "agent": "DEV",
+        "verdict": "N/A",
+        "blockers": [],
+        "key_changes": [
+          "project/backend/app/storage/memgraph_storage.py:144",
+          "project/backend/app/storage/memgraph_storage.py:250",
+          "project/backend/app/storage/memgraph_storage.py:927",
+          "project/backend/app/storage/memgraph_storage.py:1414",
+          "project/backend/app/storage/memgraph_storage.py:1581"
+        ],
+        "evidence": "环境检查：`docker ps`（backend-memgraph-1 Running）",
+        "timestamp": "2026-01-24T16:45:51"
+      }
+    }
+  }
+}

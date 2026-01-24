@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import re
+
 from pathlib import Path
 
-from .config import CONFIG, PROJECT_HISTORY_FILE, PROMPTS_DIR
+from .config import CONFIG, MIN_HISTORY_WINDOW, PROJECT_HISTORY_FILE, PROMPTS_DIR
+from .documents import resolve_uploaded_doc_path
 from .file_ops import _read_text, _rel_path, _require_file
 from .types import NextAgent
 from .dev_plan import parse_overall_task_statuses
+from .summary_extractor import extract_report_summary, format_report_summary
 
 
 def _inject_text(*, path: Path, content: str, note: str | None = None) -> str:
@@ -16,21 +20,139 @@ def _inject_text(*, path: Path, content: str, note: str | None = None) -> str:
     return "\n".join([header, content, footer])
 
 
-def _inject_file(path: Path) -> str:
+def _inject_file(
+    path: Path,
+    *,
+    level: int = 3,
+    use_summary: bool = False,
+    agent: str | None = None,
+    label_suffix: str = "",
+) -> str:
     """
     将文件内容“注入”到提示词中（黑板模式的可观测快照）。
     - 按用户要求：所有代理注入 global_context；MAIN 额外注入 project_history/dev_plan；REVIEW 注入 dev_plan
     - 不做截断/兜底：缺失即报错（快速失败）
     """
+    if use_summary:
+        if agent is None:
+            raise ValueError("agent is required when use_summary=True")
+        return _inject_report_with_level(report_path=path, agent=agent, level=level, label_suffix=label_suffix)
     _require_file(path)  # 关键分支：缺文件直接失败
-    return _inject_text(path=path, content=_read_text(path).rstrip())  # 关键变量：注入文件内容
+    note = label_suffix.strip() or None
+    return _inject_text(path=path, content=_read_text(path).rstrip(), note=note)  # 关键变量：注入文件内容
+
+
+def _inject_report_with_level(
+    *,
+    report_path: Path,
+    agent: str,
+    level: int,
+    label_suffix: str = "",
+    force_refresh: bool = False,
+) -> str:
+    if level not in {1, 2, 3}:
+        raise ValueError(f"report injection level invalid: {level}")
+    if level == 3:
+        return _inject_file(report_path, label_suffix=label_suffix)
+    summary = extract_report_summary(
+        report_path=report_path,
+        agent=agent,
+        force_refresh=force_refresh,
+    )
+    content = format_report_summary(summary=summary, level=level)
+    note = f"summary L{level}{label_suffix}".strip()
+    return _inject_text(path=report_path, content=content, note=note)
 
 
 def _approx_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-def _inject_project_history_recent(*, last_iterations: int, max_tokens: int | None = None) -> str:
+_ITERATION_HEADER_RE = re.compile(r"^## Iteration (\d+):")
+_MILESTONE_MARKER = "[MILESTONE]"
+_COMPRESS_KEEP_PREFIXES = (
+    "next_agent:",
+    "reason:",
+    "blockers:",
+    "dev_plan:",
+    "finish_review_override:",
+)
+_DOC_REF_RE = re.compile(r"@doc:([\w/\-]+\.md)")
+
+
+def _parse_history_entries(lines: list[str]) -> tuple[list[str], list[dict[str, object]]]:
+    iteration_indices = [idx for idx, line in enumerate(lines) if line.startswith("## Iteration ")]
+    if not iteration_indices:
+        return lines, []
+    header = lines[:iteration_indices[0]]
+    entries: list[dict[str, object]] = []
+    for pos, start_idx in enumerate(iteration_indices):
+        end_idx = iteration_indices[pos + 1] if pos + 1 < len(iteration_indices) else len(lines)
+        header_line = lines[start_idx]
+        match = _ITERATION_HEADER_RE.match(header_line)
+        if not match:
+            raise RuntimeError(f"Invalid iteration header line: {header_line!r}")
+        iteration = int(match.group(1))
+        entries.append(
+            {
+                "iteration": iteration,
+                "lines": lines[start_idx:end_idx],
+            }
+        )
+    return header, entries
+
+
+def _identify_milestones(entries: list[dict[str, object]]) -> set[int]:
+    milestones: set[int] = set()
+    for entry in entries:
+        iteration = entry.get("iteration")
+        lines = entry.get("lines")
+        if not isinstance(iteration, int) or not isinstance(lines, list):
+            raise RuntimeError("Invalid history entry structure")
+        if any(_MILESTONE_MARKER in line for line in lines):
+            milestones.add(iteration)
+    return milestones
+
+
+def _compress_history_entry(entry_lines: list[str]) -> list[str]:
+    if not entry_lines:
+        raise RuntimeError("Empty history entry")
+    header = entry_lines[0]
+    kept = [header]
+    for line in entry_lines[1:]:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if any(stripped.startswith(prefix) for prefix in _COMPRESS_KEEP_PREFIXES):
+            kept.append(line)
+    if len(kept) == 1:
+        raise RuntimeError("History entry missing required fields for compression")
+    return kept
+
+
+def _extract_doc_references(text: str) -> list[str]:
+    seen: set[str] = set()
+    refs: list[str] = []
+    for match in _DOC_REF_RE.finditer(text):
+        ref = match.group(1)
+        if ref in seen:
+            continue
+        seen.add(ref)
+        refs.append(ref)
+    return refs
+
+
+def _inject_doc_references(refs: list[str]) -> list[str]:
+    injections: list[str] = []
+    for ref in refs:
+        path = resolve_uploaded_doc_path(ref)
+        injections.append(_inject_file(path, label_suffix=f"doc ref: {ref}"))
+    return injections
+
+
+def _inject_project_history_recent(
+    *, last_iterations: int, max_tokens: int | None = None, include_milestones: bool = True
+) -> str:
     """
     将 `memory/project_history.md` 以“最近 N 轮 iteration”为窗口注入，避免上下文无限膨胀。
     - N 必须 >= 1
@@ -45,31 +167,56 @@ def _inject_project_history_recent(*, last_iterations: int, max_tokens: int | No
     full_text = _read_text(PROJECT_HISTORY_FILE).rstrip()  # 关键变量：历史全文
     lines = full_text.splitlines()  # 关键变量：历史逐行
 
-    iteration_indices = [idx for idx, line in enumerate(lines) if line.startswith("## Iteration ")]  # 关键变量：迭代分隔行
-    if not iteration_indices:  # 关键分支：无迭代则全量注入
+    header_lines, entries = _parse_history_entries(lines)
+    if not entries:  # 关键分支：无迭代则全量注入
         return _inject_text(path=PROJECT_HISTORY_FILE, content=full_text)
 
-    header_end = iteration_indices[0]  # 关键变量：文件头部结束位置
-    start_pos = max(0, len(iteration_indices) - last_iterations)
+    total_entries = len(entries)
+    start_idx = max(0, total_entries - last_iterations)
+    base_indices = list(range(start_idx, total_entries))
+    milestone_iterations = _identify_milestones(entries) if include_milestones else set()
+    milestone_indices = [
+        idx for idx, entry in enumerate(entries) if entry["iteration"] in milestone_iterations
+    ]
+    selected_indices = sorted(set(base_indices + milestone_indices))
 
-    def build_trimmed(start_at: int) -> str:
-        start = iteration_indices[start_at]
-        head = lines[:header_end]  # 关键变量：文件头部
-        tail = lines[start:]  # 关键变量：窗口内历史
-        return "\n".join(head + [""] + tail) if head else "\n".join(tail)
+    def build_trimmed(indices: list[int]) -> str:
+        parts: list[str] = []
+        if header_lines:
+            parts.extend(header_lines)
+            parts.append("")
+        for idx in indices:
+            entry_lines = entries[idx]["lines"]
+            if not isinstance(entry_lines, list):
+                raise RuntimeError("Invalid history entry lines")
+            iteration = entries[idx]["iteration"]
+            if not isinstance(iteration, int):
+                raise RuntimeError("Invalid history entry iteration")
+            if iteration in milestone_iterations:
+                parts.extend(entry_lines)
+            else:
+                parts.extend(_compress_history_entry(entry_lines))
+            parts.append("")
+        return "\n".join(parts).rstrip()
 
-    trimmed = build_trimmed(start_pos)
+    trimmed = build_trimmed(selected_indices)
     if max_tokens is not None and max_tokens > 0:
-        while _approx_tokens(trimmed) > max_tokens and start_pos < len(iteration_indices) - 1:
-            start_pos += 1
-            trimmed = build_trimmed(start_pos)
+        min_keep = min(total_entries, max(MIN_HISTORY_WINDOW, 1))
+        protected_recent = set(range(total_entries - min_keep, total_entries))
+        while _approx_tokens(trimmed) > max_tokens:
+            removable = [
+                idx
+                for idx in selected_indices
+                if idx not in protected_recent and entries[idx]["iteration"] not in milestone_iterations
+            ]
+            if not removable:
+                raise RuntimeError("History window exceeds max_tokens and cannot be reduced further")
+            selected_indices.remove(removable[0])
+            trimmed = build_trimmed(selected_indices)
 
-    selected_iterations = len(iteration_indices) - start_pos
-    return _inject_text(
-        path=PROJECT_HISTORY_FILE,
-        content=trimmed,
-        note=f"last {selected_iterations} iterations",
-    )
+    milestone_count = len(milestone_indices) if include_milestones else 0
+    note = f"last {len(base_indices)} iterations + {milestone_count} milestones"
+    return _inject_text(path=PROJECT_HISTORY_FILE, content=trimmed, note=note)
 
 
 def _load_system_prompt(agent_name: str) -> str:

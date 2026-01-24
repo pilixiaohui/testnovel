@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from pathlib import Path
 
 from project import ProjectConfig, ProjectTemplates
@@ -13,6 +15,11 @@ CODEX_STATE_DIR = PROJECT_ROOT / ".codex"  # 关键变量：Codex 状态目录
 MAIN_SESSION_ID_FILE = CODEX_STATE_DIR / "main_session_id.txt"  # 关键变量：MAIN 会话文件
 MAIN_ITERATION_FILE = CODEX_STATE_DIR / "main_iteration.txt"  # 关键变量：MAIN 迭代文件
 RESUME_STATE_FILE = CODEX_STATE_DIR / "resume_state.json"  # 关键变量：中断续跑状态文件
+
+# 子代理会话文件（用于 resume）
+TEST_SESSION_ID_FILE = CODEX_STATE_DIR / "test_session_id.txt"  # 关键变量：TEST 会话文件
+DEV_SESSION_ID_FILE = CODEX_STATE_DIR / "dev_session_id.txt"  # 关键变量：DEV 会话文件
+REVIEW_SESSION_ID_FILE = CODEX_STATE_DIR / "review_session_id.txt"  # 关键变量：REVIEW 会话文件
 
 # 从配置获取路径（保持全局变量兼容性）
 MEMORY_DIR = CONFIG.memory_dir  # 关键变量：memory 目录
@@ -35,7 +42,6 @@ REPORT_DEV_FILE = CONFIG.report_dev_file  # 关键变量：DEV 报告
 REPORT_REVIEW_FILE = CONFIG.report_review_file  # 关键变量：REVIEW 报告
 REPORT_FINISH_REVIEW_FILE = CONFIG.report_finish_review_file  # 关键变量：FINISH_REVIEW 报告
 REPORT_MAIN_DECISION_FILE = CONFIG.report_main_decision_file  # 关键变量：MAIN 决策输出
-REPORT_STAGE_CHANGES_FILE = REPORTS_DIR / "report_stage_changes.json"  # 关键变量：子代理阶段代码变更摘要（编排器生成）
 REPORT_ITERATION_SUMMARY_FILE = CONFIG.report_iteration_summary_file  # 关键变量：每轮摘要输出
 REPORT_ITERATION_SUMMARY_HISTORY_FILE = CONFIG.report_iteration_summary_history_file  # 关键变量：摘要历史输出
 ORCHESTRATOR_LOG_FILE = REPORTS_DIR / "orchestrator.log"  # 关键变量：编排器日志
@@ -65,11 +71,26 @@ MAX_HISTORY_WINDOW = 15  # 关键变量：最大历史窗口
 MAX_DEV_PLAN_SIZE = 1000  # 关键变量：dev_plan 最大行数（触发归档）
 MAX_PROMPT_SIZE = 800000  # 关键变量：prompt 最大字符数（触发警告）
 
+# 子代理历史上下文参数（新增）
+SUBAGENT_HISTORY_LOOKBACK = int(os.getenv("SUBAGENT_HISTORY_LOOKBACK", "1"))  # 关键变量：历史回溯轮数
+if SUBAGENT_HISTORY_LOOKBACK < 0:  # 关键分支：回溯轮数非法
+    raise ValueError("SUBAGENT_HISTORY_LOOKBACK must be >= 0")
+
 # 新增文件路径
+PROJECT_ENV_FILE = MEMORY_DIR / "project_env.json"  # 关键变量：项目环境配置（重置时保留）
 ACCEPTANCE_SCOPE_FILE = MEMORY_DIR / "acceptance_scope.json"  # 关键变量：验收范围定义
 OUT_OF_SCOPE_ISSUES_FILE = MEMORY_DIR / "out_of_scope_issues.md"  # 关键变量：范围外问题记录
 DEV_PLAN_ARCHIVED_FILE = MEMORY_DIR / "dev_plan_archived.md"  # 关键变量：已归档任务
 LEGACY_ISSUES_REPORT_FILE = REPORTS_DIR / "legacy_issues_report.md"  # 关键变量：遗留问题报告
+LOG_SUMMARY_CONFIG_FILE = MEMORY_DIR / "log_summary_config.json"  # 关键变量：日志摘要 LLM 配置
+
+# 文档管理与进度展示
+UPLOADED_DOCS_DIR = MEMORY_DIR / "uploaded_docs"  # 关键变量：上传文档根目录
+UPLOADED_DOCS_CATEGORIES = ("requirements", "specs", "references")  # 关键变量：文档分类
+UPLOADED_DOCS_MAX_BYTES = 5 * 1024 * 1024  # 关键变量：上传文档大小上限（5MB）
+
+# 新增缓存路径
+REPORT_SUMMARY_CACHE_FILE = PROJECT_ROOT / "orchestrator" / "cache" / "report_summaries.json"  # 关键变量：报告摘要缓存
 
 
 def _list_editable_md_files() -> list[str]:

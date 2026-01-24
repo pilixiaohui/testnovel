@@ -7,7 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from .config import ORCHESTRATOR_LOG_FILE, PROJECT_HISTORY_FILE, PROJECT_ROOT
+from .config import DEV_PLAN_FILE, ORCHESTRATOR_LOG_FILE, PROJECT_HISTORY_FILE, PROJECT_ROOT
+
+from project import ProjectTemplates
 
 
 def _require_file(path: Path) -> None:
@@ -116,3 +118,132 @@ def _rel_path(path: Path) -> str:
         return path.relative_to(PROJECT_ROOT).as_posix()  # 关键变量：项目内相对路径
     except ValueError as exc:  # 关键分支：路径不在项目根内
         raise ValueError(f"Path must be under project root: {path}") from exc
+
+
+def _extract_latest_task_goal() -> str:
+    """
+    从 project_history.md 提取最新的 Task Goal。
+
+    查找格式：## Task Goal (New Task) - <timestamp>
+    返回该标题下的内容（直到下一个 ## 标题或文件结束）。
+    若未找到则返回空字符串。
+    """
+    if not PROJECT_HISTORY_FILE.exists():  # 关键分支：文件不存在
+        return ""
+    content = _read_text(PROJECT_HISTORY_FILE)
+    lines = content.splitlines()
+
+    # 查找最后一个 Task Goal 标题
+    task_goal_start = -1
+    for i, line in enumerate(lines):
+        if line.startswith("## Task Goal"):  # 关键分支：找到 Task Goal 标题
+            task_goal_start = i
+
+    if task_goal_start == -1:  # 关键分支：未找到 Task Goal
+        return ""
+
+    # 提取内容（从标题下一行到下一个 ## 标题或文件结束）
+    goal_lines: list[str] = []
+    for line in lines[task_goal_start + 1 :]:
+        if line.startswith("## "):  # 关键分支：遇到下一个标题，停止
+            break
+        goal_lines.append(line)
+
+    return "\n".join(goal_lines).strip()  # 关键变量：Task Goal 内容
+
+
+def _extract_latest_user_decision(*, iteration: int) -> str | None:
+    """
+    从 project_history.md 提取指定迭代的用户决策。
+
+    查找格式：## User Decision (Iteration N): <title> - <timestamp>
+    返回该标题下的完整内容（包括 user_choice 和 user_comment）。
+    若未找到则返回 None。
+    """
+    if not PROJECT_HISTORY_FILE.exists():  # 关键分支：文件不存在
+        return None
+    content = _read_text(PROJECT_HISTORY_FILE)
+    lines = content.splitlines()
+
+    # 查找指定迭代的 User Decision 标题
+    decision_start = -1
+    needle = f"## User Decision (Iteration {iteration}):"
+    for i, line in enumerate(lines):
+        if line.startswith(needle):  # 关键分支：找到 User Decision 标题
+            decision_start = i
+            break  # 只取第一个匹配（同一迭代只有一个用户决策）
+
+    if decision_start == -1:  # 关键分支：未找到 User Decision
+        return None
+
+    # 提取内容（从标题到下一个 ## 标题或文件结束）
+    decision_lines: list[str] = [lines[decision_start]]
+    for line in lines[decision_start + 1:]:
+        if line.startswith("## "):  # 关键分支：遇到下一个标题，停止
+            break
+        decision_lines.append(line)
+
+    return "\n".join(decision_lines).strip()  # 关键变量：User Decision 内容
+
+
+def _reset_project_history_file() -> None:
+    """
+    重置 project_history.md 为初始模板。
+    用于 NewTask 时用户选择清空历史。
+    """
+    PROJECT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(PROJECT_HISTORY_FILE, ProjectTemplates.project_history())
+
+
+def _reset_dev_plan_file() -> None:
+    """
+    重置 dev_plan.md 为初始模板。
+    用于 NewTask 时用户选择清空开发计划。
+    """
+    DEV_PLAN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(DEV_PLAN_FILE, ProjectTemplates.dev_plan())
+
+
+def _extract_recent_user_decisions(*, lookback: int = 5) -> list[dict[str, str | int | None]]:
+    """
+    提取最近 N 轮的所有用户决策，供 MAIN 参考以避免重复询问。
+
+    返回格式：
+    [
+        {
+            "iteration": 1,
+            "decision_title": "权限操作需要用户介入",
+            "user_choice": "user_fix",
+            "user_comment": "已经修复了",
+        },
+        ...
+    ]
+    """
+    import re
+
+    if not PROJECT_HISTORY_FILE.exists():
+        return []
+
+    content = _read_text(PROJECT_HISTORY_FILE)
+    decisions: list[dict[str, str | int | None]] = []
+
+    # 解析所有 User Decision 块
+    # 格式：## User Decision (Iteration N): <title> - <timestamp>
+    pattern = r"## User Decision \(Iteration (\d+)\): (.+?) - \d{4}-\d{2}-\d{2}T[\d:]+\n([\s\S]*?)(?=\n## |\Z)"
+    for match in re.finditer(pattern, content):
+        iteration = int(match.group(1))
+        title = match.group(2).strip()
+        body = match.group(3)
+
+        # 提取 user_choice 和 user_comment
+        choice_match = re.search(r"- user_choice: (.+)", body)
+        comment_match = re.search(r"- user_comment: (.+)", body)
+
+        decisions.append({
+            "iteration": iteration,
+            "decision_title": title,
+            "user_choice": choice_match.group(1).strip() if choice_match else None,
+            "user_comment": comment_match.group(1).strip() if comment_match else None,
+        })
+
+    return decisions[-lookback:] if len(decisions) > lookback else decisions

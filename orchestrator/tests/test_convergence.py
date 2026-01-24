@@ -7,73 +7,6 @@ import pytest
 
 from orchestrator import validation
 from orchestrator.validation import _archive_verified_tasks
-from orchestrator.workflow import _calculate_adaptive_history_window
-
-
-def _disable_coverage_gate(monkeypatch: pytest.MonkeyPatch, tmp_dir: str) -> None:
-    policy = Path(tmp_dir) / "verification_policy.json"
-    policy.write_text(
-        "\n".join(
-            [
-                "{",
-                '  "version": 1,',
-                '  "report_rules": {',
-                '    "apply_to": ["REVIEW", "TEST", "FINISH_REVIEW"],',
-                '    "require_verdict": true,',
-                '    "verdict_prefix": "结论：",',
-                '    "verdict_allowed": ["PASS", "FAIL", "BLOCKED"],',
-                '    "blocker_prefix": "阻塞：",',
-                '    "blocker_clear_value": "无"',
-                "  }",
-                "}",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(validation, "VERIFICATION_POLICY_FILE", policy)
-
-
-def test_calculate_adaptive_history_window_shrinks_with_size_and_iteration() -> None:
-    assert (
-        _calculate_adaptive_history_window(
-            iteration=1,
-            dev_plan_size=100,
-            base_window=10,
-            min_window=3,
-            max_window=15,
-        )
-        == 10
-    )
-    assert (
-        _calculate_adaptive_history_window(
-            iteration=1,
-            dev_plan_size=201,
-            base_window=10,
-            min_window=3,
-            max_window=15,
-        )
-        == 7
-    )
-    assert (
-        _calculate_adaptive_history_window(
-            iteration=1,
-            dev_plan_size=301,
-            base_window=10,
-            min_window=3,
-            max_window=15,
-        )
-        == 3
-    )
-    assert (
-        _calculate_adaptive_history_window(
-            iteration=16,
-            dev_plan_size=100,
-            base_window=10,
-            min_window=3,
-            max_window=15,
-        )
-        == 7
-    )
 
 
 def test_check_finish_readiness_allows_todo_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -98,7 +31,6 @@ def test_check_finish_readiness_allows_todo_tasks(monkeypatch: pytest.MonkeyPatc
             encoding="utf-8",
         )
         monkeypatch.setattr(validation, "DEV_PLAN_FILE", dev_plan)
-        _disable_coverage_gate(monkeypatch, tmp_dir)
         monkeypatch.setattr(validation, "REQUIRE_ALL_VERIFIED_FOR_FINISH", True)
 
         is_ready, reason, blockers = validation._check_finish_readiness()
@@ -129,7 +61,6 @@ def test_check_finish_readiness_blocks_done_tasks(monkeypatch: pytest.MonkeyPatc
             encoding="utf-8",
         )
         monkeypatch.setattr(validation, "DEV_PLAN_FILE", dev_plan)
-        _disable_coverage_gate(monkeypatch, tmp_dir)
         monkeypatch.setattr(validation, "REQUIRE_ALL_VERIFIED_FOR_FINISH", True)
 
         is_ready, reason, blockers = validation._check_finish_readiness()
@@ -175,7 +106,6 @@ def test_check_finish_readiness_ignores_phase_status_lines(monkeypatch: pytest.M
             encoding="utf-8",
         )
         monkeypatch.setattr(validation, "DEV_PLAN_FILE", dev_plan)
-        _disable_coverage_gate(monkeypatch, tmp_dir)
         monkeypatch.setattr(validation, "REQUIRE_ALL_VERIFIED_FOR_FINISH", True)
 
         is_ready, reason, blockers = validation._check_finish_readiness()

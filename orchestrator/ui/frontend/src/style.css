@@ -81,6 +81,88 @@ section {
   background: var(--bg);
 }
 
+.logPane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logSplit {
+  display: grid;
+  grid-template-rows: minmax(180px, 38%) 1fr;
+  height: 100%;
+}
+
+.logSummaryPane {
+  border-bottom: 1px solid var(--border);
+  overflow: auto;
+  background: color-mix(in srgb, Canvas 94%, transparent);
+  min-height: 0;
+}
+
+.logSummaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logSummaryConfig {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.configField .k {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.logSummaryList {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logSummaryCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: color-mix(in srgb, Canvas 96%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.logSummaryText {
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.logStreamPane {
+  overflow: auto;
+  min-height: 0;
+}
+
 .pane {
   padding: 12px;
 }
@@ -277,6 +359,246 @@ code {
   word-break: break-word;
 }
 
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.docSelect {
+  width: 260px;
+  min-width: 240px;
+  height: 90px;
+}
+
+.docList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docItem {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.progressBar {
+  position: relative;
+  height: 12px;
+  background: var(--bg-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBar.small {
+  height: 8px;
+}
+
+.progressBarDone {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #3b82f6;
+}
+
+.progressBarVerified {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #22c55e;
+}
+
+.progressLegend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.progressStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.statCard {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
+}
+
+.statCard .k {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.statCard .v {
+  font-weight: 650;
+}
+
+.milestoneList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.milestoneCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.milestoneTasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.milestoneTask {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, Canvas 96%, transparent);
+}
+
+.taskId {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.taskTitle {
+  font-size: 12px;
+}
+
+.statusPill {
+  font-size: 11px;
+}
+
+.status-done {
+  border-color: color-mix(in srgb, #3b82f6 50%, var(--border));
+  color: #3b82f6;
+}
+
+.status-verified {
+  border-color: color-mix(in srgb, #22c55e 50%, var(--border));
+  color: #22c55e;
+}
+
+.status-doing {
+  border-color: color-mix(in srgb, #f59e0b 50%, var(--border));
+  color: #f59e0b;
+}
+
+.status-blocked {
+  border-color: color-mix(in srgb, #ef4444 50%, var(--border));
+  color: #ef4444;
+}
+
+.status-todo {
+  border-color: color-mix(in srgb, #64748b 50%, var(--border));
+  color: #64748b;
+}
+
+.summaryCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: color-mix(in srgb, Canvas 92%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summaryBadge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  font-size: 12px;
+}
+
+.summarySection {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
+}
+
+.summaryLabel {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.summaryValue {
+  font-size: 12px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.timelineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #6b7280;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.timelineContent {
+  font-size: 12px;
+}
+
+.danger {
+  border-color: color-mix(in srgb, #ef4444 55%, var(--border));
+  background: color-mix(in srgb, #ef4444 12%, Canvas);
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -309,4 +631,28 @@ code {
     grid-template-columns: 1fr;
     height: auto;
   }
+}
+
+.resetOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, Canvas 96%, transparent);
+}
+
+.resetOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.resetOption input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }

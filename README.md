@@ -96,7 +96,7 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 # 启动 Web UI（推荐）
 python orchestrator.py --ui
-# 访问 http://127.0.0.1:8765
+# 访问 http://127.0.0.1:8766
 
 # 或命令行模式
 python orchestrator.py --max-iterations 10 --task "实现新功能"

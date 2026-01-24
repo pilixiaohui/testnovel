@@ -4,6 +4,7 @@
 
 ## 输入说明（已注入）
 - MAIN 调度 JSON（report_main_decision.json）
+- dev_plan（orchestrator/memory/dev_plan.md）
 - 本轮子代理工单（current_task.md）
 - 本轮子代理报告（report_*.md）
 - 编排器提供的 iteration / session_id / 产物路径
@@ -43,6 +44,25 @@
   - `report_file`
   - `summary_file`
   （以上路径必须与输入一致）
+
+## 可选 JSON 字段（强烈建议提供）
+- `progress`: object 或 null
+  - `total_tasks`: number
+  - `completed_tasks`: number（DONE + VERIFIED）
+  - `verified_tasks`: number
+  - `in_progress_tasks`: number
+  - `blocked_tasks`: number
+  - `todo_tasks`: number
+  - `completion_percentage`: number（0-100）
+  - `verification_percentage`: number（0-100）
+  - `current_milestone`: string 或 null
+  - `milestones`: array（按顺序）
+    - `milestone_id`: string（例如 M1）
+    - `milestone_name`: string
+    - `total_tasks`: number
+    - `completed_tasks`: number
+    - `verified_tasks`: number
+    - `percentage`: number（0-100）
 
 ## 输出示例（仅示意，不可照抄）
 注意 `steps` 数组中每个元素都是独立的对象：

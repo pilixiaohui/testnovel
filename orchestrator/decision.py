@@ -10,11 +10,26 @@ from .state import UiRuntime, UserInterrupted
 from .types import MainDecision, MainDecisionUser, MainOutput, UserDecisionOption
 
 
+def _extract_json_object(raw_json: str) -> str | None:
+    start = raw_json.find("{")
+    end = raw_json.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return raw_json[start : end + 1]
+
+
 def _load_json_object(raw_json: str) -> dict:
+    trimmed = raw_json.strip()
     try:  # 关键分支：尝试解析 JSON
-        payload = json.loads(raw_json.strip())  # 关键变量：解析 JSON
-    except json.JSONDecodeError as exc:  # 关键分支：非 JSON 输出直接失败
-        raise ValueError(f"MAIN output must be pure JSON, got: {raw_json!r}") from exc
+        payload = json.loads(trimmed)  # 关键变量：解析 JSON
+    except json.JSONDecodeError as exc:  # 关键分支：容忍包裹文本，尝试提取 JSON 对象
+        extracted = _extract_json_object(raw_json)
+        if extracted is None:
+            raise ValueError(f"MAIN output must be pure JSON, got: {raw_json!r}") from exc
+        try:
+            payload = json.loads(extracted)
+        except json.JSONDecodeError as exc_inner:
+            raise ValueError(f"MAIN output must be pure JSON, got: {raw_json!r}") from exc_inner
     if not isinstance(payload, dict):  # 关键分支：必须是 JSON 对象
         raise ValueError(f"MAIN output must be a JSON object, got: {payload!r}")
     return payload

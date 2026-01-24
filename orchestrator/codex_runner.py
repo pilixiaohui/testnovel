@@ -3,9 +3,20 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
-from .config import CODEX_STATE_DIR, MAIN_ITERATION_FILE, MAIN_SESSION_ID_FILE, ORCHESTRATOR_LOG_FILE, PROJECT_ROOT, RESUME_STATE_FILE
+from .config import (
+    CODEX_STATE_DIR,
+    MAIN_ITERATION_FILE,
+    MAIN_SESSION_ID_FILE,
+    ORCHESTRATOR_LOG_FILE,
+    PROJECT_ROOT,
+    RESUME_STATE_FILE,
+    TEST_SESSION_ID_FILE,
+    DEV_SESSION_ID_FILE,
+    REVIEW_SESSION_ID_FILE,
+)
 from .errors import PermanentError, TemporaryError
 from .file_ops import _append_log_line, _atomic_write_text, _read_text, _require_file
 from .state import RunControl, UserInterrupted
@@ -67,11 +78,59 @@ def _save_main_iteration(iteration: int) -> None:
     _atomic_write_text(MAIN_ITERATION_FILE, f"{iteration}\n")  # 关键变量：持久化迭代号
 
 
+# ============= 子代理会话管理 =============
+
+_SUBAGENT_SESSION_FILES: dict[str, Path] = {
+    "TEST": TEST_SESSION_ID_FILE,
+    "DEV": DEV_SESSION_ID_FILE,
+    "REVIEW": REVIEW_SESSION_ID_FILE,
+}
+
+
+def _load_subagent_session_id(agent: str) -> str | None:
+    """加载子代理的会话 ID（用于 resume）"""
+    session_file = _SUBAGENT_SESSION_FILES.get(agent)
+    if session_file is None:
+        return None
+    if not session_file.exists():
+        return None
+    session_id = _read_text(session_file).strip()
+    if not session_id:
+        return None
+    _validate_session_id(session_id)
+    return session_id
+
+
+def _save_subagent_session_id(agent: str, session_id: str) -> None:
+    """保存子代理的会话 ID（用于后续 resume）"""
+    session_file = _SUBAGENT_SESSION_FILES.get(agent)
+    if session_file is None:
+        raise ValueError(f"Unknown subagent: {agent}")
+    _validate_session_id(session_id)
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(session_file, f"{session_id}\n")
+
+
+def _clear_subagent_session_id(agent: str) -> None:
+    """清除子代理的会话 ID"""
+    session_file = _SUBAGENT_SESSION_FILES.get(agent)
+    if session_file is not None and session_file.exists():
+        session_file.unlink()
+
+
+def _clear_all_subagent_sessions() -> None:
+    """清除所有子代理的会话 ID（new task 时调用）"""
+    for session_file in _SUBAGENT_SESSION_FILES.values():
+        if session_file.exists():
+            session_file.unlink()
+
+
 _TEMPORARY_HINTS = (
     "timeout",
     "timed out",
     "rate limit",
     "429",
+    "500",
     "502",
     "503",
     "504",
@@ -82,6 +141,10 @@ _TEMPORARY_HINTS = (
     "connection refused",
     "econnreset",
     "econnrefused",
+    "high demand",
+    "internal server error",
+    "service unavailable",
+    "封号",  # API 账号限制
 )
 
 
@@ -228,10 +291,13 @@ def _run_codex_exec(
         _append_log_line(diag_msg)
 
         if not last_message:  # 关键分支：空输出则重试或失败
+            combined_text = "".join(combined_output)
+            is_server_error = _is_temporary_codex_failure(combined_text)  # 关键变量：检测服务器错误
+
             empty_diag = (
                 f"orchestrator: {label} EMPTY OUTPUT detected - "
                 f"prompt_chars={prompt_char_count}, prompt_lines={prompt_line_count}, "
-                f"retries_left={retries_left}\n"
+                f"retries_left={retries_left}, server_error={is_server_error}\n"
             )
             _append_log_line(empty_diag)
             print(empty_diag, end="", flush=True)
@@ -240,18 +306,32 @@ def _run_codex_exec(
                 raise TemporaryError(
                     f"Empty last message: {output_last_message}\n"
                     f"Diagnostics: prompt_chars={prompt_char_count}, prompt_lines={prompt_line_count}, "
-                    f"session_id={session_id or 'none'}"
+                    f"session_id={session_id or 'none'}, server_error={is_server_error}"
                 )
             if active_resume_session_id is None:
                 raise PermanentError(
                     f"Empty last message: {output_last_message} (missing session_id for resume)"
                 )
-            retry_msg = (
-                f"orchestrator: {label} empty last message; retrying "
-                f"({max_empty_last_message_retries - retries_left + 1}/{max_empty_last_message_retries})\n"
-            )
-            _append_log_line(retry_msg)
-            print(retry_msg, end="", flush=True)
+
+            # 服务器错误时使用退避延迟，代理行为问题时立即重试
+            if is_server_error:
+                attempt_num = max_empty_last_message_retries - retries_left + 1
+                backoff_seconds = min(30, 5 * (2 ** (attempt_num - 1)))  # 5s, 10s, 20s, 最大 30s
+                backoff_msg = (
+                    f"orchestrator: {label} server error detected, waiting {backoff_seconds}s before retry "
+                    f"({attempt_num}/{max_empty_last_message_retries})\n"
+                )
+                _append_log_line(backoff_msg)
+                print(backoff_msg, end="", flush=True)
+                time.sleep(backoff_seconds)
+            else:
+                retry_msg = (
+                    f"orchestrator: {label} empty last message; retrying "
+                    f"({max_empty_last_message_retries - retries_left + 1}/{max_empty_last_message_retries})\n"
+                )
+                _append_log_line(retry_msg)
+                print(retry_msg, end="", flush=True)
+
             retries_left -= 1
             continue
         return {"last_message": last_message, "session_id": session_id}

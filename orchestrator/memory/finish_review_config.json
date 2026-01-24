@@ -1,8 +1,6 @@
 {
   "task_goal_anchor": "## Task Goal (New Task)",
   "task_goal_anchor_mode": "prefix_latest",
-  "docs": [
-    "doc/graph_refactor_final_plan.md"
-  ],
+  "docs": [],
   "code_root": "."
 }
