@@ -118,6 +118,18 @@ def delete_uploaded_doc(doc_path: str) -> None:
     path.unlink()
 
 
+def get_finish_review_docs() -> list[str]:
+    _require_file(FINISH_REVIEW_CONFIG_FILE)
+    raw = _read_text(FINISH_REVIEW_CONFIG_FILE)
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("finish_review_config must be an object")
+    docs = payload.get("docs")
+    if not isinstance(docs, list) or not all(isinstance(item, str) for item in docs):
+        raise ValueError("finish_review_config.docs must be a list of strings")
+    return docs
+
+
 def add_doc_to_finish_review_config(doc_path: str) -> str:
     path = resolve_uploaded_doc_path(doc_path)
     if not path.exists():
@@ -142,3 +154,24 @@ def add_doc_to_finish_review_config(doc_path: str) -> str:
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
     )
     return rel_path
+
+
+def remove_doc_from_finish_review_config(doc_path: str) -> bool:
+    _require_file(FINISH_REVIEW_CONFIG_FILE)
+    raw = _read_text(FINISH_REVIEW_CONFIG_FILE)
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("finish_review_config must be an object")
+    docs = payload.get("docs")
+    if not isinstance(docs, list) or not all(isinstance(item, str) for item in docs):
+        raise ValueError("finish_review_config.docs must be a list of strings")
+
+    if doc_path in docs:
+        docs.remove(doc_path)
+        payload["docs"] = docs
+        _atomic_write_text(
+            FINISH_REVIEW_CONFIG_FILE,
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        )
+        return True
+    return False

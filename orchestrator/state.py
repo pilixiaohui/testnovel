@@ -55,7 +55,7 @@ class RunControl:
         self._running = False  # 关键变量：运行态
         self._start_pending = False  # 关键变量：启动中
         self._current_proc: subprocess.Popen[str] | None = None  # 关键变量：当前子进程
-        self._start_queue: Queue[bool] = Queue()  # 关键变量：启动请求队列
+        self._start_queue: Queue[tuple[bool, str]] = Queue()  # 关键变量：启动请求队列 (new_task, task_goal)
         self.cancel_event = Event()  # 关键变量：中断信号
 
     def is_running(self) -> bool:
@@ -69,7 +69,13 @@ class RunControl:
     def request_start(self) -> bool:
         return self.request_start_with_options(new_task=False)  # 关键变量：默认非新任务启动
 
-    def request_start_with_options(self, *, new_task: bool, before_enqueue: Callable[[], None] | None = None) -> bool:
+    def request_start_with_options(
+        self,
+        *,
+        new_task: bool,
+        task_goal: str = "",
+        before_enqueue: Callable[[], None] | None = None,
+    ) -> bool:
         with self._lock:
             if self._running or self._start_pending:  # 关键分支：忙碌时拒绝启动
                 return False
@@ -77,15 +83,15 @@ class RunControl:
                 before_enqueue()
             self._start_pending = True  # 关键变量：标记启动中
             self.cancel_event.clear()  # 关键变量：清除中断标志
-            self._start_queue.put(new_task)  # 关键变量：入队启动请求
+            self._start_queue.put((new_task, task_goal))  # 关键变量：入队启动请求
             return True
 
-    def wait_for_start(self) -> bool:
-        new_task = self._start_queue.get()  # 关键变量：阻塞等待启动请求
+    def wait_for_start(self) -> tuple[bool, str]:
+        new_task, task_goal = self._start_queue.get()  # 关键变量：阻塞等待启动请求
         with self._lock:
             self._start_pending = False  # 关键变量：清理启动中
             self._running = True  # 关键变量：标记运行中
-        return new_task
+        return new_task, task_goal
 
     def mark_finished(self) -> None:
         with self._lock:

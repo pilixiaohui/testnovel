@@ -281,6 +281,9 @@
                 <div>
                   <div class="summaryTitle">
                     <b>Iteration {{ item.iteration }}</b>
+                    <span v-if="item.verdict" :class="['verdictBadge', item.verdict.toLowerCase()]">
+                      {{ item.verdict }}
+                    </span>
                   </div>
                   <div class="muted">agent: {{ item.subagent.agent }}</div>
                 </div>
@@ -291,6 +294,32 @@
               <div class="summarySection">
                 <div class="summaryLabel">概览</div>
                 <div class="summaryValue">{{ item.summary }}</div>
+              </div>
+              <div v-if="item.key_findings && item.key_findings.length > 0" class="summarySection">
+                <div class="summaryLabel">关键发现</div>
+                <div class="summaryValue">
+                  <ul class="findingsList">
+                    <li v-for="(finding, idx) in item.key_findings" :key="idx">{{ finding }}</li>
+                  </ul>
+                </div>
+              </div>
+              <div v-if="item.changes" class="summarySection">
+                <div class="summaryLabel">代码变更</div>
+                <div class="summaryValue">
+                  <div v-if="item.changes.files_modified && item.changes.files_modified.length > 0">
+                    <span class="muted">修改文件:</span>
+                    <code v-for="(f, idx) in item.changes.files_modified" :key="idx" class="fileTag">{{ f }}</code>
+                  </div>
+                  <div v-if="item.changes.tests_passed !== undefined">
+                    <span class="muted">自测:</span>
+                    <span :class="item.changes.tests_passed ? 'pass' : 'fail'">
+                      {{ item.changes.tests_passed ? 'PASS' : 'FAIL' }}
+                    </span>
+                    <span v-if="item.changes.coverage !== undefined" class="muted">
+                      覆盖率 {{ item.changes.coverage }}%
+                    </span>
+                  </div>
+                </div>
               </div>
               <div class="summarySection">
                 <div class="summaryLabel">MAIN 决策</div>
@@ -340,9 +369,6 @@
                   </div>
                 </div>
               </div>
-              <div v-if="item.artifacts" class="summaryArtifacts">
-                artifacts: {{ JSON.stringify(item.artifacts) }}
-              </div>
             </div>
           </div>
         </div>
@@ -370,13 +396,31 @@
             <div v-if="uploadedDocs.length === 0" class="muted">暂无文档</div>
             <div v-for="doc in uploadedDocs" :key="doc.path" class="docItem">
               <div class="docMeta">
-                <div><code>{{ doc.path }}</code></div>
+                <div>
+                  <code>{{ doc.path }}</code>
+                  <span v-if="isDocInFinishReview(doc)" class="badge badge-success">已加入验收</span>
+                </div>
                 <div class="muted">{{ doc.size }} bytes · {{ doc.upload_time }}</div>
               </div>
               <div class="row">
                 <button @click="copyDocRef(doc)">Copy @doc</button>
-                <button @click="addDocToFinishReview(doc)">加入验收</button>
+                <button v-if="!isDocInFinishReview(doc)" @click="addDocToFinishReview(doc)">加入验收</button>
+                <button v-else class="danger" @click="removeDocFromFinishReview(doc)">移出验收</button>
                 <button class="danger" @click="deleteDoc(doc)">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div style="height: 16px"></div>
+          <div class="muted">验收文档列表（finish_review_config.docs）</div>
+          <div style="height: 8px"></div>
+          <div class="docList">
+            <div v-if="finishReviewDocs.length === 0" class="muted">暂无验收文档</div>
+            <div v-for="docPath in finishReviewDocs" :key="docPath" class="docItem">
+              <div class="docMeta">
+                <code>{{ docPath }}</code>
+              </div>
+              <div class="row">
+                <button class="danger" @click="removeDocFromFinishReviewByPath(docPath)">移出验收</button>
               </div>
             </div>
           </div>
@@ -526,6 +570,7 @@ const fileDirty = ref(false);
 
 const progress = ref<ProgressInfo | null>(null);
 const uploadedDocs = ref<UploadedDocument[]>([]);
+const finishReviewDocs = ref<string[]>([]);
 const uploadCategory = ref('requirements');
 const uploadFile = ref<File | null>(null);
 const taskDocRefs = ref<string[]>([]);
@@ -789,7 +834,24 @@ async function fetchUploadedDocs() {
     throw new Error('uploaded docs must be array');
   }
   uploadedDocs.value = data;
+  await fetchFinishReviewDocs();
   docsStatus.value = 'ok';
+}
+
+async function fetchFinishReviewDocs() {
+  const res = await fetch('/api/finish_review_docs');
+  if (!res.ok) {
+    return;
+  }
+  const data = await res.json();
+  if (data && Array.isArray(data.docs)) {
+    finishReviewDocs.value = data.docs;
+  }
+}
+
+function isDocInFinishReview(doc: UploadedDocument): boolean {
+  const fullPath = `orchestrator/memory/uploaded_docs/${doc.path}`;
+  return finishReviewDocs.value.includes(fullPath);
 }
 
 function onUploadFileChange(event: Event) {
@@ -862,7 +924,32 @@ async function addDocToFinishReview(doc: UploadedDocument) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ doc_path: doc.path })
   });
-  docsStatus.value = resp.ok ? 'added to finish_review' : `error ${resp.status}`;
+  if (resp.ok) {
+    await fetchFinishReviewDocs();
+    docsStatus.value = 'added to finish_review';
+  } else {
+    docsStatus.value = `error ${resp.status}`;
+  }
+}
+
+async function removeDocFromFinishReview(doc: UploadedDocument) {
+  const fullPath = `orchestrator/memory/uploaded_docs/${doc.path}`;
+  await removeDocFromFinishReviewByPath(fullPath);
+}
+
+async function removeDocFromFinishReviewByPath(docPath: string) {
+  docsStatus.value = 'updating...';
+  const resp = await fetch('/api/remove_from_finish_review', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ doc_path: docPath })
+  });
+  if (resp.ok) {
+    await fetchFinishReviewDocs();
+    docsStatus.value = 'removed from finish_review';
+  } else {
+    docsStatus.value = `error ${resp.status}`;
+  }
 }
 
 async function copyDocRef(doc: UploadedDocument) {

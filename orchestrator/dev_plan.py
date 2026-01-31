@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 
 _TASK_HEADER_RE = re.compile(r"^###\s+([^:]+):\s*(.*)$")
+_MILESTONE_HEADER_RE = re.compile(r"^##\s+Milestone\s+(\S+):\s*(.*)$")
 # NOTE: allow optional leading "-" to reduce brittleness for LLM-written markdown.
 _STATUS_RE = re.compile(r"^\s*(?:-\s*)?status:\s*([A-Z]+)\s*$")
 

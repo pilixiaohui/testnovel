@@ -1,0 +1,1083 @@
+{"ts": "2026-01-27T08:08:26.837911+00:00", "event": "run_start", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T08:08:26.840483+00:00", "event": "iteration_start", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 1}
+{"ts": "2026-01-27T08:08:26.841175+00:00", "event": "main_prompt_size", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 1, "prompt_len": 4914}
+{"ts": "2026-01-27T08:12:07.024117+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 1, "stage": "MAIN", "duration_ms": 220182}
+{"ts": "2026-01-27T08:46:12.939883+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 1, "stage": "REVIEW", "duration_ms": 2045913}
+{"ts": "2026-01-27T08:46:12.944914+00:00", "event": "iteration_start", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 2}
+{"ts": "2026-01-27T08:46:12.945433+00:00", "event": "main_prompt_size", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 2, "prompt_len": 10862}
+{"ts": "2026-01-27T08:46:57.036939+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 2, "stage": "SUMMARY", "duration_ms": 44096}
+{"ts": "2026-01-27T08:50:49.179168+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 2, "stage": "MAIN", "duration_ms": 276233}
+{"ts": "2026-01-27T08:59:10.231557+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 2, "stage": "TEST", "duration_ms": 501047}
+{"ts": "2026-01-27T08:59:10.236474+00:00", "event": "iteration_start", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 3}
+{"ts": "2026-01-27T08:59:10.237236+00:00", "event": "main_prompt_size", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 3, "prompt_len": 6357}
+{"ts": "2026-01-27T08:59:42.030368+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 3, "stage": "SUMMARY", "duration_ms": 31797}
+{"ts": "2026-01-27T09:01:35.518999+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 3, "stage": "MAIN", "duration_ms": 145281}
+{"ts": "2026-01-27T09:37:13.285392+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 3, "stage": "DEV", "duration_ms": 2137760}
+{"ts": "2026-01-27T09:37:13.295765+00:00", "event": "iteration_start", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 4}
+{"ts": "2026-01-27T09:37:13.296333+00:00", "event": "main_prompt_size", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 4, "prompt_len": 6789}
+{"ts": "2026-01-27T09:37:57.687324+00:00", "event": "stage_complete", "trace_id": "c83c2b4c-95d8-4d27-bf6d-4b77354dfc68", "iteration": 4, "stage": "MAIN", "duration_ms": 44390}
+{"ts": "2026-01-27T10:25:08.983955+00:00", "event": "run_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T10:29:36.425888+00:00", "event": "iteration_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 5}
+{"ts": "2026-01-27T10:29:36.427228+00:00", "event": "main_prompt_size", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 5, "prompt_len": 6390}
+{"ts": "2026-01-27T10:30:28.830063+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 5, "stage": "MAIN", "duration_ms": 52402}
+{"ts": "2026-01-27T10:43:31.623212+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 5, "stage": "DEV", "duration_ms": 782788}
+{"ts": "2026-01-27T10:43:31.625041+00:00", "event": "iteration_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 6}
+{"ts": "2026-01-27T10:43:31.625960+00:00", "event": "main_prompt_size", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 6, "prompt_len": 6303}
+{"ts": "2026-01-27T10:44:10.304863+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 6, "stage": "SUMMARY", "duration_ms": 38680}
+{"ts": "2026-01-27T10:44:15.817013+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 6, "stage": "MAIN", "duration_ms": 44190}
+{"ts": "2026-01-27T11:05:42.700173+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 6, "stage": "DEV", "duration_ms": 1286878}
+{"ts": "2026-01-27T11:05:42.707730+00:00", "event": "iteration_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 7}
+{"ts": "2026-01-27T11:05:42.708338+00:00", "event": "main_prompt_size", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 7, "prompt_len": 6302}
+{"ts": "2026-01-27T11:06:21.131128+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 7, "stage": "SUMMARY", "duration_ms": 38429}
+{"ts": "2026-01-27T11:06:37.798025+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 7, "stage": "MAIN", "duration_ms": 55089}
+{"ts": "2026-01-27T11:41:43.094376+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 7, "stage": "DEV", "duration_ms": 2105292}
+{"ts": "2026-01-27T11:41:43.096046+00:00", "event": "iteration_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 8}
+{"ts": "2026-01-27T11:41:43.096739+00:00", "event": "main_prompt_size", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 8, "prompt_len": 8601}
+{"ts": "2026-01-27T11:42:37.031432+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 8, "stage": "MAIN", "duration_ms": 53934}
+{"ts": "2026-01-27T12:03:12.867777+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 8, "stage": "DEV", "duration_ms": 1200786}
+{"ts": "2026-01-27T12:03:12.869203+00:00", "event": "iteration_start", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 9}
+{"ts": "2026-01-27T12:03:12.869888+00:00", "event": "main_prompt_size", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 9, "prompt_len": 6715}
+{"ts": "2026-01-27T12:04:01.533066+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 9, "stage": "SUMMARY", "duration_ms": 48664}
+{"ts": "2026-01-27T12:04:02.184564+00:00", "event": "stage_complete", "trace_id": "70afb65d-b957-4c2e-8607-f8d8e3537f2b", "iteration": 9, "stage": "MAIN", "duration_ms": 49314}
+{"ts": "2026-01-27T12:38:08.922084+00:00", "event": "run_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T12:53:31.111897+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 10}
+{"ts": "2026-01-27T12:53:31.112780+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 10, "prompt_len": 6069}
+{"ts": "2026-01-27T12:54:53.545190+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 10, "stage": "MAIN", "duration_ms": 82432}
+{"ts": "2026-01-27T13:02:09.678015+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 10, "stage": "TEST", "duration_ms": 436128}
+{"ts": "2026-01-27T13:02:09.683122+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 11}
+{"ts": "2026-01-27T13:02:09.688813+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 11, "prompt_len": 6250}
+{"ts": "2026-01-27T13:02:51.687892+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 11, "stage": "MAIN", "duration_ms": 41998}
+{"ts": "2026-01-27T13:05:52.445516+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 11, "stage": "DEV", "duration_ms": 162601}
+{"ts": "2026-01-27T13:05:52.447601+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 12}
+{"ts": "2026-01-27T13:05:52.449151+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 12, "prompt_len": 5698}
+{"ts": "2026-01-27T13:06:42.490827+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 12, "stage": "MAIN", "duration_ms": 50041}
+{"ts": "2026-01-27T13:18:09.858987+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 12, "stage": "REVIEW", "duration_ms": 676076}
+{"ts": "2026-01-27T13:18:09.875713+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 13}
+{"ts": "2026-01-27T13:18:09.876368+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 13, "prompt_len": 16631}
+{"ts": "2026-01-27T13:18:58.245671+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 13, "stage": "SUMMARY", "duration_ms": 48384}
+{"ts": "2026-01-27T13:19:46.783481+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 13, "stage": "MAIN", "duration_ms": 96906}
+{"ts": "2026-01-27T13:24:23.886326+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 13, "stage": "DEV", "duration_ms": 277096}
+{"ts": "2026-01-27T13:24:23.893180+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 14}
+{"ts": "2026-01-27T13:24:23.894705+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 14, "prompt_len": 6054}
+{"ts": "2026-01-27T13:25:30.057340+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 14, "stage": "SUMMARY", "duration_ms": 66170}
+{"ts": "2026-01-27T13:25:55.612507+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 14, "stage": "MAIN", "duration_ms": 91717}
+{"ts": "2026-01-27T13:30:37.796525+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 14, "stage": "REVIEW", "duration_ms": 282179}
+{"ts": "2026-01-27T13:30:37.798554+00:00", "event": "iteration_start", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 15}
+{"ts": "2026-01-27T13:30:37.800353+00:00", "event": "main_prompt_size", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 15, "prompt_len": 6308}
+{"ts": "2026-01-27T13:31:32.359244+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 15, "stage": "SUMMARY", "duration_ms": 54561}
+{"ts": "2026-01-27T13:31:50.089449+00:00", "event": "stage_complete", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 15, "stage": "MAIN", "duration_ms": 72287}
+{"ts": "2026-01-27T13:31:50.090100+00:00", "event": "finish_attempt", "trace_id": "71e5ef3e-0fc8-4e1a-ad03-c418ebd55974", "iteration": 15, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-27T14:01:41.441833+00:00", "event": "run_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T14:01:41.442504+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15}
+{"ts": "2026-01-27T14:01:41.443307+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "prompt_len": 6308}
+{"ts": "2026-01-27T14:02:28.130859+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "stage": "MAIN", "duration_ms": 46687}
+{"ts": "2026-01-27T14:02:28.131144+00:00", "event": "finish_attempt", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-27T14:21:52.034467+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "stage": "FINISH_REVIEW", "duration_ms": 1163902}
+{"ts": "2026-01-27T14:23:47.515874+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "stage": "MAIN_FINISH_CHECK", "duration_ms": 115480}
+{"ts": "2026-01-27T14:27:55.669926+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 15, "stage": "DEV", "duration_ms": 248145}
+{"ts": "2026-01-27T14:27:55.673452+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 16}
+{"ts": "2026-01-27T14:27:55.674217+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 16, "prompt_len": 5760}
+{"ts": "2026-01-27T14:28:45.780278+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 16, "stage": "SUMMARY", "duration_ms": 50109}
+{"ts": "2026-01-27T14:30:33.098513+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 16, "stage": "MAIN", "duration_ms": 157424}
+{"ts": "2026-01-27T14:42:27.263311+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 16, "stage": "DEV", "duration_ms": 714159}
+{"ts": "2026-01-27T14:42:27.271814+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 17}
+{"ts": "2026-01-27T14:42:27.272629+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 17, "prompt_len": 6534}
+{"ts": "2026-01-27T14:43:08.128445+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 17, "stage": "SUMMARY", "duration_ms": 40864}
+{"ts": "2026-01-27T14:44:00.270321+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 17, "stage": "MAIN", "duration_ms": 92997}
+{"ts": "2026-01-27T14:48:37.247012+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 17, "stage": "REVIEW", "duration_ms": 276971}
+{"ts": "2026-01-27T14:48:37.252257+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 18}
+{"ts": "2026-01-27T14:48:37.253525+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 18, "prompt_len": 7582}
+{"ts": "2026-01-27T14:49:17.806722+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 18, "stage": "SUMMARY", "duration_ms": 40558}
+{"ts": "2026-01-27T14:50:31.439667+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 18, "stage": "MAIN", "duration_ms": 114185}
+{"ts": "2026-01-27T14:53:04.491570+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 18, "stage": "TEST", "duration_ms": 153047}
+{"ts": "2026-01-27T14:53:04.493134+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 19}
+{"ts": "2026-01-27T14:53:04.494713+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 19, "prompt_len": 6074}
+{"ts": "2026-01-27T14:53:59.048503+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 19, "stage": "SUMMARY", "duration_ms": 54556}
+{"ts": "2026-01-27T14:55:31.148756+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 19, "stage": "MAIN", "duration_ms": 146653}
+{"ts": "2026-01-27T14:58:31.263281+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 19, "stage": "REVIEW", "duration_ms": 180111}
+{"ts": "2026-01-27T14:58:31.264865+00:00", "event": "iteration_start", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 20}
+{"ts": "2026-01-27T14:58:31.266541+00:00", "event": "main_prompt_size", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 20, "prompt_len": 10598}
+{"ts": "2026-01-27T14:59:27.359759+00:00", "event": "stage_complete", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 20, "stage": "MAIN", "duration_ms": 56092}
+{"ts": "2026-01-27T14:59:27.360081+00:00", "event": "finish_attempt", "trace_id": "270e6c90-35c9-4771-9c27-f06b4885d430", "iteration": 20, "finish_attempts": 2, "max_finish_attempts": 3}
+{"ts": "2026-01-27T15:38:04.694487+00:00", "event": "run_start", "trace_id": "f9b15750-bb65-4d8c-8065-c15f873a142b", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T15:38:04.695309+00:00", "event": "iteration_start", "trace_id": "f9b15750-bb65-4d8c-8065-c15f873a142b", "iteration": 20}
+{"ts": "2026-01-27T15:38:04.696053+00:00", "event": "main_prompt_size", "trace_id": "f9b15750-bb65-4d8c-8065-c15f873a142b", "iteration": 20, "prompt_len": 4915}
+{"ts": "2026-01-27T15:38:30.091338+00:00", "event": "stage_complete", "trace_id": "f9b15750-bb65-4d8c-8065-c15f873a142b", "iteration": 20, "stage": "MAIN", "duration_ms": 25395}
+{"ts": "2026-01-27T15:38:30.091756+00:00", "event": "finish_attempt", "trace_id": "f9b15750-bb65-4d8c-8065-c15f873a142b", "iteration": 20, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-27T16:50:03.106487+00:00", "event": "run_start", "trace_id": "95814891-9ea6-4b07-b8cb-dae3b8c5d078", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T16:50:03.109365+00:00", "event": "iteration_start", "trace_id": "95814891-9ea6-4b07-b8cb-dae3b8c5d078", "iteration": 1}
+{"ts": "2026-01-27T16:50:03.110057+00:00", "event": "main_prompt_size", "trace_id": "95814891-9ea6-4b07-b8cb-dae3b8c5d078", "iteration": 1, "prompt_len": 4914}
+{"ts": "2026-01-27T16:52:56.045088+00:00", "event": "stage_complete", "trace_id": "95814891-9ea6-4b07-b8cb-dae3b8c5d078", "iteration": 1, "stage": "MAIN", "duration_ms": 172934}
+{"ts": "2026-01-27T16:55:11.405758+00:00", "event": "run_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T16:55:11.408613+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 1}
+{"ts": "2026-01-27T16:55:11.409308+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 1, "prompt_len": 4914}
+{"ts": "2026-01-27T16:57:46.260738+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 1, "stage": "MAIN", "duration_ms": 154851}
+{"ts": "2026-01-27T17:14:43.727934+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 1, "stage": "REVIEW", "duration_ms": 1017464}
+{"ts": "2026-01-27T17:14:43.739053+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 2}
+{"ts": "2026-01-27T17:14:43.739973+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 2, "prompt_len": 7968}
+{"ts": "2026-01-27T17:15:12.061900+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 2, "stage": "SUMMARY", "duration_ms": 28332}
+{"ts": "2026-01-27T17:23:37.116792+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 2, "stage": "MAIN", "duration_ms": 533376}
+{"ts": "2026-01-27T17:27:57.930224+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 2, "stage": "TEST", "duration_ms": 260807}
+{"ts": "2026-01-27T17:27:57.939549+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 3}
+{"ts": "2026-01-27T17:27:57.940316+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 3, "prompt_len": 6788}
+{"ts": "2026-01-27T17:29:14.401500+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 3, "stage": "SUMMARY", "duration_ms": 76470}
+{"ts": "2026-01-27T17:30:06.640368+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 3, "stage": "MAIN", "duration_ms": 128699}
+{"ts": "2026-01-27T17:43:06.188893+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 3, "stage": "REVIEW", "duration_ms": 779543}
+{"ts": "2026-01-27T17:43:06.191931+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 4}
+{"ts": "2026-01-27T17:43:06.193251+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 4, "prompt_len": 20078}
+{"ts": "2026-01-27T17:44:04.571022+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 4, "stage": "SUMMARY", "duration_ms": 58380}
+{"ts": "2026-01-27T17:48:41.074795+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 4, "stage": "MAIN", "duration_ms": 334881}
+{"ts": "2026-01-27T17:56:04.263792+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 4, "stage": "DEV", "duration_ms": 443182}
+{"ts": "2026-01-27T17:56:04.272029+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 5}
+{"ts": "2026-01-27T17:56:04.273257+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 5, "prompt_len": 7820}
+{"ts": "2026-01-27T17:57:02.707027+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 5, "stage": "SUMMARY", "duration_ms": 58442}
+{"ts": "2026-01-27T18:01:36.367042+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 5, "stage": "MAIN", "duration_ms": 332093}
+{"ts": "2026-01-27T18:05:20.719889+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 5, "stage": "DEV", "duration_ms": 224345}
+{"ts": "2026-01-27T18:05:20.723912+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 6}
+{"ts": "2026-01-27T18:05:20.724812+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 6, "prompt_len": 9050}
+{"ts": "2026-01-27T18:06:07.981015+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 6, "stage": "SUMMARY", "duration_ms": 47260}
+{"ts": "2026-01-27T18:08:48.390783+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 6, "stage": "MAIN", "duration_ms": 207665}
+{"ts": "2026-01-27T18:14:07.816548+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 6, "stage": "REVIEW", "duration_ms": 319418}
+{"ts": "2026-01-27T18:14:07.819098+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 7}
+{"ts": "2026-01-27T18:14:07.820604+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 7, "prompt_len": 9988}
+{"ts": "2026-01-27T18:15:15.069092+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 7, "stage": "SUMMARY", "duration_ms": 67250}
+{"ts": "2026-01-27T18:16:59.597584+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 7, "stage": "MAIN", "duration_ms": 171776}
+{"ts": "2026-01-27T18:29:19.433687+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 7, "stage": "DEV", "duration_ms": 739829}
+{"ts": "2026-01-27T18:29:19.435843+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 8}
+{"ts": "2026-01-27T18:29:19.436461+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 8, "prompt_len": 8316}
+{"ts": "2026-01-27T18:29:55.133837+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 8, "stage": "SUMMARY", "duration_ms": 35699}
+{"ts": "2026-01-27T18:30:32.039633+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 8, "stage": "MAIN", "duration_ms": 72603}
+{"ts": "2026-01-27T18:34:01.050093+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 8, "stage": "REVIEW", "duration_ms": 209003}
+{"ts": "2026-01-27T18:34:01.052437+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 9}
+{"ts": "2026-01-27T18:34:01.054048+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 9, "prompt_len": 8270}
+{"ts": "2026-01-27T18:34:40.125446+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 9, "stage": "SUMMARY", "duration_ms": 39074}
+{"ts": "2026-01-27T18:35:17.635045+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 9, "stage": "MAIN", "duration_ms": 76580}
+{"ts": "2026-01-27T18:44:15.945089+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 9, "stage": "DEV", "duration_ms": 538299}
+{"ts": "2026-01-27T18:44:15.951837+00:00", "event": "iteration_start", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 10}
+{"ts": "2026-01-27T18:44:15.952555+00:00", "event": "main_prompt_size", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 10, "prompt_len": 7537}
+{"ts": "2026-01-27T18:44:50.349932+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 10, "stage": "SUMMARY", "duration_ms": 34403}
+{"ts": "2026-01-27T18:45:30.392788+00:00", "event": "stage_complete", "trace_id": "55bd43dc-bf53-48c6-833b-ae463b855cdb", "iteration": 10, "stage": "MAIN", "duration_ms": 74439}
+{"ts": "2026-01-27T18:50:42.604003+00:00", "event": "run_start", "trace_id": "1f0f5490-ea83-4f3c-b251-36507735df9c", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-27T18:50:42.607087+00:00", "event": "iteration_start", "trace_id": "1f0f5490-ea83-4f3c-b251-36507735df9c", "iteration": 1}
+{"ts": "2026-01-27T18:50:42.607829+00:00", "event": "main_prompt_size", "trace_id": "1f0f5490-ea83-4f3c-b251-36507735df9c", "iteration": 1, "prompt_len": 4943}
+{"ts": "2026-01-27T18:53:59.576662+00:00", "event": "run_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 268}
+{"ts": "2026-01-27T18:53:59.579262+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 1}
+{"ts": "2026-01-27T18:53:59.579944+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 1, "prompt_len": 4943}
+{"ts": "2026-01-27T18:56:41.709176+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 1, "stage": "MAIN", "duration_ms": 162129}
+{"ts": "2026-01-27T19:13:03.996434+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 1, "stage": "REVIEW", "duration_ms": 982284}
+{"ts": "2026-01-27T19:13:03.998076+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 2}
+{"ts": "2026-01-27T19:13:03.998683+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 2, "prompt_len": 10122}
+{"ts": "2026-01-27T19:13:32.154177+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 2, "stage": "SUMMARY", "duration_ms": 28156}
+{"ts": "2026-01-27T19:17:38.403920+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 2, "stage": "MAIN", "duration_ms": 274405}
+{"ts": "2026-01-27T19:27:16.860047+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 2, "stage": "DEV", "duration_ms": 578451}
+{"ts": "2026-01-27T19:27:16.862007+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 3}
+{"ts": "2026-01-27T19:27:16.862572+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 3, "prompt_len": 7206}
+{"ts": "2026-01-27T19:27:51.385464+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 3, "stage": "SUMMARY", "duration_ms": 34524}
+{"ts": "2026-01-27T19:28:01.157365+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 3, "stage": "MAIN", "duration_ms": 44294}
+{"ts": "2026-01-27T19:34:13.636292+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 3, "stage": "DEV", "duration_ms": 372465}
+{"ts": "2026-01-27T19:34:13.652471+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 4}
+{"ts": "2026-01-27T19:34:13.653249+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 4, "prompt_len": 6846}
+{"ts": "2026-01-27T19:34:57.053343+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 4, "stage": "SUMMARY", "duration_ms": 43416}
+{"ts": "2026-01-27T19:35:01.496023+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 4, "stage": "MAIN", "duration_ms": 47842}
+{"ts": "2026-01-27T19:42:30.639769+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 4, "stage": "DEV", "duration_ms": 449138}
+{"ts": "2026-01-27T19:42:30.641498+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 5}
+{"ts": "2026-01-27T19:42:30.642735+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 5, "prompt_len": 13202}
+{"ts": "2026-01-27T19:43:05.704165+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 5, "stage": "SUMMARY", "duration_ms": 35063}
+{"ts": "2026-01-27T19:43:18.830506+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 5, "stage": "MAIN", "duration_ms": 48187}
+{"ts": "2026-01-27T19:50:14.916990+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 5, "stage": "DEV", "duration_ms": 416080}
+{"ts": "2026-01-27T19:50:14.924021+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 6}
+{"ts": "2026-01-27T19:50:14.925118+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 6, "prompt_len": 8193}
+{"ts": "2026-01-27T19:50:48.244748+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 6, "stage": "SUMMARY", "duration_ms": 33326}
+{"ts": "2026-01-27T19:51:04.980997+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 6, "stage": "MAIN", "duration_ms": 50055}
+{"ts": "2026-01-27T19:54:50.838402+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 6, "stage": "TEST", "duration_ms": 225849}
+{"ts": "2026-01-27T19:54:50.841917+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 7}
+{"ts": "2026-01-27T19:54:50.842470+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 7, "prompt_len": 7304}
+{"ts": "2026-01-27T19:55:44.076240+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 7, "stage": "SUMMARY", "duration_ms": 53234}
+{"ts": "2026-01-27T19:56:19.527869+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 7, "stage": "MAIN", "duration_ms": 88685}
+{"ts": "2026-01-27T20:03:07.720942+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 7, "stage": "DEV", "duration_ms": 408189}
+{"ts": "2026-01-27T20:03:07.731587+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 8}
+{"ts": "2026-01-27T20:03:07.732180+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 8, "prompt_len": 8803}
+{"ts": "2026-01-27T20:03:42.874601+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 8, "stage": "SUMMARY", "duration_ms": 35152}
+{"ts": "2026-01-27T20:03:50.862929+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 8, "stage": "MAIN", "duration_ms": 43130}
+{"ts": "2026-01-27T20:10:40.768670+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 8, "stage": "DEV", "duration_ms": 409896}
+{"ts": "2026-01-27T20:10:40.771789+00:00", "event": "iteration_start", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 9}
+{"ts": "2026-01-27T20:10:40.772443+00:00", "event": "main_prompt_size", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 9, "prompt_len": 7265}
+{"ts": "2026-01-27T20:11:53.576283+00:00", "event": "stage_complete", "trace_id": "026ab9c0-f924-49bb-b243-63980e59dff7", "iteration": 9, "stage": "MAIN", "duration_ms": 72803}
+{"ts": "2026-01-28T06:14:24.251997+00:00", "event": "run_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 268}
+{"ts": "2026-01-28T06:14:24.255923+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 1}
+{"ts": "2026-01-28T06:14:24.256648+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 1, "prompt_len": 6940}
+{"ts": "2026-01-28T06:16:14.241433+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 1, "stage": "MAIN", "duration_ms": 109984}
+{"ts": "2026-01-28T06:36:37.856450+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 1, "stage": "REVIEW", "duration_ms": 1223611}
+{"ts": "2026-01-28T06:36:37.858563+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 2}
+{"ts": "2026-01-28T06:36:37.859096+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 2, "prompt_len": 13157}
+{"ts": "2026-01-28T06:37:05.615055+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 2, "stage": "SUMMARY", "duration_ms": 27757}
+{"ts": "2026-01-28T06:39:07.779092+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 2, "stage": "MAIN", "duration_ms": 149919}
+{"ts": "2026-01-28T06:51:50.320407+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 2, "stage": "TEST", "duration_ms": 762534}
+{"ts": "2026-01-28T06:51:50.326206+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 3}
+{"ts": "2026-01-28T06:51:50.326714+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 3, "prompt_len": 10302}
+{"ts": "2026-01-28T06:52:27.477517+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 3, "stage": "SUMMARY", "duration_ms": 37155}
+{"ts": "2026-01-28T06:52:47.797176+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 3, "stage": "MAIN", "duration_ms": 57470}
+{"ts": "2026-01-28T07:02:57.557633+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 3, "stage": "TEST", "duration_ms": 609756}
+{"ts": "2026-01-28T07:02:57.559483+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 4}
+{"ts": "2026-01-28T07:02:57.560256+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 4, "prompt_len": 9661}
+{"ts": "2026-01-28T07:03:31.200442+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 4, "stage": "SUMMARY", "duration_ms": 33641}
+{"ts": "2026-01-28T07:03:48.553356+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 4, "stage": "MAIN", "duration_ms": 50992}
+{"ts": "2026-01-28T07:43:35.937434+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 4, "stage": "DEV", "duration_ms": 2387376}
+{"ts": "2026-01-28T07:43:35.939859+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 5}
+{"ts": "2026-01-28T07:43:35.940406+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 5, "prompt_len": 9968}
+{"ts": "2026-01-28T07:44:15.891324+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 5, "stage": "MAIN", "duration_ms": 39950}
+{"ts": "2026-01-28T07:46:34.379660+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 5, "stage": "DEV", "duration_ms": 135100}
+{"ts": "2026-01-28T07:46:34.384095+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 6}
+{"ts": "2026-01-28T07:46:34.385119+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 6, "prompt_len": 8190}
+{"ts": "2026-01-28T07:47:16.064448+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 6, "stage": "SUMMARY", "duration_ms": 41683}
+{"ts": "2026-01-28T07:47:27.503560+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 6, "stage": "MAIN", "duration_ms": 53117}
+{"ts": "2026-01-28T07:53:05.846716+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 6, "stage": "TEST", "duration_ms": 338335}
+{"ts": "2026-01-28T07:53:05.859050+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 7}
+{"ts": "2026-01-28T07:53:05.859698+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 7, "prompt_len": 9412}
+{"ts": "2026-01-28T07:53:38.592548+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 7, "stage": "SUMMARY", "duration_ms": 32744}
+{"ts": "2026-01-28T07:53:42.564938+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 7, "stage": "MAIN", "duration_ms": 36705}
+{"ts": "2026-01-28T07:58:58.050230+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 7, "stage": "TEST", "duration_ms": 315481}
+{"ts": "2026-01-28T07:58:58.067796+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 8}
+{"ts": "2026-01-28T07:58:58.068465+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 8, "prompt_len": 8911}
+{"ts": "2026-01-28T07:59:28.322847+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 8, "stage": "MAIN", "duration_ms": 30254}
+{"ts": "2026-01-28T08:18:38.958573+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 8, "stage": "DEV", "duration_ms": 1132136}
+{"ts": "2026-01-28T08:18:38.975852+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 9}
+{"ts": "2026-01-28T08:18:38.976462+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 9, "prompt_len": 9013}
+{"ts": "2026-01-28T08:19:07.394892+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 9, "stage": "MAIN", "duration_ms": 28418}
+{"ts": "2026-01-28T08:21:17.998611+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 9, "stage": "DEV", "duration_ms": 106204}
+{"ts": "2026-01-28T08:21:18.005902+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 10}
+{"ts": "2026-01-28T08:21:18.006430+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 10, "prompt_len": 8175}
+{"ts": "2026-01-28T08:21:54.151422+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 10, "stage": "SUMMARY", "duration_ms": 36151}
+{"ts": "2026-01-28T08:22:09.907227+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 10, "stage": "MAIN", "duration_ms": 51900}
+{"ts": "2026-01-28T08:38:15.626900+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 10, "stage": "TEST", "duration_ms": 965714}
+{"ts": "2026-01-28T08:38:15.640722+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 11}
+{"ts": "2026-01-28T08:38:15.641318+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 11, "prompt_len": 9194}
+{"ts": "2026-01-28T08:38:58.979771+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 11, "stage": "SUMMARY", "duration_ms": 43351}
+{"ts": "2026-01-28T08:39:19.332464+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 11, "stage": "MAIN", "duration_ms": 63691}
+{"ts": "2026-01-28T09:11:26.576429+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 11, "stage": "DEV", "duration_ms": 1927237}
+{"ts": "2026-01-28T09:11:26.588103+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 12}
+{"ts": "2026-01-28T09:11:26.588928+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 12, "prompt_len": 8699}
+{"ts": "2026-01-28T09:11:52.692555+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 12, "stage": "MAIN", "duration_ms": 26103}
+{"ts": "2026-01-28T09:50:31.626890+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 12, "stage": "DEV", "duration_ms": 2297998}
+{"ts": "2026-01-28T09:50:31.631949+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 13}
+{"ts": "2026-01-28T09:50:31.632522+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 13, "prompt_len": 8676}
+{"ts": "2026-01-28T09:51:04.808381+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 13, "stage": "SUMMARY", "duration_ms": 33180}
+{"ts": "2026-01-28T09:51:16.792424+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 13, "stage": "MAIN", "duration_ms": 45151}
+{"ts": "2026-01-28T09:53:06.576468+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 13, "stage": "DEV", "duration_ms": 109779}
+{"ts": "2026-01-28T09:53:06.578201+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 14}
+{"ts": "2026-01-28T09:53:06.579594+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 14, "prompt_len": 7803}
+{"ts": "2026-01-28T09:53:56.733497+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 14, "stage": "SUMMARY", "duration_ms": 50156}
+{"ts": "2026-01-28T09:53:59.740258+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 14, "stage": "MAIN", "duration_ms": 53160}
+{"ts": "2026-01-28T10:00:00.859445+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 14, "stage": "TEST", "duration_ms": 361114}
+{"ts": "2026-01-28T10:00:00.867834+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 15}
+{"ts": "2026-01-28T10:00:00.868426+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 15, "prompt_len": 9327}
+{"ts": "2026-01-28T10:00:27.501370+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 15, "stage": "MAIN", "duration_ms": 26632}
+{"ts": "2026-01-28T10:12:56.188540+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 15, "stage": "DEV", "duration_ms": 731327}
+{"ts": "2026-01-28T10:12:56.190603+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 16}
+{"ts": "2026-01-28T10:12:56.191923+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 16, "prompt_len": 9299}
+{"ts": "2026-01-28T10:13:24.009017+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 16, "stage": "MAIN", "duration_ms": 27816}
+{"ts": "2026-01-28T10:19:17.343364+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 16, "stage": "DEV", "duration_ms": 333715}
+{"ts": "2026-01-28T10:19:17.344894+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 17}
+{"ts": "2026-01-28T10:19:17.345515+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 17, "prompt_len": 8176}
+{"ts": "2026-01-28T10:19:56.065245+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 17, "stage": "SUMMARY", "duration_ms": 38720}
+{"ts": "2026-01-28T10:20:08.977174+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 17, "stage": "MAIN", "duration_ms": 51631}
+{"ts": "2026-01-28T10:25:31.344182+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 17, "stage": "TEST", "duration_ms": 322361}
+{"ts": "2026-01-28T10:25:31.347836+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 18}
+{"ts": "2026-01-28T10:25:31.348426+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 18, "prompt_len": 9253}
+{"ts": "2026-01-28T10:26:05.822214+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 18, "stage": "MAIN", "duration_ms": 34473}
+{"ts": "2026-01-28T10:32:51.835022+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 18, "stage": "DEV", "duration_ms": 403507}
+{"ts": "2026-01-28T10:32:51.836340+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 19}
+{"ts": "2026-01-28T10:32:51.836875+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 19, "prompt_len": 8804}
+{"ts": "2026-01-28T10:33:35.164152+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 19, "stage": "MAIN", "duration_ms": 43327}
+{"ts": "2026-01-28T10:47:16.927717+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 19, "stage": "DEV", "duration_ms": 811270}
+{"ts": "2026-01-28T10:47:16.935223+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 20}
+{"ts": "2026-01-28T10:47:16.935789+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 20, "prompt_len": 8711}
+{"ts": "2026-01-28T10:48:04.176388+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 20, "stage": "SUMMARY", "duration_ms": 47247}
+{"ts": "2026-01-28T10:48:10.601771+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 20, "stage": "MAIN", "duration_ms": 53665}
+{"ts": "2026-01-28T11:09:52.550589+00:00", "event": "stage_complete", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 20, "stage": "TEST", "duration_ms": 1301940}
+{"ts": "2026-01-28T11:09:52.552607+00:00", "event": "iteration_start", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 21}
+{"ts": "2026-01-28T11:09:52.553371+00:00", "event": "main_prompt_size", "trace_id": "3c983ef9-bf6e-440d-86e2-f0c46aecbf42", "iteration": 21, "prompt_len": 9150}
+{"ts": "2026-01-28T11:53:40.145019+00:00", "event": "run_start", "trace_id": "705aeb53-4655-4aaa-aabc-8860d136a4bb", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T11:53:40.145824+00:00", "event": "iteration_start", "trace_id": "705aeb53-4655-4aaa-aabc-8860d136a4bb", "iteration": 21}
+{"ts": "2026-01-28T11:53:40.146627+00:00", "event": "main_prompt_size", "trace_id": "705aeb53-4655-4aaa-aabc-8860d136a4bb", "iteration": 21, "prompt_len": 7342}
+{"ts": "2026-01-28T11:59:19.288864+00:00", "event": "run_start", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T11:59:19.289649+00:00", "event": "iteration_start", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 21}
+{"ts": "2026-01-28T11:59:19.290404+00:00", "event": "main_prompt_size", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 21, "prompt_len": 7342}
+{"ts": "2026-01-28T11:59:41.784465+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 21, "stage": "MAIN", "duration_ms": 22493}
+{"ts": "2026-01-28T11:59:59.323463+00:00", "event": "iteration_start", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 22}
+{"ts": "2026-01-28T11:59:59.324539+00:00", "event": "main_prompt_size", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 22, "prompt_len": 9072}
+{"ts": "2026-01-28T12:01:11.733380+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 22, "stage": "MAIN", "duration_ms": 72408}
+{"ts": "2026-01-28T12:13:58.272474+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 22, "stage": "TEST", "duration_ms": 766534}
+{"ts": "2026-01-28T12:13:58.277394+00:00", "event": "iteration_start", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 23}
+{"ts": "2026-01-28T12:13:58.278284+00:00", "event": "main_prompt_size", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 23, "prompt_len": 9670}
+{"ts": "2026-01-28T12:14:29.713230+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 23, "stage": "MAIN", "duration_ms": 31434}
+{"ts": "2026-01-28T12:54:20.942969+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 23, "stage": "DEV", "duration_ms": 2368941}
+{"ts": "2026-01-28T12:54:20.951733+00:00", "event": "iteration_start", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 24}
+{"ts": "2026-01-28T12:54:20.952616+00:00", "event": "main_prompt_size", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 24, "prompt_len": 9795}
+{"ts": "2026-01-28T12:55:32.141929+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 24, "stage": "SUMMARY", "duration_ms": 71197}
+{"ts": "2026-01-28T12:55:45.371987+00:00", "event": "stage_complete", "trace_id": "28b41635-5111-4988-bdc8-b2f97fd16cc3", "iteration": 24, "stage": "MAIN", "duration_ms": 84419}
+{"ts": "2026-01-28T13:01:25.482635+00:00", "event": "run_start", "trace_id": "0af42115-358a-424b-b017-3c38fb28d44c", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T13:01:58.248859+00:00", "event": "run_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 268}
+{"ts": "2026-01-28T13:01:58.251898+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 1}
+{"ts": "2026-01-28T13:01:58.252591+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 1, "prompt_len": 7892}
+{"ts": "2026-01-28T13:11:20.043678+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 1, "stage": "MAIN", "duration_ms": 561790}
+{"ts": "2026-01-28T13:41:05.785109+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 1, "stage": "REVIEW", "duration_ms": 1785736}
+{"ts": "2026-01-28T13:41:05.793686+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 2}
+{"ts": "2026-01-28T13:41:05.794238+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 2, "prompt_len": 15566}
+{"ts": "2026-01-28T13:41:59.541254+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 2, "stage": "SUMMARY", "duration_ms": 53754}
+{"ts": "2026-01-28T13:42:20.412794+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 2, "stage": "MAIN", "duration_ms": 74618}
+{"ts": "2026-01-28T13:56:35.843457+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 2, "stage": "REVIEW", "duration_ms": 855425}
+{"ts": "2026-01-28T13:56:35.847743+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 3}
+{"ts": "2026-01-28T13:56:35.848499+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 3, "prompt_len": 37545}
+{"ts": "2026-01-28T13:57:55.669769+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 3, "stage": "SUMMARY", "duration_ms": 79825}
+{"ts": "2026-01-28T13:58:00.312422+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 3, "stage": "MAIN", "duration_ms": 84463}
+{"ts": "2026-01-28T14:01:12.127580+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 3, "stage": "REVIEW", "duration_ms": 191809}
+{"ts": "2026-01-28T14:01:12.132325+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 4}
+{"ts": "2026-01-28T14:01:12.133500+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 4, "prompt_len": 11488}
+{"ts": "2026-01-28T14:01:53.073356+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 4, "stage": "SUMMARY", "duration_ms": 40944}
+{"ts": "2026-01-28T14:03:32.991026+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 4, "stage": "MAIN", "duration_ms": 140857}
+{"ts": "2026-01-28T14:17:43.651118+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 4, "stage": "DEV", "duration_ms": 850647}
+{"ts": "2026-01-28T14:17:43.653841+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 5}
+{"ts": "2026-01-28T14:17:43.654369+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 5, "prompt_len": 10127}
+{"ts": "2026-01-28T14:18:37.663600+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 5, "stage": "MAIN", "duration_ms": 54009}
+{"ts": "2026-01-28T14:21:07.598897+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 5, "stage": "REVIEW", "duration_ms": 109732}
+{"ts": "2026-01-28T14:21:07.601732+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 6}
+{"ts": "2026-01-28T14:21:07.603040+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 6, "prompt_len": 12678}
+{"ts": "2026-01-28T14:21:58.677583+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 6, "stage": "SUMMARY", "duration_ms": 51076}
+{"ts": "2026-01-28T14:22:09.885011+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 6, "stage": "MAIN", "duration_ms": 62281}
+{"ts": "2026-01-28T14:38:42.145918+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 6, "stage": "DEV", "duration_ms": 992256}
+{"ts": "2026-01-28T14:38:42.161854+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 7}
+{"ts": "2026-01-28T14:38:42.162440+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 7, "prompt_len": 10752}
+{"ts": "2026-01-28T14:39:29.721555+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 7, "stage": "SUMMARY", "duration_ms": 47573}
+{"ts": "2026-01-28T14:41:02.783618+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 7, "stage": "MAIN", "duration_ms": 140621}
+{"ts": "2026-01-28T14:43:31.621291+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 7, "stage": "DEV", "duration_ms": 148831}
+{"ts": "2026-01-28T14:43:31.622739+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 8}
+{"ts": "2026-01-28T14:43:31.623258+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 8, "prompt_len": 9604}
+{"ts": "2026-01-28T14:45:29.792055+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 8, "stage": "SUMMARY", "duration_ms": 118169}
+{"ts": "2026-01-28T14:46:18.210115+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 8, "stage": "MAIN", "duration_ms": 166586}
+{"ts": "2026-01-28T14:51:25.868241+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 8, "stage": "DEV", "duration_ms": 307650}
+{"ts": "2026-01-28T14:51:25.878340+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 9}
+{"ts": "2026-01-28T14:51:25.879157+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 9, "prompt_len": 10149}
+{"ts": "2026-01-28T14:52:27.044010+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 9, "stage": "MAIN", "duration_ms": 61164}
+{"ts": "2026-01-28T14:59:36.297782+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 9, "stage": "REVIEW", "duration_ms": 413345}
+{"ts": "2026-01-28T14:59:36.299993+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 10}
+{"ts": "2026-01-28T14:59:36.300866+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 10, "prompt_len": 16684}
+{"ts": "2026-01-28T15:00:46.704323+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 10, "stage": "MAIN", "duration_ms": 70403}
+{"ts": "2026-01-28T15:08:17.636948+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 10, "stage": "DEV", "duration_ms": 450563}
+{"ts": "2026-01-28T15:08:17.644559+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 11}
+{"ts": "2026-01-28T15:08:17.645089+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 11, "prompt_len": 10334}
+{"ts": "2026-01-28T15:09:22.692065+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 11, "stage": "SUMMARY", "duration_ms": 65053}
+{"ts": "2026-01-28T15:09:27.012251+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 11, "stage": "MAIN", "duration_ms": 69367}
+{"ts": "2026-01-28T15:12:15.992141+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 11, "stage": "REVIEW", "duration_ms": 168969}
+{"ts": "2026-01-28T15:12:15.993752+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 12}
+{"ts": "2026-01-28T15:12:15.994465+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 12, "prompt_len": 10468}
+{"ts": "2026-01-28T15:13:07.800812+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 12, "stage": "SUMMARY", "duration_ms": 51807}
+{"ts": "2026-01-28T15:13:13.042079+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 12, "stage": "MAIN", "duration_ms": 57047}
+{"ts": "2026-01-28T15:18:30.225957+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 12, "stage": "DEV", "duration_ms": 317178}
+{"ts": "2026-01-28T15:18:30.227219+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 13}
+{"ts": "2026-01-28T15:18:30.227942+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 13, "prompt_len": 9710}
+{"ts": "2026-01-28T15:19:30.806558+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 13, "stage": "SUMMARY", "duration_ms": 60579}
+{"ts": "2026-01-28T15:19:34.139338+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 13, "stage": "MAIN", "duration_ms": 63911}
+{"ts": "2026-01-28T15:20:57.444331+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 13, "stage": "REVIEW", "duration_ms": 83296}
+{"ts": "2026-01-28T15:20:57.446707+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 14}
+{"ts": "2026-01-28T15:20:57.448176+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 14, "prompt_len": 10037}
+{"ts": "2026-01-28T15:22:08.400550+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 14, "stage": "MAIN", "duration_ms": 70951}
+{"ts": "2026-01-28T15:24:43.946051+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 14, "stage": "DEV", "duration_ms": 155098}
+{"ts": "2026-01-28T15:24:43.947625+00:00", "event": "iteration_start", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 15}
+{"ts": "2026-01-28T15:24:43.948623+00:00", "event": "main_prompt_size", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 15, "prompt_len": 9834}
+{"ts": "2026-01-28T15:25:47.511987+00:00", "event": "stage_complete", "trace_id": "7aabc03b-d29b-4ea6-bb20-ae42862ab75f", "iteration": 15, "stage": "MAIN", "duration_ms": 63563}
+{"ts": "2026-01-28T15:55:02.539626+00:00", "event": "run_start", "trace_id": "f76eb653-f904-4a55-96a9-b12aa844d79a", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T15:55:02.543467+00:00", "event": "iteration_start", "trace_id": "f76eb653-f904-4a55-96a9-b12aa844d79a", "iteration": 1}
+{"ts": "2026-01-28T15:55:02.544153+00:00", "event": "main_prompt_size", "trace_id": "f76eb653-f904-4a55-96a9-b12aa844d79a", "iteration": 1, "prompt_len": 7904}
+{"ts": "2026-01-28T15:58:59.724843+00:00", "event": "run_start", "trace_id": "99785198-1d94-4831-966d-f5113a423980", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T15:58:59.728890+00:00", "event": "iteration_start", "trace_id": "99785198-1d94-4831-966d-f5113a423980", "iteration": 1}
+{"ts": "2026-01-28T15:58:59.729599+00:00", "event": "main_prompt_size", "trace_id": "99785198-1d94-4831-966d-f5113a423980", "iteration": 1, "prompt_len": 7904}
+{"ts": "2026-01-28T16:00:42.961178+00:00", "event": "stage_complete", "trace_id": "99785198-1d94-4831-966d-f5113a423980", "iteration": 1, "stage": "MAIN", "duration_ms": 103231}
+{"ts": "2026-01-28T16:04:38.210829+00:00", "event": "run_start", "trace_id": "f68672a4-1042-4117-bc11-cabf524f1781", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T16:04:38.215526+00:00", "event": "iteration_start", "trace_id": "f68672a4-1042-4117-bc11-cabf524f1781", "iteration": 1}
+{"ts": "2026-01-28T16:04:38.217608+00:00", "event": "main_prompt_size", "trace_id": "f68672a4-1042-4117-bc11-cabf524f1781", "iteration": 1, "prompt_len": 7904}
+{"ts": "2026-01-28T16:21:31.945753+00:00", "event": "run_start", "trace_id": "46ea4825-5b4f-445b-9700-ca93296458c4", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T16:21:31.950150+00:00", "event": "iteration_start", "trace_id": "46ea4825-5b4f-445b-9700-ca93296458c4", "iteration": 1}
+{"ts": "2026-01-28T16:21:31.951197+00:00", "event": "main_prompt_size", "trace_id": "46ea4825-5b4f-445b-9700-ca93296458c4", "iteration": 1, "prompt_len": 7904}
+{"ts": "2026-01-28T16:36:58.232973+00:00", "event": "run_start", "trace_id": "5a1c95ac-a19e-4bd9-b07d-29702eabcd52", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T16:36:58.235580+00:00", "event": "iteration_start", "trace_id": "5a1c95ac-a19e-4bd9-b07d-29702eabcd52", "iteration": 1}
+{"ts": "2026-01-28T16:36:58.236246+00:00", "event": "main_prompt_size", "trace_id": "5a1c95ac-a19e-4bd9-b07d-29702eabcd52", "iteration": 1, "prompt_len": 7904}
+{"ts": "2026-01-28T16:37:40.868234+00:00", "event": "stage_complete", "trace_id": "5a1c95ac-a19e-4bd9-b07d-29702eabcd52", "iteration": 1, "stage": "MAIN", "duration_ms": 42631}
+{"ts": "2026-01-28T17:20:23.022271+00:00", "event": "run_start", "trace_id": "e867fc70-aea9-4bd4-85df-6173fa6ea7f5", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T17:20:50.263348+00:00", "event": "run_start", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 280}
+{"ts": "2026-01-28T17:20:50.265999+00:00", "event": "iteration_start", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 1}
+{"ts": "2026-01-28T17:20:50.266767+00:00", "event": "main_prompt_size", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 1, "prompt_len": 8127}
+{"ts": "2026-01-28T17:21:58.968757+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 1, "stage": "MAIN", "duration_ms": 68701}
+{"ts": "2026-01-28T17:38:39.861912+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 1, "stage": "REVIEW", "duration_ms": 1000891}
+{"ts": "2026-01-28T17:39:12.227993+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 1, "stage": "SUMMARY", "duration_ms": 32365}
+{"ts": "2026-01-28T17:39:12.228260+00:00", "event": "iteration_start", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 2}
+{"ts": "2026-01-28T17:39:12.228781+00:00", "event": "main_prompt_size", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 2, "prompt_len": 19058}
+{"ts": "2026-01-28T17:39:48.689017+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 2, "stage": "MAIN", "duration_ms": 36460}
+{"ts": "2026-01-28T17:59:09.841834+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 2, "stage": "DEV", "duration_ms": 1161149}
+{"ts": "2026-01-28T17:59:55.056160+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 2, "stage": "SUMMARY", "duration_ms": 45213}
+{"ts": "2026-01-28T17:59:55.056407+00:00", "event": "iteration_start", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 3}
+{"ts": "2026-01-28T17:59:55.056916+00:00", "event": "main_prompt_size", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 3, "prompt_len": 12481}
+{"ts": "2026-01-28T18:00:17.012600+00:00", "event": "stage_complete", "trace_id": "4b008cd6-4b00-4b22-8a5b-4f203d75c614", "iteration": 3, "stage": "MAIN", "duration_ms": 21955}
+{"ts": "2026-01-28T18:01:10.084499+00:00", "event": "run_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T18:09:35.215375+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 4}
+{"ts": "2026-01-28T18:09:35.216377+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 4, "prompt_len": 10608}
+{"ts": "2026-01-28T18:10:16.379494+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 4, "stage": "MAIN", "duration_ms": 41162}
+{"ts": "2026-01-28T18:23:41.632968+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 4, "stage": "DEV", "duration_ms": 805249}
+{"ts": "2026-01-28T18:24:19.130050+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 4, "stage": "SUMMARY", "duration_ms": 37495}
+{"ts": "2026-01-28T18:24:19.130329+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 5}
+{"ts": "2026-01-28T18:24:19.130795+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 5, "prompt_len": 10850}
+{"ts": "2026-01-28T18:24:51.559441+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 5, "stage": "MAIN", "duration_ms": 32428}
+{"ts": "2026-01-28T18:30:02.958870+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 5, "stage": "DEV", "duration_ms": 311395}
+{"ts": "2026-01-28T18:30:43.043868+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 5, "stage": "SUMMARY", "duration_ms": 40084}
+{"ts": "2026-01-28T18:30:43.044114+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 6}
+{"ts": "2026-01-28T18:30:43.044643+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 6, "prompt_len": 10513}
+{"ts": "2026-01-28T18:31:17.847742+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 6, "stage": "MAIN", "duration_ms": 34802}
+{"ts": "2026-01-28T18:35:36.708141+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 6, "stage": "REVIEW", "duration_ms": 258856}
+{"ts": "2026-01-28T18:36:06.784201+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 6, "stage": "SUMMARY", "duration_ms": 30074}
+{"ts": "2026-01-28T18:36:06.784432+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 7}
+{"ts": "2026-01-28T18:36:06.784986+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 7, "prompt_len": 13262}
+{"ts": "2026-01-28T18:36:37.124084+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 7, "stage": "MAIN", "duration_ms": 30338}
+{"ts": "2026-01-28T18:40:52.047102+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 7, "stage": "DEV", "duration_ms": 254919}
+{"ts": "2026-01-28T18:41:32.418467+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 7, "stage": "SUMMARY", "duration_ms": 40370}
+{"ts": "2026-01-28T18:41:32.418717+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 8}
+{"ts": "2026-01-28T18:41:32.419242+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 8, "prompt_len": 10212}
+{"ts": "2026-01-28T18:41:58.579722+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 8, "stage": "MAIN", "duration_ms": 26160}
+{"ts": "2026-01-28T18:50:15.792367+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 8, "stage": "DEV", "duration_ms": 497210}
+{"ts": "2026-01-28T18:51:05.682393+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 8, "stage": "SUMMARY", "duration_ms": 49889}
+{"ts": "2026-01-28T18:51:05.682712+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 9}
+{"ts": "2026-01-28T18:51:05.683270+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 9, "prompt_len": 12049}
+{"ts": "2026-01-28T18:51:33.705031+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 9, "stage": "MAIN", "duration_ms": 28021}
+{"ts": "2026-01-28T18:57:59.518842+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 9, "stage": "DEV", "duration_ms": 385811}
+{"ts": "2026-01-28T18:58:27.947149+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 9, "stage": "SUMMARY", "duration_ms": 28427}
+{"ts": "2026-01-28T18:58:27.947660+00:00", "event": "iteration_start", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 10}
+{"ts": "2026-01-28T18:58:27.948535+00:00", "event": "main_prompt_size", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 10, "prompt_len": 11111}
+{"ts": "2026-01-28T18:58:51.836104+00:00", "event": "stage_complete", "trace_id": "220066cd-0ee4-49ff-9af1-851ebd365f22", "iteration": 10, "stage": "MAIN", "duration_ms": 23887}
+{"ts": "2026-01-28T19:20:29.453800+00:00", "event": "run_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T19:21:46.272148+00:00", "event": "iteration_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 11}
+{"ts": "2026-01-28T19:21:46.273015+00:00", "event": "main_prompt_size", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 11, "prompt_len": 11223}
+{"ts": "2026-01-28T19:22:11.147110+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 11, "stage": "MAIN", "duration_ms": 24873}
+{"ts": "2026-01-28T19:25:51.536981+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 11, "stage": "DEV", "duration_ms": 220387}
+{"ts": "2026-01-28T19:26:19.381479+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 11, "stage": "SUMMARY", "duration_ms": 27843}
+{"ts": "2026-01-28T19:26:19.381911+00:00", "event": "iteration_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 12}
+{"ts": "2026-01-28T19:26:19.382633+00:00", "event": "main_prompt_size", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 12, "prompt_len": 10887}
+{"ts": "2026-01-28T19:26:42.370074+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 12, "stage": "MAIN", "duration_ms": 22987}
+{"ts": "2026-01-28T19:29:23.419351+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 12, "stage": "DEV", "duration_ms": 161046}
+{"ts": "2026-01-28T19:31:06.768264+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 12, "stage": "SUMMARY", "duration_ms": 103347}
+{"ts": "2026-01-28T19:31:06.768515+00:00", "event": "iteration_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 13}
+{"ts": "2026-01-28T19:31:06.769068+00:00", "event": "main_prompt_size", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 13, "prompt_len": 10883}
+{"ts": "2026-01-28T19:31:32.726223+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 13, "stage": "MAIN", "duration_ms": 25957}
+{"ts": "2026-01-28T19:41:14.309150+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 13, "stage": "REVIEW", "duration_ms": 581580}
+{"ts": "2026-01-28T19:42:01.805750+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 13, "stage": "SUMMARY", "duration_ms": 47495}
+{"ts": "2026-01-28T19:42:01.806039+00:00", "event": "iteration_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 14}
+{"ts": "2026-01-28T19:42:01.806736+00:00", "event": "main_prompt_size", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 14, "prompt_len": 17890}
+{"ts": "2026-01-28T19:42:28.010515+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 14, "stage": "MAIN", "duration_ms": 26203}
+{"ts": "2026-01-28T19:47:15.490990+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 14, "stage": "DEV", "duration_ms": 287478}
+{"ts": "2026-01-28T19:48:20.783240+00:00", "event": "stage_complete", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 14, "stage": "SUMMARY", "duration_ms": 65291}
+{"ts": "2026-01-28T19:48:20.783480+00:00", "event": "iteration_start", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 15}
+{"ts": "2026-01-28T19:48:20.784044+00:00", "event": "main_prompt_size", "trace_id": "a2a8c6e0-6f65-47bd-b2f0-1cbb1665e558", "iteration": 15, "prompt_len": 11135}
+{"ts": "2026-01-28T20:41:38.964857+00:00", "event": "run_start", "trace_id": "3262804a-5171-4a41-84e6-7a1f87e9ef7f", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-28T20:41:38.965740+00:00", "event": "iteration_start", "trace_id": "3262804a-5171-4a41-84e6-7a1f87e9ef7f", "iteration": 15}
+{"ts": "2026-01-28T20:41:38.966631+00:00", "event": "main_prompt_size", "trace_id": "3262804a-5171-4a41-84e6-7a1f87e9ef7f", "iteration": 15, "prompt_len": 11788}
+{"ts": "2026-01-28T21:05:08.376310+00:00", "event": "run_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 290}
+{"ts": "2026-01-28T21:05:08.379234+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 1}
+{"ts": "2026-01-28T21:05:08.385226+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 1, "prompt_len": 21102}
+{"ts": "2026-01-28T21:05:36.048699+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 1, "stage": "MAIN", "duration_ms": 27663}
+{"ts": "2026-01-28T21:15:52.484777+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 1, "stage": "REVIEW", "duration_ms": 616433}
+{"ts": "2026-01-28T21:16:18.992851+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 1, "stage": "SUMMARY", "duration_ms": 26506}
+{"ts": "2026-01-28T21:16:18.993098+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 2}
+{"ts": "2026-01-28T21:16:18.993707+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 2, "prompt_len": 24189}
+{"ts": "2026-01-28T21:16:42.546241+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 2, "stage": "MAIN", "duration_ms": 23552}
+{"ts": "2026-01-28T21:22:02.462512+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 2, "stage": "DEV", "duration_ms": 319914}
+{"ts": "2026-01-28T21:22:36.631914+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 2, "stage": "SUMMARY", "duration_ms": 34168}
+{"ts": "2026-01-28T21:22:36.632471+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 3}
+{"ts": "2026-01-28T21:22:36.633166+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 3, "prompt_len": 13201}
+{"ts": "2026-01-28T21:23:28.691102+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 3, "stage": "MAIN", "duration_ms": 52057}
+{"ts": "2026-01-28T21:25:16.348006+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 3, "stage": "DEV", "duration_ms": 107654}
+{"ts": "2026-01-28T21:25:55.991378+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 3, "stage": "SUMMARY", "duration_ms": 39642}
+{"ts": "2026-01-28T21:25:55.991768+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 4}
+{"ts": "2026-01-28T21:25:55.992461+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 4, "prompt_len": 12161}
+{"ts": "2026-01-28T21:26:20.123694+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 4, "stage": "MAIN", "duration_ms": 24131}
+{"ts": "2026-01-28T21:33:43.973963+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 4, "stage": "REVIEW", "duration_ms": 443847}
+{"ts": "2026-01-28T21:34:40.222617+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 4, "stage": "SUMMARY", "duration_ms": 56247}
+{"ts": "2026-01-28T21:34:40.223033+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 5}
+{"ts": "2026-01-28T21:34:40.223771+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 5, "prompt_len": 22497}
+{"ts": "2026-01-28T21:35:03.061560+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 5, "stage": "MAIN", "duration_ms": 22837}
+{"ts": "2026-01-28T21:36:40.928741+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 5, "stage": "DEV", "duration_ms": 97864}
+{"ts": "2026-01-28T21:37:13.397578+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 5, "stage": "SUMMARY", "duration_ms": 32467}
+{"ts": "2026-01-28T21:37:13.398017+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 6}
+{"ts": "2026-01-28T21:37:13.398663+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 6, "prompt_len": 12178}
+{"ts": "2026-01-28T21:37:35.824922+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 6, "stage": "MAIN", "duration_ms": 22426}
+{"ts": "2026-01-28T21:45:42.566502+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 6, "stage": "REVIEW", "duration_ms": 486739}
+{"ts": "2026-01-28T21:46:22.731101+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 6, "stage": "SUMMARY", "duration_ms": 40163}
+{"ts": "2026-01-28T21:46:22.731368+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 7}
+{"ts": "2026-01-28T21:46:22.731982+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 7, "prompt_len": 22664}
+{"ts": "2026-01-28T21:47:26.323835+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 7, "stage": "MAIN", "duration_ms": 63591}
+{"ts": "2026-01-28T21:48:09.507978+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 7, "stage": "DEV", "duration_ms": 43180}
+{"ts": "2026-01-28T21:49:03.291912+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 7, "stage": "SUMMARY", "duration_ms": 53782}
+{"ts": "2026-01-28T21:49:03.292165+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 8}
+{"ts": "2026-01-28T21:49:03.292737+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 8, "prompt_len": 12059}
+{"ts": "2026-01-28T21:50:03.188152+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 8, "stage": "MAIN", "duration_ms": 59895}
+{"ts": "2026-01-28T21:57:53.592179+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 8, "stage": "DEV", "duration_ms": 470400}
+{"ts": "2026-01-28T21:58:29.282975+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 8, "stage": "SUMMARY", "duration_ms": 35687}
+{"ts": "2026-01-28T21:58:29.283257+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 9}
+{"ts": "2026-01-28T21:58:29.283889+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 9, "prompt_len": 12605}
+{"ts": "2026-01-28T21:58:59.119313+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 9, "stage": "MAIN", "duration_ms": 29835}
+{"ts": "2026-01-28T22:10:03.092423+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 9, "stage": "DEV", "duration_ms": 663969}
+{"ts": "2026-01-28T22:11:00.818244+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 9, "stage": "SUMMARY", "duration_ms": 57724}
+{"ts": "2026-01-28T22:11:00.818587+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 10}
+{"ts": "2026-01-28T22:11:00.819143+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 10, "prompt_len": 12783}
+{"ts": "2026-01-28T22:11:29.063025+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 10, "stage": "MAIN", "duration_ms": 28243}
+{"ts": "2026-01-28T22:17:39.381009+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 10, "stage": "REVIEW", "duration_ms": 370314}
+{"ts": "2026-01-28T22:18:04.961993+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 10, "stage": "SUMMARY", "duration_ms": 25580}
+{"ts": "2026-01-28T22:18:04.962234+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11}
+{"ts": "2026-01-28T22:18:04.963385+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "prompt_len": 17729}
+{"ts": "2026-01-28T22:18:36.167067+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "stage": "MAIN", "duration_ms": 31203}
+{"ts": "2026-01-28T22:18:36.167315+00:00", "event": "finish_attempt", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-28T22:32:08.057740+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "stage": "FINISH_REVIEW", "duration_ms": 811890}
+{"ts": "2026-01-28T22:32:52.347646+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "stage": "MAIN_FINISH_CHECK", "duration_ms": 44289}
+{"ts": "2026-01-28T22:48:47.752541+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "stage": "DEV", "duration_ms": 955401}
+{"ts": "2026-01-28T22:49:28.345661+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 11, "stage": "SUMMARY", "duration_ms": 40592}
+{"ts": "2026-01-28T22:49:28.346117+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 12}
+{"ts": "2026-01-28T22:49:28.346901+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 12, "prompt_len": 13429}
+{"ts": "2026-01-28T22:50:00.775841+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 12, "stage": "MAIN", "duration_ms": 32428}
+{"ts": "2026-01-28T22:59:27.146633+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 12, "stage": "REVIEW", "duration_ms": 566366}
+{"ts": "2026-01-28T23:00:28.557514+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 12, "stage": "SUMMARY", "duration_ms": 61409}
+{"ts": "2026-01-28T23:00:28.558007+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 13}
+{"ts": "2026-01-28T23:00:28.558832+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 13, "prompt_len": 19326}
+{"ts": "2026-01-28T23:01:40.041616+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 13, "stage": "MAIN", "duration_ms": 71482}
+{"ts": "2026-01-28T23:13:38.290783+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 13, "stage": "DEV", "duration_ms": 718245}
+{"ts": "2026-01-28T23:14:13.304875+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 13, "stage": "SUMMARY", "duration_ms": 35012}
+{"ts": "2026-01-28T23:14:13.305141+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 14}
+{"ts": "2026-01-28T23:14:13.305739+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 14, "prompt_len": 13066}
+{"ts": "2026-01-28T23:14:36.691957+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 14, "stage": "MAIN", "duration_ms": 23386}
+{"ts": "2026-01-28T23:22:41.434228+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 14, "stage": "REVIEW", "duration_ms": 484739}
+{"ts": "2026-01-28T23:23:11.777984+00:00", "event": "stage_complete", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 14, "stage": "SUMMARY", "duration_ms": 30342}
+{"ts": "2026-01-28T23:23:11.778456+00:00", "event": "iteration_start", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 15}
+{"ts": "2026-01-28T23:23:11.779198+00:00", "event": "main_prompt_size", "trace_id": "84fa2b22-5083-4c88-9a83-788c73fbc3aa", "iteration": 15, "prompt_len": 17377}
+{"ts": "2026-01-29T06:45:07.323563+00:00", "event": "run_start", "trace_id": "83a967f5-6cc8-47d0-aaeb-edb93db11d91", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-29T06:45:07.324381+00:00", "event": "iteration_start", "trace_id": "83a967f5-6cc8-47d0-aaeb-edb93db11d91", "iteration": 15}
+{"ts": "2026-01-29T06:45:07.325459+00:00", "event": "main_prompt_size", "trace_id": "83a967f5-6cc8-47d0-aaeb-edb93db11d91", "iteration": 15, "prompt_len": 17428}
+{"ts": "2026-01-29T07:22:53.090735+00:00", "event": "run_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 328}
+{"ts": "2026-01-29T07:22:53.094049+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 1}
+{"ts": "2026-01-29T07:22:53.100156+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 1, "prompt_len": 21530}
+{"ts": "2026-01-29T07:23:14.700779+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 1, "stage": "MAIN", "duration_ms": 21600}
+{"ts": "2026-01-29T07:32:20.273858+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 2}
+{"ts": "2026-01-29T07:32:20.274801+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 2, "prompt_len": 11941}
+{"ts": "2026-01-29T07:33:02.796290+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 2, "stage": "MAIN", "duration_ms": 42521}
+{"ts": "2026-01-29T07:49:01.987800+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 2, "stage": "DEV", "duration_ms": 959187}
+{"ts": "2026-01-29T07:49:59.169365+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 2, "stage": "SUMMARY", "duration_ms": 57180}
+{"ts": "2026-01-29T07:49:59.169822+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 3}
+{"ts": "2026-01-29T07:49:59.170722+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 3, "prompt_len": 14170}
+{"ts": "2026-01-29T07:50:29.541001+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 3, "stage": "MAIN", "duration_ms": 30370}
+{"ts": "2026-01-29T07:58:31.610553+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 3, "stage": "REVIEW", "duration_ms": 482065}
+{"ts": "2026-01-29T07:59:10.971423+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 3, "stage": "SUMMARY", "duration_ms": 39357}
+{"ts": "2026-01-29T07:59:10.971836+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 4}
+{"ts": "2026-01-29T07:59:10.972850+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 4, "prompt_len": 15450}
+{"ts": "2026-01-29T07:59:48.007315+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 4, "stage": "MAIN", "duration_ms": 37034}
+{"ts": "2026-01-29T08:09:15.503696+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 4, "stage": "REVIEW", "duration_ms": 567492}
+{"ts": "2026-01-29T08:09:58.459441+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 4, "stage": "SUMMARY", "duration_ms": 42954}
+{"ts": "2026-01-29T08:09:58.459725+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5}
+{"ts": "2026-01-29T08:09:58.460523+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "prompt_len": 17616}
+{"ts": "2026-01-29T08:10:33.517698+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "stage": "MAIN", "duration_ms": 35057}
+{"ts": "2026-01-29T08:10:33.517938+00:00", "event": "finish_attempt", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-29T08:38:59.881135+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "stage": "FINISH_REVIEW", "duration_ms": 1706362}
+{"ts": "2026-01-29T08:39:52.407018+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "stage": "MAIN_FINISH_CHECK", "duration_ms": 52525}
+{"ts": "2026-01-29T09:45:44.088330+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "stage": "DEV", "duration_ms": 3951677}
+{"ts": "2026-01-29T09:46:43.976855+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 5, "stage": "SUMMARY", "duration_ms": 59887}
+{"ts": "2026-01-29T09:46:43.977087+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 6}
+{"ts": "2026-01-29T09:46:43.977746+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 6, "prompt_len": 15564}
+{"ts": "2026-01-29T09:47:27.203689+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 6, "stage": "MAIN", "duration_ms": 43225}
+{"ts": "2026-01-29T10:01:43.524212+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 6, "stage": "DEV", "duration_ms": 856316}
+{"ts": "2026-01-29T10:03:32.788419+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 6, "stage": "SUMMARY", "duration_ms": 109261}
+{"ts": "2026-01-29T10:03:32.788977+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 7}
+{"ts": "2026-01-29T10:03:32.789965+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 7, "prompt_len": 14690}
+{"ts": "2026-01-29T10:04:15.347511+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 7, "stage": "MAIN", "duration_ms": 42557}
+{"ts": "2026-01-29T10:29:17.137547+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 7, "stage": "REVIEW", "duration_ms": 1501785}
+{"ts": "2026-01-29T10:29:50.193267+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 7, "stage": "SUMMARY", "duration_ms": 33047}
+{"ts": "2026-01-29T10:29:50.193938+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8}
+{"ts": "2026-01-29T10:29:50.195379+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "prompt_len": 35175}
+{"ts": "2026-01-29T10:30:28.042081+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "stage": "MAIN", "duration_ms": 37846}
+{"ts": "2026-01-29T10:30:28.042349+00:00", "event": "finish_attempt", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "finish_attempts": 2, "max_finish_attempts": 3}
+{"ts": "2026-01-29T10:49:33.675569+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "stage": "FINISH_REVIEW", "duration_ms": 1145632}
+{"ts": "2026-01-29T10:50:23.249564+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "stage": "MAIN_FINISH_CHECK", "duration_ms": 49573}
+{"ts": "2026-01-29T10:55:39.347136+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "stage": "DEV", "duration_ms": 316093}
+{"ts": "2026-01-29T10:56:56.209102+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 8, "stage": "SUMMARY", "duration_ms": 76860}
+{"ts": "2026-01-29T10:56:56.209709+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 9}
+{"ts": "2026-01-29T10:56:56.210733+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 9, "prompt_len": 14681}
+{"ts": "2026-01-29T10:57:48.398640+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 9, "stage": "MAIN", "duration_ms": 52187}
+{"ts": "2026-01-29T10:59:42.819463+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 9, "stage": "DEV", "duration_ms": 114416}
+{"ts": "2026-01-29T11:00:44.567401+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 9, "stage": "SUMMARY", "duration_ms": 61747}
+{"ts": "2026-01-29T11:00:44.567854+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 10}
+{"ts": "2026-01-29T11:00:44.568717+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 10, "prompt_len": 14083}
+{"ts": "2026-01-29T11:01:32.159833+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 10, "stage": "MAIN", "duration_ms": 47590}
+{"ts": "2026-01-29T11:14:48.253521+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 10, "stage": "REVIEW", "duration_ms": 796089}
+{"ts": "2026-01-29T11:15:30.302841+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 10, "stage": "SUMMARY", "duration_ms": 42047}
+{"ts": "2026-01-29T11:15:30.303275+00:00", "event": "iteration_start", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11}
+{"ts": "2026-01-29T11:15:30.304640+00:00", "event": "main_prompt_size", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11, "prompt_len": 24541}
+{"ts": "2026-01-29T11:16:16.239365+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11, "stage": "MAIN", "duration_ms": 45934}
+{"ts": "2026-01-29T11:16:16.239651+00:00", "event": "finish_attempt", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11, "finish_attempts": 3, "max_finish_attempts": 3}
+{"ts": "2026-01-29T11:33:33.512562+00:00", "event": "stage_complete", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11, "stage": "FINISH_REVIEW", "duration_ms": 1037272}
+{"ts": "2026-01-29T11:33:33.512899+00:00", "event": "force_finish", "trace_id": "f4a2ae1d-3537-449d-b052-55a9fce096c8", "iteration": 11, "finish_attempts": 3, "blockers": ["存在 7 个非 VERIFIED 任务（DONE/DOING/BLOCKED）"]}
+{"ts": "2026-01-29T13:02:07.600342+00:00", "event": "run_start", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 157}
+{"ts": "2026-01-29T13:02:07.603354+00:00", "event": "iteration_start", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 1}
+{"ts": "2026-01-29T13:02:07.609996+00:00", "event": "main_prompt_size", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 1, "prompt_len": 23359}
+{"ts": "2026-01-29T13:02:36.591317+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 1, "stage": "MAIN", "duration_ms": 28981}
+{"ts": "2026-01-29T13:25:53.162387+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 1, "stage": "REVIEW", "duration_ms": 1396568}
+{"ts": "2026-01-29T13:26:43.373896+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 1, "stage": "SUMMARY", "duration_ms": 50209}
+{"ts": "2026-01-29T13:26:43.374339+00:00", "event": "iteration_start", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 2}
+{"ts": "2026-01-29T13:26:43.375626+00:00", "event": "main_prompt_size", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 2, "prompt_len": 81363}
+{"ts": "2026-01-29T13:27:34.130164+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 2, "stage": "MAIN", "duration_ms": 50754}
+{"ts": "2026-01-29T13:32:39.225656+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 2, "stage": "DEV", "duration_ms": 305091}
+{"ts": "2026-01-29T13:33:25.522391+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 2, "stage": "SUMMARY", "duration_ms": 46295}
+{"ts": "2026-01-29T13:33:25.525767+00:00", "event": "iteration_start", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 3}
+{"ts": "2026-01-29T13:33:25.526724+00:00", "event": "main_prompt_size", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 3, "prompt_len": 15208}
+{"ts": "2026-01-29T13:33:51.011269+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 3, "stage": "MAIN", "duration_ms": 25484}
+{"ts": "2026-01-29T13:38:44.487333+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 3, "stage": "REVIEW", "duration_ms": 293473}
+{"ts": "2026-01-29T13:39:35.852192+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 3, "stage": "SUMMARY", "duration_ms": 51363}
+{"ts": "2026-01-29T13:39:35.852448+00:00", "event": "iteration_start", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 4}
+{"ts": "2026-01-29T13:39:35.853171+00:00", "event": "main_prompt_size", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 4, "prompt_len": 17010}
+{"ts": "2026-01-29T13:40:19.057469+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 4, "stage": "MAIN", "duration_ms": 43204}
+{"ts": "2026-01-29T13:40:19.057724+00:00", "event": "finish_attempt", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 4, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-29T13:55:01.299608+00:00", "event": "stage_complete", "trace_id": "ab4702b0-132a-4de0-b65e-8778e56c0f09", "iteration": 4, "stage": "FINISH_REVIEW", "duration_ms": 882241}
+{"ts": "2026-01-29T16:04:06.137901+00:00", "event": "run_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-29T16:04:06.138465+00:00", "event": "iteration_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 4}
+{"ts": "2026-01-29T16:04:06.139685+00:00", "event": "main_prompt_size", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 4, "prompt_len": 17010}
+{"ts": "2026-01-29T16:05:00.701687+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 4, "stage": "MAIN", "duration_ms": 54561}
+{"ts": "2026-01-29T16:12:24.350133+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 4, "stage": "DEV", "duration_ms": 443643}
+{"ts": "2026-01-29T16:13:06.496601+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 4, "stage": "SUMMARY", "duration_ms": 42145}
+{"ts": "2026-01-29T16:13:06.497083+00:00", "event": "iteration_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 5}
+{"ts": "2026-01-29T16:13:06.498037+00:00", "event": "main_prompt_size", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 5, "prompt_len": 9546}
+{"ts": "2026-01-29T16:13:28.131205+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 5, "stage": "MAIN", "duration_ms": 21632}
+{"ts": "2026-01-29T16:17:57.739016+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 5, "stage": "REVIEW", "duration_ms": 269604}
+{"ts": "2026-01-29T16:18:49.106006+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 5, "stage": "SUMMARY", "duration_ms": 51365}
+{"ts": "2026-01-29T16:18:49.106284+00:00", "event": "iteration_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 6}
+{"ts": "2026-01-29T16:18:49.107229+00:00", "event": "main_prompt_size", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 6, "prompt_len": 11326}
+{"ts": "2026-01-29T16:19:14.772502+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 6, "stage": "MAIN", "duration_ms": 25665}
+{"ts": "2026-01-29T16:21:37.922399+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 6, "stage": "DEV", "duration_ms": 143147}
+{"ts": "2026-01-29T16:23:40.923393+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 6, "stage": "SUMMARY", "duration_ms": 122999}
+{"ts": "2026-01-29T16:23:40.923646+00:00", "event": "iteration_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 7}
+{"ts": "2026-01-29T16:23:40.924379+00:00", "event": "main_prompt_size", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 7, "prompt_len": 9560}
+{"ts": "2026-01-29T16:24:06.521525+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 7, "stage": "MAIN", "duration_ms": 25597}
+{"ts": "2026-01-29T16:26:10.854717+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 7, "stage": "REVIEW", "duration_ms": 124329}
+{"ts": "2026-01-29T16:26:52.577826+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 7, "stage": "SUMMARY", "duration_ms": 41721}
+{"ts": "2026-01-29T16:26:52.578058+00:00", "event": "iteration_start", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8}
+{"ts": "2026-01-29T16:26:52.579031+00:00", "event": "main_prompt_size", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8, "prompt_len": 11249}
+{"ts": "2026-01-29T16:27:29.838737+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8, "stage": "MAIN", "duration_ms": 37259}
+{"ts": "2026-01-29T16:27:29.838980+00:00", "event": "finish_attempt", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-29T16:36:46.197718+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8, "stage": "FINISH_REVIEW", "duration_ms": 556358}
+{"ts": "2026-01-29T16:37:16.376100+00:00", "event": "stage_complete", "trace_id": "5151e40f-2978-4f04-9946-88f24cf2aa1e", "iteration": 8, "stage": "MAIN_FINISH_CHECK", "duration_ms": 30176}
+{"ts": "2026-01-29T16:42:07.241036+00:00", "event": "run_start", "trace_id": "fdd22bcd-26a5-48c0-b587-17e6356369ee", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 157}
+{"ts": "2026-01-29T16:42:07.243899+00:00", "event": "iteration_start", "trace_id": "fdd22bcd-26a5-48c0-b587-17e6356369ee", "iteration": 1}
+{"ts": "2026-01-29T16:42:07.250168+00:00", "event": "main_prompt_size", "trace_id": "fdd22bcd-26a5-48c0-b587-17e6356369ee", "iteration": 1, "prompt_len": 16606}
+{"ts": "2026-01-29T16:42:35.499170+00:00", "event": "stage_complete", "trace_id": "fdd22bcd-26a5-48c0-b587-17e6356369ee", "iteration": 1, "stage": "MAIN", "duration_ms": 28248}
+{"ts": "2026-01-29T16:46:04.497867+00:00", "event": "run_start", "trace_id": "fb8c2637-220a-4636-8a51-fe5f73435513", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 157}
+{"ts": "2026-01-29T16:46:04.500820+00:00", "event": "iteration_start", "trace_id": "fb8c2637-220a-4636-8a51-fe5f73435513", "iteration": 1}
+{"ts": "2026-01-29T16:46:04.507062+00:00", "event": "main_prompt_size", "trace_id": "fb8c2637-220a-4636-8a51-fe5f73435513", "iteration": 1, "prompt_len": 16606}
+{"ts": "2026-01-29T16:46:30.524910+00:00", "event": "stage_complete", "trace_id": "fb8c2637-220a-4636-8a51-fe5f73435513", "iteration": 1, "stage": "MAIN", "duration_ms": 26017}
+{"ts": "2026-01-29T16:48:50.832806+00:00", "event": "run_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 157}
+{"ts": "2026-01-29T16:48:50.835623+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 1}
+{"ts": "2026-01-29T16:48:50.841824+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 1, "prompt_len": 16606}
+{"ts": "2026-01-29T16:49:20.825324+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 1, "stage": "MAIN", "duration_ms": 29983}
+{"ts": "2026-01-29T17:12:49.765271+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 2}
+{"ts": "2026-01-29T17:12:49.766010+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 2, "prompt_len": 21889}
+{"ts": "2026-01-29T17:13:11.064679+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 2, "stage": "MAIN", "duration_ms": 21298}
+{"ts": "2026-01-29T17:25:10.758087+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 3}
+{"ts": "2026-01-29T17:25:10.759060+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 3, "prompt_len": 22742}
+{"ts": "2026-01-29T17:25:53.009985+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 3, "stage": "MAIN", "duration_ms": 42250}
+{"ts": "2026-01-29T17:29:15.534836+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 3, "stage": "TEST", "duration_ms": 202520}
+{"ts": "2026-01-29T17:29:48.418870+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 3, "stage": "SUMMARY", "duration_ms": 32882}
+{"ts": "2026-01-29T17:29:48.419117+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 4}
+{"ts": "2026-01-29T17:29:48.419730+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 4, "prompt_len": 10410}
+{"ts": "2026-01-29T17:30:11.381902+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 4, "stage": "MAIN", "duration_ms": 22961}
+{"ts": "2026-01-29T17:40:53.971305+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 4, "stage": "DEV", "duration_ms": 642587}
+{"ts": "2026-01-29T17:41:46.124719+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 4, "stage": "SUMMARY", "duration_ms": 52152}
+{"ts": "2026-01-29T17:41:46.125155+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 5}
+{"ts": "2026-01-29T17:41:46.126046+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 5, "prompt_len": 11038}
+{"ts": "2026-01-29T17:42:08.841128+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 5, "stage": "MAIN", "duration_ms": 22714}
+{"ts": "2026-01-29T17:44:32.456840+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 5, "stage": "DEV", "duration_ms": 143613}
+{"ts": "2026-01-29T17:45:12.767873+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 5, "stage": "SUMMARY", "duration_ms": 40309}
+{"ts": "2026-01-29T17:45:12.768777+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 6}
+{"ts": "2026-01-29T17:45:12.769964+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 6, "prompt_len": 9769}
+{"ts": "2026-01-29T17:45:41.977566+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 6, "stage": "MAIN", "duration_ms": 29206}
+{"ts": "2026-01-29T17:52:16.669789+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 6, "stage": "REVIEW", "duration_ms": 394688}
+{"ts": "2026-01-29T17:52:47.470073+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 6, "stage": "SUMMARY", "duration_ms": 30799}
+{"ts": "2026-01-29T17:52:47.470354+00:00", "event": "iteration_start", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 7}
+{"ts": "2026-01-29T17:52:47.471257+00:00", "event": "main_prompt_size", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 7, "prompt_len": 15462}
+{"ts": "2026-01-29T17:53:30.678182+00:00", "event": "stage_complete", "trace_id": "6c7c1e5c-367e-4b17-965b-97515cb3e93f", "iteration": 7, "stage": "MAIN", "duration_ms": 43206}
+{"ts": "2026-01-29T19:37:57.367421+00:00", "event": "run_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 164}
+{"ts": "2026-01-29T19:37:57.370476+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 1}
+{"ts": "2026-01-29T19:37:57.376658+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 1, "prompt_len": 18736}
+{"ts": "2026-01-29T19:38:35.949514+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 1, "stage": "MAIN", "duration_ms": 38572}
+{"ts": "2026-01-29T19:53:16.100424+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 2}
+{"ts": "2026-01-29T19:53:16.101253+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 2, "prompt_len": 24163}
+{"ts": "2026-01-29T19:53:41.570076+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 2, "stage": "MAIN", "duration_ms": 25468}
+{"ts": "2026-01-29T20:07:48.475106+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 3}
+{"ts": "2026-01-29T20:07:48.476219+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 3, "prompt_len": 25135}
+{"ts": "2026-01-29T20:08:36.090559+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 3, "stage": "MAIN", "duration_ms": 47614}
+{"ts": "2026-01-29T20:12:14.268160+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 3, "stage": "TEST", "duration_ms": 218173}
+{"ts": "2026-01-29T20:12:44.812798+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 3, "stage": "SUMMARY", "duration_ms": 30543}
+{"ts": "2026-01-29T20:12:44.813317+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 4}
+{"ts": "2026-01-29T20:12:44.818482+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 4, "prompt_len": 12948}
+{"ts": "2026-01-29T20:13:08.686417+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 4, "stage": "MAIN", "duration_ms": 23867}
+{"ts": "2026-01-29T20:24:53.165255+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 4, "stage": "DEV", "duration_ms": 704476}
+{"ts": "2026-01-29T20:25:21.409218+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 4, "stage": "SUMMARY", "duration_ms": 28243}
+{"ts": "2026-01-29T20:25:21.409684+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 5}
+{"ts": "2026-01-29T20:25:21.410795+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 5, "prompt_len": 13187}
+{"ts": "2026-01-29T20:26:08.224050+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 5, "stage": "MAIN", "duration_ms": 46813}
+{"ts": "2026-01-29T20:31:22.220031+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 5, "stage": "TEST", "duration_ms": 313991}
+{"ts": "2026-01-29T20:31:50.617930+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 5, "stage": "SUMMARY", "duration_ms": 28396}
+{"ts": "2026-01-29T20:31:50.618187+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 6}
+{"ts": "2026-01-29T20:31:50.618958+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 6, "prompt_len": 12970}
+{"ts": "2026-01-29T20:32:17.206061+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 6, "stage": "MAIN", "duration_ms": 26586}
+{"ts": "2026-01-29T20:38:52.361113+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 6, "stage": "DEV", "duration_ms": 395152}
+{"ts": "2026-01-29T20:39:35.248159+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 6, "stage": "SUMMARY", "duration_ms": 42886}
+{"ts": "2026-01-29T20:39:35.248756+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 7}
+{"ts": "2026-01-29T20:39:35.249775+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 7, "prompt_len": 12541}
+{"ts": "2026-01-29T20:40:08.300524+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 7, "stage": "MAIN", "duration_ms": 33050}
+{"ts": "2026-01-29T20:45:19.590240+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 7, "stage": "TEST", "duration_ms": 311285}
+{"ts": "2026-01-29T20:45:52.610206+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 7, "stage": "SUMMARY", "duration_ms": 33018}
+{"ts": "2026-01-29T20:45:52.610480+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 8}
+{"ts": "2026-01-29T20:45:52.611121+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 8, "prompt_len": 13988}
+{"ts": "2026-01-29T20:46:17.267273+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 8, "stage": "MAIN", "duration_ms": 24656}
+{"ts": "2026-01-29T20:54:02.107228+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 8, "stage": "DEV", "duration_ms": 464837}
+{"ts": "2026-01-29T20:54:47.010490+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 8, "stage": "SUMMARY", "duration_ms": 44901}
+{"ts": "2026-01-29T20:54:47.010740+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 9}
+{"ts": "2026-01-29T20:54:47.011387+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 9, "prompt_len": 13188}
+{"ts": "2026-01-29T20:55:22.104300+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 9, "stage": "MAIN", "duration_ms": 35092}
+{"ts": "2026-01-29T21:02:36.019541+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 9, "stage": "REVIEW", "duration_ms": 433911}
+{"ts": "2026-01-29T21:03:18.598928+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 9, "stage": "SUMMARY", "duration_ms": 42578}
+{"ts": "2026-01-29T21:03:18.599404+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 10}
+{"ts": "2026-01-29T21:03:18.600518+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 10, "prompt_len": 17317}
+{"ts": "2026-01-29T21:04:04.558050+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 10, "stage": "MAIN", "duration_ms": 45957}
+{"ts": "2026-01-29T21:06:53.508995+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 10, "stage": "TEST", "duration_ms": 168946}
+{"ts": "2026-01-29T21:07:33.364674+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 10, "stage": "SUMMARY", "duration_ms": 39854}
+{"ts": "2026-01-29T21:07:33.365305+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 11}
+{"ts": "2026-01-29T21:07:33.366352+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 11, "prompt_len": 12746}
+{"ts": "2026-01-29T21:07:56.256031+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 11, "stage": "MAIN", "duration_ms": 22889}
+{"ts": "2026-01-29T21:10:31.766282+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 11, "stage": "DEV", "duration_ms": 155507}
+{"ts": "2026-01-29T21:11:59.010438+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 11, "stage": "SUMMARY", "duration_ms": 87242}
+{"ts": "2026-01-29T21:11:59.010984+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 12}
+{"ts": "2026-01-29T21:11:59.011976+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 12, "prompt_len": 12567}
+{"ts": "2026-01-29T21:12:32.115393+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 12, "stage": "MAIN", "duration_ms": 33103}
+{"ts": "2026-01-29T21:16:26.892844+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 12, "stage": "TEST", "duration_ms": 234773}
+{"ts": "2026-01-29T21:17:19.394437+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 12, "stage": "SUMMARY", "duration_ms": 52499}
+{"ts": "2026-01-29T21:17:19.394814+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 13}
+{"ts": "2026-01-29T21:17:19.395654+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 13, "prompt_len": 12920}
+{"ts": "2026-01-29T21:17:45.599014+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 13, "stage": "MAIN", "duration_ms": 26203}
+{"ts": "2026-01-29T21:23:43.777693+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 13, "stage": "DEV", "duration_ms": 358176}
+{"ts": "2026-01-29T21:24:35.704068+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 13, "stage": "SUMMARY", "duration_ms": 51925}
+{"ts": "2026-01-29T21:24:35.704527+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 14}
+{"ts": "2026-01-29T21:24:35.705378+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 14, "prompt_len": 12725}
+{"ts": "2026-01-29T21:25:12.072081+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 14, "stage": "MAIN", "duration_ms": 36366}
+{"ts": "2026-01-29T21:27:58.960688+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 14, "stage": "TEST", "duration_ms": 166884}
+{"ts": "2026-01-29T21:28:47.283848+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 14, "stage": "SUMMARY", "duration_ms": 48322}
+{"ts": "2026-01-29T21:28:47.284096+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 15}
+{"ts": "2026-01-29T21:28:47.284820+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 15, "prompt_len": 13168}
+{"ts": "2026-01-29T21:29:09.958533+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 15, "stage": "MAIN", "duration_ms": 22673}
+{"ts": "2026-01-29T21:30:40.527271+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 15, "stage": "DEV", "duration_ms": 90566}
+{"ts": "2026-01-29T21:31:25.404351+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 15, "stage": "SUMMARY", "duration_ms": 44875}
+{"ts": "2026-01-29T21:31:25.404608+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 16}
+{"ts": "2026-01-29T21:31:25.405298+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 16, "prompt_len": 12429}
+{"ts": "2026-01-29T21:32:01.795788+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 16, "stage": "MAIN", "duration_ms": 36390}
+{"ts": "2026-01-29T21:36:22.642353+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 16, "stage": "REVIEW", "duration_ms": 260842}
+{"ts": "2026-01-29T21:36:51.896809+00:00", "event": "stage_complete", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 16, "stage": "SUMMARY", "duration_ms": 29253}
+{"ts": "2026-01-29T21:36:51.897212+00:00", "event": "iteration_start", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 17}
+{"ts": "2026-01-29T21:36:51.898184+00:00", "event": "main_prompt_size", "trace_id": "e4cf077c-65b5-4612-b278-d13c9b6ec299", "iteration": 17, "prompt_len": 16371}
+{"ts": "2026-01-30T04:48:33.567123+00:00", "event": "run_start", "trace_id": "8e969368-f31e-4e00-9520-edc2457cb5ce", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T04:48:33.570461+00:00", "event": "iteration_start", "trace_id": "8e969368-f31e-4e00-9520-edc2457cb5ce", "iteration": 1}
+{"ts": "2026-01-30T04:48:33.577059+00:00", "event": "main_prompt_size", "trace_id": "8e969368-f31e-4e00-9520-edc2457cb5ce", "iteration": 1, "prompt_len": 21694}
+{"ts": "2026-01-30T04:48:56.368779+00:00", "event": "stage_complete", "trace_id": "8e969368-f31e-4e00-9520-edc2457cb5ce", "iteration": 1, "stage": "MAIN", "duration_ms": 22791}
+{"ts": "2026-01-30T04:50:29.160808+00:00", "event": "run_start", "trace_id": "c643c417-85e8-4ae1-9dbb-406af604b2ba", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T04:50:29.163706+00:00", "event": "iteration_start", "trace_id": "c643c417-85e8-4ae1-9dbb-406af604b2ba", "iteration": 1}
+{"ts": "2026-01-30T04:50:29.170209+00:00", "event": "main_prompt_size", "trace_id": "c643c417-85e8-4ae1-9dbb-406af604b2ba", "iteration": 1, "prompt_len": 21694}
+{"ts": "2026-01-30T04:50:50.685834+00:00", "event": "stage_complete", "trace_id": "c643c417-85e8-4ae1-9dbb-406af604b2ba", "iteration": 1, "stage": "MAIN", "duration_ms": 21515}
+{"ts": "2026-01-30T05:00:48.847847+00:00", "event": "run_start", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T05:00:48.850824+00:00", "event": "iteration_start", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 1}
+{"ts": "2026-01-30T05:00:48.857580+00:00", "event": "main_prompt_size", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 1, "prompt_len": 23500}
+{"ts": "2026-01-30T05:01:21.585393+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 1, "stage": "MAIN", "duration_ms": 32727}
+{"ts": "2026-01-30T05:21:49.781650+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 1, "stage": "REVIEW", "duration_ms": 1228194}
+{"ts": "2026-01-30T05:23:03.469284+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 1, "stage": "SUMMARY", "duration_ms": 73686}
+{"ts": "2026-01-30T05:23:03.469574+00:00", "event": "iteration_start", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 2}
+{"ts": "2026-01-30T05:23:03.478984+00:00", "event": "main_prompt_size", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 2, "prompt_len": 34735}
+{"ts": "2026-01-30T05:23:55.406727+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 2, "stage": "MAIN", "duration_ms": 51927}
+{"ts": "2026-01-30T05:28:35.101769+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 2, "stage": "DEV", "duration_ms": 279691}
+{"ts": "2026-01-30T05:30:07.916231+00:00", "event": "stage_complete", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 2, "stage": "SUMMARY", "duration_ms": 92813}
+{"ts": "2026-01-30T05:30:07.916658+00:00", "event": "iteration_start", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 3}
+{"ts": "2026-01-30T05:30:07.923242+00:00", "event": "main_prompt_size", "trace_id": "f1ec7290-85f2-4e5c-98eb-b43916ba8bb3", "iteration": 3, "prompt_len": 25795}
+{"ts": "2026-01-30T05:35:58.187894+00:00", "event": "run_start", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 172}
+{"ts": "2026-01-30T05:35:58.190843+00:00", "event": "iteration_start", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 1}
+{"ts": "2026-01-30T05:35:58.197266+00:00", "event": "main_prompt_size", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 1, "prompt_len": 23902}
+{"ts": "2026-01-30T05:36:27.537083+00:00", "event": "stage_complete", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 1, "stage": "MAIN", "duration_ms": 29339}
+{"ts": "2026-01-30T05:42:18.568927+00:00", "event": "stage_complete", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 1, "stage": "REVIEW", "duration_ms": 351029}
+{"ts": "2026-01-30T05:43:45.186726+00:00", "event": "stage_complete", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 1, "stage": "SUMMARY", "duration_ms": 86616}
+{"ts": "2026-01-30T05:43:45.187168+00:00", "event": "iteration_start", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 2}
+{"ts": "2026-01-30T05:43:45.196973+00:00", "event": "main_prompt_size", "trace_id": "c9f726cf-5db3-41f5-9eeb-b4da2fad8c86", "iteration": 2, "prompt_len": 29581}
+{"ts": "2026-01-30T07:09:02.854750+00:00", "event": "run_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T07:09:02.857920+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 1}
+{"ts": "2026-01-30T07:09:02.864549+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 1, "prompt_len": 23901}
+{"ts": "2026-01-30T07:09:34.801625+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 1, "stage": "MAIN", "duration_ms": 31936}
+{"ts": "2026-01-30T07:16:05.156531+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 1, "stage": "DEV", "duration_ms": 390352}
+{"ts": "2026-01-30T07:17:14.211891+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 1, "stage": "SUMMARY", "duration_ms": 69054}
+{"ts": "2026-01-30T07:17:14.212141+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 2}
+{"ts": "2026-01-30T07:17:14.220674+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 2, "prompt_len": 24575}
+{"ts": "2026-01-30T07:17:40.309255+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 2, "stage": "MAIN", "duration_ms": 26088}
+{"ts": "2026-01-30T07:25:56.279611+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 2, "stage": "REVIEW", "duration_ms": 495968}
+{"ts": "2026-01-30T07:27:10.898165+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 2, "stage": "SUMMARY", "duration_ms": 74617}
+{"ts": "2026-01-30T07:27:10.898447+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 3}
+{"ts": "2026-01-30T07:27:10.909608+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 3, "prompt_len": 29960}
+{"ts": "2026-01-30T07:28:25.380937+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 3, "stage": "MAIN", "duration_ms": 74470}
+{"ts": "2026-01-30T07:31:47.384732+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 3, "stage": "TEST", "duration_ms": 202001}
+{"ts": "2026-01-30T07:32:57.733738+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 3, "stage": "SUMMARY", "duration_ms": 70348}
+{"ts": "2026-01-30T07:32:57.734445+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 4}
+{"ts": "2026-01-30T07:32:57.743883+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 4, "prompt_len": 24573}
+{"ts": "2026-01-30T07:33:47.341674+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 4, "stage": "MAIN", "duration_ms": 49597}
+{"ts": "2026-01-30T07:38:28.111355+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 4, "stage": "REVIEW", "duration_ms": 280767}
+{"ts": "2026-01-30T07:40:38.373577+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 4, "stage": "SUMMARY", "duration_ms": 130261}
+{"ts": "2026-01-30T07:40:38.373847+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 5}
+{"ts": "2026-01-30T07:40:38.380776+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 5, "prompt_len": 29614}
+{"ts": "2026-01-30T07:42:30.744295+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 5, "stage": "MAIN", "duration_ms": 112363}
+{"ts": "2026-01-30T07:58:29.541426+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 5, "stage": "REVIEW", "duration_ms": 958793}
+{"ts": "2026-01-30T07:59:53.862767+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 5, "stage": "SUMMARY", "duration_ms": 84316}
+{"ts": "2026-01-30T07:59:53.863169+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 6}
+{"ts": "2026-01-30T07:59:53.881752+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 6, "prompt_len": 28282}
+{"ts": "2026-01-30T08:01:19.663184+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 6, "stage": "MAIN", "duration_ms": 85781}
+{"ts": "2026-01-30T08:04:46.763181+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 6, "stage": "TEST", "duration_ms": 207097}
+{"ts": "2026-01-30T08:05:58.688211+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 6, "stage": "SUMMARY", "duration_ms": 71923}
+{"ts": "2026-01-30T08:05:58.688478+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 7}
+{"ts": "2026-01-30T08:05:58.697310+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 7, "prompt_len": 24793}
+{"ts": "2026-01-30T08:06:26.184446+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 7, "stage": "MAIN", "duration_ms": 27487}
+{"ts": "2026-01-30T08:11:18.880017+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 7, "stage": "DEV", "duration_ms": 292690}
+{"ts": "2026-01-30T08:13:52.723802+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 7, "stage": "SUMMARY", "duration_ms": 153842}
+{"ts": "2026-01-30T08:13:52.724124+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 8}
+{"ts": "2026-01-30T08:13:52.733104+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 8, "prompt_len": 24765}
+{"ts": "2026-01-30T08:14:21.161388+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 8, "stage": "MAIN", "duration_ms": 28428}
+{"ts": "2026-01-30T08:18:54.636523+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 8, "stage": "REVIEW", "duration_ms": 273472}
+{"ts": "2026-01-30T08:20:28.954127+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 8, "stage": "SUMMARY", "duration_ms": 94316}
+{"ts": "2026-01-30T08:20:28.954607+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 9}
+{"ts": "2026-01-30T08:20:28.963851+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 9, "prompt_len": 28823}
+{"ts": "2026-01-30T08:22:19.667079+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 9, "stage": "MAIN", "duration_ms": 110703}
+{"ts": "2026-01-30T08:29:47.025290+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 9, "stage": "DEV", "duration_ms": 447353}
+{"ts": "2026-01-30T08:30:48.844006+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 9, "stage": "SUMMARY", "duration_ms": 61817}
+{"ts": "2026-01-30T08:30:48.844266+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 10}
+{"ts": "2026-01-30T08:30:48.852192+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 10, "prompt_len": 24994}
+{"ts": "2026-01-30T08:31:16.609542+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 10, "stage": "MAIN", "duration_ms": 27757}
+{"ts": "2026-01-30T08:37:33.025745+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 10, "stage": "DEV", "duration_ms": 376413}
+{"ts": "2026-01-30T08:39:00.293622+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 10, "stage": "SUMMARY", "duration_ms": 87266}
+{"ts": "2026-01-30T08:39:00.293907+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 11}
+{"ts": "2026-01-30T08:39:00.304204+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 11, "prompt_len": 24405}
+{"ts": "2026-01-30T08:39:26.384484+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 11, "stage": "MAIN", "duration_ms": 26079}
+{"ts": "2026-01-30T08:50:00.886106+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 11, "stage": "REVIEW", "duration_ms": 634499}
+{"ts": "2026-01-30T08:51:19.145907+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 11, "stage": "SUMMARY", "duration_ms": 78258}
+{"ts": "2026-01-30T08:51:19.146559+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 12}
+{"ts": "2026-01-30T08:51:19.155152+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 12, "prompt_len": 29033}
+{"ts": "2026-01-30T08:53:08.867092+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 12, "stage": "MAIN", "duration_ms": 109711}
+{"ts": "2026-01-30T09:00:30.519518+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 12, "stage": "DEV", "duration_ms": 441648}
+{"ts": "2026-01-30T09:01:29.907477+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 12, "stage": "SUMMARY", "duration_ms": 59386}
+{"ts": "2026-01-30T09:01:29.907747+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 13}
+{"ts": "2026-01-30T09:01:29.914191+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 13, "prompt_len": 24523}
+{"ts": "2026-01-30T09:01:59.893387+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 13, "stage": "MAIN", "duration_ms": 29978}
+{"ts": "2026-01-30T09:05:00.856692+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 13, "stage": "DEV", "duration_ms": 180960}
+{"ts": "2026-01-30T09:07:08.399883+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 13, "stage": "SUMMARY", "duration_ms": 127541}
+{"ts": "2026-01-30T09:07:08.400137+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 14}
+{"ts": "2026-01-30T09:07:08.408706+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 14, "prompt_len": 24494}
+{"ts": "2026-01-30T09:07:39.782951+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 14, "stage": "MAIN", "duration_ms": 31373}
+{"ts": "2026-01-30T09:11:06.497968+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 14, "stage": "DEV", "duration_ms": 206712}
+{"ts": "2026-01-30T09:13:13.007837+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 14, "stage": "SUMMARY", "duration_ms": 126508}
+{"ts": "2026-01-30T09:13:13.008182+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 15}
+{"ts": "2026-01-30T09:13:13.014956+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 15, "prompt_len": 25697}
+{"ts": "2026-01-30T09:14:18.854933+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 15, "stage": "MAIN", "duration_ms": 65839}
+{"ts": "2026-01-30T09:18:28.835785+00:00", "event": "iteration_start", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 16}
+{"ts": "2026-01-30T09:18:28.842641+00:00", "event": "main_prompt_size", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 16, "prompt_len": 26011}
+{"ts": "2026-01-30T09:18:52.677524+00:00", "event": "stage_complete", "trace_id": "1817902f-3d49-4e13-ba9e-7deb0c86f8f2", "iteration": 16, "stage": "MAIN", "duration_ms": 23834}
+{"ts": "2026-01-30T10:53:31.697748+00:00", "event": "run_start", "trace_id": "48e37e0b-3722-4f2f-a1b9-c2391f90101c", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-30T11:09:02.057789+00:00", "event": "run_start", "trace_id": "51c103f8-556e-4c07-998b-5b16a220c01d", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 0}
+{"ts": "2026-01-30T11:14:10.589513+00:00", "event": "run_start", "trace_id": "81d6f935-36ea-4858-9806-585b22f4eaef", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T11:14:10.592608+00:00", "event": "iteration_start", "trace_id": "81d6f935-36ea-4858-9806-585b22f4eaef", "iteration": 1}
+{"ts": "2026-01-30T11:14:10.599298+00:00", "event": "main_prompt_size", "trace_id": "81d6f935-36ea-4858-9806-585b22f4eaef", "iteration": 1, "prompt_len": 24319}
+{"ts": "2026-01-30T11:14:34.514334+00:00", "event": "stage_complete", "trace_id": "81d6f935-36ea-4858-9806-585b22f4eaef", "iteration": 1, "stage": "MAIN", "duration_ms": 23914}
+{"ts": "2026-01-30T11:15:25.215025+00:00", "event": "run_start", "trace_id": "bf44626c-25e3-4428-a7a4-2a85b17ed96c", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T11:15:25.217899+00:00", "event": "iteration_start", "trace_id": "bf44626c-25e3-4428-a7a4-2a85b17ed96c", "iteration": 1}
+{"ts": "2026-01-30T11:15:25.225246+00:00", "event": "main_prompt_size", "trace_id": "bf44626c-25e3-4428-a7a4-2a85b17ed96c", "iteration": 1, "prompt_len": 24319}
+{"ts": "2026-01-30T11:15:50.623060+00:00", "event": "stage_complete", "trace_id": "bf44626c-25e3-4428-a7a4-2a85b17ed96c", "iteration": 1, "stage": "MAIN", "duration_ms": 25397}
+{"ts": "2026-01-30T11:25:39.508034+00:00", "event": "run_start", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "new_task": true, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "history_window_iterations": 10, "history_window_max_tokens": 3200, "user_task_len": 171}
+{"ts": "2026-01-30T11:25:39.511421+00:00", "event": "iteration_start", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 17}
+{"ts": "2026-01-30T11:25:39.519008+00:00", "event": "main_prompt_size", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 17, "prompt_len": 23138}
+{"ts": "2026-01-30T11:26:03.940910+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 17, "stage": "MAIN", "duration_ms": 24421}
+{"ts": "2026-01-30T11:27:52.860690+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 17, "stage": "DEV", "duration_ms": 108917}
+{"ts": "2026-01-30T11:29:23.532717+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 17, "stage": "SUMMARY", "duration_ms": 90670}
+{"ts": "2026-01-30T11:29:23.533163+00:00", "event": "iteration_start", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 18}
+{"ts": "2026-01-30T11:29:23.544540+00:00", "event": "main_prompt_size", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 18, "prompt_len": 25936}
+{"ts": "2026-01-30T11:30:45.391256+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 18, "stage": "MAIN", "duration_ms": 81846}
+{"ts": "2026-01-30T11:31:46.045930+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 18, "stage": "DEV", "duration_ms": 60650}
+{"ts": "2026-01-30T11:33:02.132844+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 18, "stage": "SUMMARY", "duration_ms": 76082}
+{"ts": "2026-01-30T11:33:02.133264+00:00", "event": "iteration_start", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 19}
+{"ts": "2026-01-30T11:33:02.142753+00:00", "event": "main_prompt_size", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 19, "prompt_len": 24419}
+{"ts": "2026-01-30T11:33:53.731967+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 19, "stage": "MAIN", "duration_ms": 51588}
+{"ts": "2026-01-30T11:37:39.041477+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 19, "stage": "DEV", "duration_ms": 225305}
+{"ts": "2026-01-30T11:38:31.939508+00:00", "event": "stage_complete", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 19, "stage": "SUMMARY", "duration_ms": 52896}
+{"ts": "2026-01-30T11:38:31.940113+00:00", "event": "iteration_start", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 20}
+{"ts": "2026-01-30T11:38:31.950500+00:00", "event": "main_prompt_size", "trace_id": "5e3bc100-b5aa-43d4-895f-dafa82b128b5", "iteration": 20, "prompt_len": 24651}
+{"ts": "2026-01-30T11:46:21.760623+00:00", "event": "run_start", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "new_task": false, "max_iterations": 50, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-30T11:46:21.761173+00:00", "event": "iteration_start", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 20}
+{"ts": "2026-01-30T11:46:21.768098+00:00", "event": "main_prompt_size", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 20, "prompt_len": 25833}
+{"ts": "2026-01-30T11:47:26.328297+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 20, "stage": "MAIN", "duration_ms": 64560}
+{"ts": "2026-01-30T11:54:39.676942+00:00", "event": "iteration_start", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 21}
+{"ts": "2026-01-30T11:54:39.683883+00:00", "event": "main_prompt_size", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 21, "prompt_len": 26770}
+{"ts": "2026-01-30T11:55:09.949251+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 21, "stage": "MAIN", "duration_ms": 30265}
+{"ts": "2026-01-30T12:17:37.241422+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 21, "stage": "REVIEW", "duration_ms": 1347289}
+{"ts": "2026-01-30T12:18:39.648684+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 21, "stage": "SUMMARY", "duration_ms": 62405}
+{"ts": "2026-01-30T12:18:39.649156+00:00", "event": "iteration_start", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 22}
+{"ts": "2026-01-30T12:18:39.659278+00:00", "event": "main_prompt_size", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 22, "prompt_len": 33955}
+{"ts": "2026-01-30T12:19:08.918761+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 22, "stage": "MAIN", "duration_ms": 29259}
+{"ts": "2026-01-30T12:34:51.147899+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 22, "stage": "DEV", "duration_ms": 942226}
+{"ts": "2026-01-30T12:36:31.759117+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 22, "stage": "SUMMARY", "duration_ms": 100610}
+{"ts": "2026-01-30T12:36:31.759577+00:00", "event": "iteration_start", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 23}
+{"ts": "2026-01-30T12:36:31.769116+00:00", "event": "main_prompt_size", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 23, "prompt_len": 26435}
+{"ts": "2026-01-30T12:37:38.855367+00:00", "event": "stage_complete", "trace_id": "8a0f305b-a359-4e81-8f32-f733fdad25a8", "iteration": 23, "stage": "MAIN", "duration_ms": 67086}
+{"ts": "2026-01-30T16:44:55.435308+00:00", "event": "run_start", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "new_task": true, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 83}
+{"ts": "2026-01-30T16:44:55.438275+00:00", "event": "iteration_start", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 1}
+{"ts": "2026-01-30T16:44:55.444686+00:00", "event": "main_prompt_size", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 1, "prompt_len": 16912}
+{"ts": "2026-01-30T16:45:21.228600+00:00", "event": "stage_complete", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 1, "stage": "MAIN", "duration_ms": 25783}
+{"ts": "2026-01-30T17:04:09.940794+00:00", "event": "stage_complete", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 1, "stage": "REVIEW", "duration_ms": 1128710}
+{"ts": "2026-01-30T17:04:55.729299+00:00", "event": "stage_complete", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 1, "stage": "SUMMARY", "duration_ms": 45787}
+{"ts": "2026-01-30T17:04:55.729819+00:00", "event": "iteration_start", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 2}
+{"ts": "2026-01-30T17:04:55.738643+00:00", "event": "main_prompt_size", "trace_id": "dc7a02e3-8cbe-4555-88bb-a2b19bedadb9", "iteration": 2, "prompt_len": 22527}
+{"ts": "2026-01-30T17:42:50.014875+00:00", "event": "run_start", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-30T17:42:50.015329+00:00", "event": "iteration_start", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 2}
+{"ts": "2026-01-30T17:42:50.021861+00:00", "event": "main_prompt_size", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 2, "prompt_len": 22549}
+{"ts": "2026-01-30T17:43:12.715288+00:00", "event": "stage_complete", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 2, "stage": "MAIN", "duration_ms": 22693}
+{"ts": "2026-01-30T17:44:21.914938+00:00", "event": "iteration_start", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 3}
+{"ts": "2026-01-30T17:44:21.921603+00:00", "event": "main_prompt_size", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 3, "prompt_len": 24784}
+{"ts": "2026-01-30T17:45:24.200334+00:00", "event": "stage_complete", "trace_id": "288d54f9-c5a3-4256-b15c-a97934a3c1b1", "iteration": 3, "stage": "MAIN", "duration_ms": 62278}
+{"ts": "2026-01-31T04:28:36.975318+00:00", "event": "run_start", "trace_id": "febe735f-24c3-4512-a12b-f42eca5e2e1e", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T04:28:36.975765+00:00", "event": "iteration_start", "trace_id": "febe735f-24c3-4512-a12b-f42eca5e2e1e", "iteration": 3}
+{"ts": "2026-01-31T04:28:36.982791+00:00", "event": "main_prompt_size", "trace_id": "febe735f-24c3-4512-a12b-f42eca5e2e1e", "iteration": 3, "prompt_len": 17730}
+{"ts": "2026-01-31T04:29:40.567908+00:00", "event": "stage_complete", "trace_id": "febe735f-24c3-4512-a12b-f42eca5e2e1e", "iteration": 3, "stage": "MAIN", "duration_ms": 63584}
+{"ts": "2026-01-31T04:31:37.510115+00:00", "event": "run_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T04:31:37.510580+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 3}
+{"ts": "2026-01-31T04:31:37.517320+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 3, "prompt_len": 17730}
+{"ts": "2026-01-31T04:32:38.614047+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 3, "stage": "MAIN", "duration_ms": 61096}
+{"ts": "2026-01-31T05:21:47.796344+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 3, "stage": "REVIEW", "duration_ms": 2949179}
+{"ts": "2026-01-31T05:22:51.166636+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 3, "stage": "SUMMARY", "duration_ms": 63369}
+{"ts": "2026-01-31T05:22:51.166915+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 4}
+{"ts": "2026-01-31T05:22:51.174800+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 4, "prompt_len": 27163}
+{"ts": "2026-01-31T05:23:20.473206+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 4, "stage": "MAIN", "duration_ms": 29298}
+{"ts": "2026-01-31T06:00:40.672921+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 5}
+{"ts": "2026-01-31T06:00:40.679424+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 5, "prompt_len": 28048}
+{"ts": "2026-01-31T06:01:12.050626+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 5, "stage": "MAIN", "duration_ms": 31371}
+{"ts": "2026-01-31T06:18:44.272856+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 5, "stage": "REVIEW", "duration_ms": 1052219}
+{"ts": "2026-01-31T06:19:46.018663+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 5, "stage": "SUMMARY", "duration_ms": 61744}
+{"ts": "2026-01-31T06:19:46.019190+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 6}
+{"ts": "2026-01-31T06:19:46.035442+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 6, "prompt_len": 20186}
+{"ts": "2026-01-31T06:20:58.015450+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 6, "stage": "MAIN", "duration_ms": 71979}
+{"ts": "2026-01-31T06:26:53.802183+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 7}
+{"ts": "2026-01-31T06:26:53.808675+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 7, "prompt_len": 19736}
+{"ts": "2026-01-31T06:27:22.774757+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 7, "stage": "MAIN", "duration_ms": 28965}
+{"ts": "2026-01-31T07:01:08.515849+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 7, "stage": "REVIEW", "duration_ms": 2025738}
+{"ts": "2026-01-31T07:01:53.120295+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 7, "stage": "SUMMARY", "duration_ms": 44603}
+{"ts": "2026-01-31T07:01:53.120555+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 8}
+{"ts": "2026-01-31T07:01:53.129965+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 8, "prompt_len": 18978}
+{"ts": "2026-01-31T07:02:17.390250+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 8, "stage": "MAIN", "duration_ms": 24260}
+{"ts": "2026-01-31T07:05:24.783993+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 9}
+{"ts": "2026-01-31T07:05:24.790918+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 9, "prompt_len": 21484}
+{"ts": "2026-01-31T07:07:01.991625+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 9, "stage": "MAIN", "duration_ms": 97200}
+{"ts": "2026-01-31T07:39:05.376941+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 9, "stage": "TEST", "duration_ms": 1923381}
+{"ts": "2026-01-31T07:40:12.577648+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 9, "stage": "SUMMARY", "duration_ms": 67199}
+{"ts": "2026-01-31T07:40:12.577950+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 10}
+{"ts": "2026-01-31T07:40:12.587881+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 10, "prompt_len": 19868}
+{"ts": "2026-01-31T07:40:57.551619+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 10, "stage": "MAIN", "duration_ms": 44963}
+{"ts": "2026-01-31T08:24:24.626662+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 10, "stage": "DEV", "duration_ms": 2607071}
+{"ts": "2026-01-31T08:26:06.547795+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 10, "stage": "SUMMARY", "duration_ms": 101920}
+{"ts": "2026-01-31T08:26:06.548243+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 11}
+{"ts": "2026-01-31T08:26:06.556293+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 11, "prompt_len": 20178}
+{"ts": "2026-01-31T08:26:45.850637+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 11, "stage": "MAIN", "duration_ms": 39294}
+{"ts": "2026-01-31T08:50:27.945426+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 11, "stage": "DEV", "duration_ms": 1422091}
+{"ts": "2026-01-31T08:51:18.029024+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 11, "stage": "SUMMARY", "duration_ms": 50082}
+{"ts": "2026-01-31T08:51:18.029586+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 12}
+{"ts": "2026-01-31T08:51:18.040608+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 12, "prompt_len": 20610}
+{"ts": "2026-01-31T08:52:53.963900+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 12, "stage": "MAIN", "duration_ms": 95923}
+{"ts": "2026-01-31T09:18:31.859873+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 12, "stage": "REVIEW", "duration_ms": 1537892}
+{"ts": "2026-01-31T09:19:47.632150+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 12, "stage": "SUMMARY", "duration_ms": 75771}
+{"ts": "2026-01-31T09:19:47.632844+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 13}
+{"ts": "2026-01-31T09:19:47.642271+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 13, "prompt_len": 24799}
+{"ts": "2026-01-31T09:20:39.507969+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 13, "stage": "MAIN", "duration_ms": 51865}
+{"ts": "2026-01-31T09:32:30.719938+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 13, "stage": "DEV", "duration_ms": 711208}
+{"ts": "2026-01-31T09:34:37.121145+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 13, "stage": "SUMMARY", "duration_ms": 126400}
+{"ts": "2026-01-31T09:34:37.121578+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 14}
+{"ts": "2026-01-31T09:34:37.130796+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 14, "prompt_len": 21159}
+{"ts": "2026-01-31T09:35:11.449298+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 14, "stage": "MAIN", "duration_ms": 34318}
+{"ts": "2026-01-31T10:06:39.189586+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 14, "stage": "REVIEW", "duration_ms": 1887737}
+{"ts": "2026-01-31T10:07:28.906964+00:00", "event": "stage_complete", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 14, "stage": "SUMMARY", "duration_ms": 49715}
+{"ts": "2026-01-31T10:07:28.907428+00:00", "event": "iteration_start", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 15}
+{"ts": "2026-01-31T10:07:28.914764+00:00", "event": "main_prompt_size", "trace_id": "00a0dff3-e2c6-4d55-87bd-87e049cca1ec", "iteration": 15, "prompt_len": 26519}
+{"ts": "2026-01-31T10:14:20.045709+00:00", "event": "run_start", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T10:14:20.046514+00:00", "event": "iteration_start", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 15}
+{"ts": "2026-01-31T10:14:20.053553+00:00", "event": "main_prompt_size", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 15, "prompt_len": 26519}
+{"ts": "2026-01-31T10:15:41.735906+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 15, "stage": "MAIN", "duration_ms": 81682}
+{"ts": "2026-01-31T10:36:02.180681+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 15, "stage": "TEST", "duration_ms": 1220441}
+{"ts": "2026-01-31T10:37:25.004936+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 15, "stage": "SUMMARY", "duration_ms": 82823}
+{"ts": "2026-01-31T10:37:25.005268+00:00", "event": "iteration_start", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 16}
+{"ts": "2026-01-31T10:37:25.020822+00:00", "event": "main_prompt_size", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 16, "prompt_len": 20464}
+{"ts": "2026-01-31T10:38:13.677101+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 16, "stage": "MAIN", "duration_ms": 48655}
+{"ts": "2026-01-31T10:48:33.158683+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 16, "stage": "REVIEW", "duration_ms": 619477}
+{"ts": "2026-01-31T10:49:51.756393+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 16, "stage": "SUMMARY", "duration_ms": 78596}
+{"ts": "2026-01-31T10:49:51.756828+00:00", "event": "iteration_start", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 17}
+{"ts": "2026-01-31T10:49:51.766686+00:00", "event": "main_prompt_size", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 17, "prompt_len": 23136}
+{"ts": "2026-01-31T10:52:19.036062+00:00", "event": "stage_complete", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 17, "stage": "MAIN", "duration_ms": 147269}
+{"ts": "2026-01-31T10:52:19.036318+00:00", "event": "finish_attempt", "trace_id": "baed1d9b-10a6-4b26-ad34-c11172f4ada1", "iteration": 17, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-31T11:43:23.468346+00:00", "event": "run_start", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T11:43:23.469142+00:00", "event": "iteration_start", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17}
+{"ts": "2026-01-31T11:43:23.476232+00:00", "event": "main_prompt_size", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17, "prompt_len": 23136}
+{"ts": "2026-01-31T11:44:38.662399+00:00", "event": "stage_complete", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17, "stage": "MAIN", "duration_ms": 75185}
+{"ts": "2026-01-31T11:44:38.662643+00:00", "event": "finish_attempt", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-31T12:02:14.231496+00:00", "event": "stage_complete", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17, "stage": "FINISH_REVIEW", "duration_ms": 1055568}
+{"ts": "2026-01-31T12:02:49.163564+00:00", "event": "stage_complete", "trace_id": "8b5847a8-6bb5-49a6-980f-1bd0606fcbbe", "iteration": 17, "stage": "MAIN_FINISH_CHECK", "duration_ms": 34931}
+{"ts": "2026-01-31T12:32:24.213168+00:00", "event": "run_start", "trace_id": "f5ef795f-1f08-437e-a8ca-ab462361aa30", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T12:32:24.213932+00:00", "event": "iteration_start", "trace_id": "f5ef795f-1f08-437e-a8ca-ab462361aa30", "iteration": 17}
+{"ts": "2026-01-31T12:32:24.220953+00:00", "event": "main_prompt_size", "trace_id": "f5ef795f-1f08-437e-a8ca-ab462361aa30", "iteration": 17, "prompt_len": 23136}
+{"ts": "2026-01-31T12:33:51.780777+00:00", "event": "stage_complete", "trace_id": "f5ef795f-1f08-437e-a8ca-ab462361aa30", "iteration": 17, "stage": "MAIN", "duration_ms": 87559}
+{"ts": "2026-01-31T12:33:51.781040+00:00", "event": "finish_attempt", "trace_id": "f5ef795f-1f08-437e-a8ca-ab462361aa30", "iteration": 17, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-31T12:44:30.393470+00:00", "event": "run_start", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "new_task": false, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 0}
+{"ts": "2026-01-31T12:44:30.394367+00:00", "event": "iteration_start", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17}
+{"ts": "2026-01-31T12:44:30.401642+00:00", "event": "main_prompt_size", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17, "prompt_len": 23136}
+{"ts": "2026-01-31T12:45:59.893507+00:00", "event": "stage_complete", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17, "stage": "MAIN", "duration_ms": 89491}
+{"ts": "2026-01-31T12:45:59.893761+00:00", "event": "finish_attempt", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-31T13:13:12.212613+00:00", "event": "stage_complete", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17, "stage": "FINISH_REVIEW", "duration_ms": 1632317}
+{"ts": "2026-01-31T13:13:37.182236+00:00", "event": "stage_complete", "trace_id": "673d6281-516f-4d35-8939-bac32fc03786", "iteration": 17, "stage": "MAIN_FINISH_CHECK", "duration_ms": 24968}
+{"ts": "2026-01-31T13:35:44.209548+00:00", "event": "run_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "new_task": true, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 116}
+{"ts": "2026-01-31T13:35:44.213137+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 18}
+{"ts": "2026-01-31T13:35:44.219359+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 18, "prompt_len": 16703}
+{"ts": "2026-01-31T13:36:27.293481+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 18, "stage": "MAIN", "duration_ms": 43074}
+{"ts": "2026-01-31T13:52:36.722794+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 18, "stage": "REVIEW", "duration_ms": 969426}
+{"ts": "2026-01-31T13:54:01.582863+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 18, "stage": "SUMMARY", "duration_ms": 84859}
+{"ts": "2026-01-31T13:54:01.583300+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 19}
+{"ts": "2026-01-31T13:54:01.592818+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 19, "prompt_len": 22586}
+{"ts": "2026-01-31T13:55:06.284201+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 19, "stage": "MAIN", "duration_ms": 64691}
+{"ts": "2026-01-31T14:02:28.910236+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 19, "stage": "DEV", "duration_ms": 442622}
+{"ts": "2026-01-31T14:03:44.474884+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 19, "stage": "SUMMARY", "duration_ms": 75562}
+{"ts": "2026-01-31T14:03:44.475487+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 20}
+{"ts": "2026-01-31T14:03:44.484524+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 20, "prompt_len": 18075}
+{"ts": "2026-01-31T14:04:18.247417+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 20, "stage": "MAIN", "duration_ms": 33762}
+{"ts": "2026-01-31T14:23:47.579128+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 20, "stage": "TEST", "duration_ms": 1169328}
+{"ts": "2026-01-31T14:25:05.457683+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 20, "stage": "SUMMARY", "duration_ms": 77877}
+{"ts": "2026-01-31T14:25:05.458165+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 21}
+{"ts": "2026-01-31T14:25:05.466177+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 21, "prompt_len": 17656}
+{"ts": "2026-01-31T14:25:36.385660+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 21, "stage": "MAIN", "duration_ms": 30919}
+{"ts": "2026-01-31T14:26:38.455347+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 21, "stage": "DEV", "duration_ms": 62067}
+{"ts": "2026-01-31T14:28:52.282940+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 21, "stage": "SUMMARY", "duration_ms": 133826}
+{"ts": "2026-01-31T14:28:52.283543+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 22}
+{"ts": "2026-01-31T14:28:52.293582+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 22, "prompt_len": 18360}
+{"ts": "2026-01-31T14:30:14.986808+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 22, "stage": "MAIN", "duration_ms": 82692}
+{"ts": "2026-01-31T14:36:34.402216+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 22, "stage": "TEST", "duration_ms": 379413}
+{"ts": "2026-01-31T14:37:54.257042+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 22, "stage": "SUMMARY", "duration_ms": 79853}
+{"ts": "2026-01-31T14:37:54.257451+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 23}
+{"ts": "2026-01-31T14:37:54.267259+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 23, "prompt_len": 17566}
+{"ts": "2026-01-31T14:38:29.479937+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 23, "stage": "MAIN", "duration_ms": 35212}
+{"ts": "2026-01-31T14:49:43.204490+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 23, "stage": "REVIEW", "duration_ms": 673721}
+{"ts": "2026-01-31T14:51:13.281593+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 23, "stage": "SUMMARY", "duration_ms": 90076}
+{"ts": "2026-01-31T14:51:13.282147+00:00", "event": "iteration_start", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24}
+{"ts": "2026-01-31T14:51:13.290640+00:00", "event": "main_prompt_size", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24, "prompt_len": 22099}
+{"ts": "2026-01-31T14:52:27.528840+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24, "stage": "MAIN", "duration_ms": 74238}
+{"ts": "2026-01-31T14:52:27.529081+00:00", "event": "finish_attempt", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24, "finish_attempts": 1, "max_finish_attempts": 3}
+{"ts": "2026-01-31T15:36:03.742686+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24, "stage": "FINISH_REVIEW", "duration_ms": 2616211}
+{"ts": "2026-01-31T15:36:31.857511+00:00", "event": "stage_complete", "trace_id": "96a6ed48-01e7-4dc8-92dd-cde4bf70420f", "iteration": 24, "stage": "MAIN_FINISH_CHECK", "duration_ms": 28114}

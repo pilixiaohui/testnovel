@@ -58,14 +58,17 @@ DEV_PLAN_MAX_LINE_LENGTH = CONFIG.dev_plan_max_line_length  # 关键变量：行
 DEV_PLAN_BANNED_SUBSTRINGS: tuple[str, ...] = CONFIG.dev_plan_banned_substrings  # 关键变量：禁用子串
 
 # 收敛控制参数（新增）
+MAX_ITERATIONS = 100  # 关键变量：最大迭代轮数
 MAX_FINISH_ATTEMPTS = 3  # 关键变量：最大 FINISH 尝试次数
 REQUIRE_ALL_VERIFIED_FOR_FINISH = True  # 关键变量：是否要求所有任务 VERIFIED 才能 FINISH
 
+# 并行审阅参数
+MAX_PARALLEL_REVIEWS = 4  # 关键变量：最大并行审阅数量
+PARALLEL_REVIEW_ITERATIONS = {1, 2}  # 关键变量：允许并行审阅的迭代（仅计划制定阶段）
+
 # 上下文管理参数（新增）
 KEEP_RECENT_MILESTONES = 2  # 关键变量：dev_plan 保留最近 N 个 Milestone
-BASE_HISTORY_WINDOW = 10  # 关键变量：基础历史窗口大小
-MIN_HISTORY_WINDOW = 3  # 关键变量：最小历史窗口
-MAX_HISTORY_WINDOW = 15  # 关键变量：最大历史窗口
+MIN_HISTORY_WINDOW = 3  # 关键变量：最小历史窗口（用于 token 裁剪时保护最近 N 轮）
 
 # 阈值参数（新增）
 MAX_DEV_PLAN_SIZE = 1000  # 关键变量：dev_plan 最大行数（触发归档）
@@ -91,6 +94,75 @@ UPLOADED_DOCS_MAX_BYTES = 5 * 1024 * 1024  # 关键变量：上传文档大小�
 
 # 新增缓存路径
 REPORT_SUMMARY_CACHE_FILE = PROJECT_ROOT / "orchestrator" / "cache" / "report_summaries.json"  # 关键变量：报告摘要缓存
+
+# 上下文压缩配置
+COMPACT_INTERVAL = 3  # 每 N 轮压缩一次（0 表示禁用）
+COMPACT_INSTRUCTIONS = """侧重保留：
+1. 决策推理过程（为什么选择某个 next_agent）
+2. 跨轮问题分析（连续 FAIL 的根因判断）
+3. 文档修正执行记录（Edit 工具调用）
+4. 用户补充说明（user_comment）的关键信息
+
+可丢弃（每轮会重新注入）：
+- dev_plan 完整内容
+- 子代理报告详情
+- 用户决策选项列表
+- 项目目录结构
+- 全局上下文（压缩后会重新注入）"""
+
+# 子代理压缩指令（针对 TEST/DEV/REVIEW）
+SUBAGENT_COMPACT_INSTRUCTIONS = """你的任务是/compact当前对话上下文后退出，不需要执行其他的任务。压缩过程侧重保留：
+1. 当前任务的关键发现和结论
+2. 已执行的命令及其结果摘要
+3. 遇到的问题和解决方案
+4. 代码修改的关键决策（DEV）/ 测试设计思路（TEST）/ 审查发现（REVIEW）
+"""
+
+# ============= CLI 工具配置 =============
+# 每个代理可以配置使用不同的 CLI 工具
+# 支持的 CLI: codex, claude, opencode
+CLI_CONFIG: dict[str, dict[str, str | list[str]]] = {
+    "MAIN": {
+        "cli": "claude",           # MAIN 使用 claude CLI
+        "extra_args": [],         # 额外参数
+    },
+    "DEV": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2-codex"],
+    },
+    "TEST": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2-codex"],
+    },
+    "REVIEW": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+    },
+    "SUMMARY": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+    },
+}
+
+# ============= MCP 工具注入配置 =============
+# 配置哪些代理需要注入 MCP 工具指南
+MCP_TOOLS_GUIDE_FILE = PROMPTS_DIR / "mcp_tools_guide.md"  # 关键变量：MCP 工具指南文件
+
+# 需要注入 MCP 工具指南的代理列表（默认所有子代理）
+MCP_TOOLS_INJECT_AGENTS: set[str] = {"DEV", "TEST", "REVIEW", "FINISH_REVIEW"}
+
+
+def get_cli_for_agent(agent: str) -> str:
+    """获取指定代理使用的 CLI 工具名称"""
+    agent_config = CLI_CONFIG.get(agent, {})
+    return str(agent_config.get("cli", "codex"))
+
+
+def get_cli_extra_args(agent: str) -> list[str]:
+    """获取指定代理的额外 CLI 参数"""
+    agent_config = CLI_CONFIG.get(agent, {})
+    extra = agent_config.get("extra_args", [])
+    return list(extra) if extra else []
 
 
 def _list_editable_md_files() -> list[str]:

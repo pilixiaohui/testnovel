@@ -7,7 +7,7 @@ from queue import Queue
 from .codex_runner import _load_saved_main_iteration, _load_saved_main_session_id
 from .errors import PermanentError, TemporaryError
 from .file_ops import _append_log_line, _append_new_task_goal_to_history, _rel_path
-from .config import REPORT_ITERATION_SUMMARY_FILE, REPORT_ITERATION_SUMMARY_HISTORY_FILE
+from .config import REPORT_ITERATION_SUMMARY_FILE, REPORT_ITERATION_SUMMARY_HISTORY_FILE, MAX_ITERATIONS
 from .summary import _load_iteration_summary_history
 from .state import RunControl, UiStateStore, UserInterrupted
 from .types import UserDecisionResponse
@@ -17,20 +17,7 @@ from .workflow import _preflight, workflow_loop
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Blackboard-style Codex multi-agent orchestrator")  # 关键变量：CLI 解析器
-    parser.add_argument("--max-iterations", type=int, default=30)
-    parser.add_argument(
-        "--history-window-iterations",
-        type=int,
-        default=10,
-        help="How many recent '## Iteration' blocks to inject from memory/project_history.md for MAIN. "
-             "Reduced from 20 to 10 to avoid context overload.",
-    )
-    parser.add_argument(
-        "--history-window-max-tokens",
-        type=int,
-        default=3200,
-        help="Approx token budget for injected project_history; 0 disables token-based trimming.",
-    )
+    parser.add_argument("--max-iterations", type=int, default=MAX_ITERATIONS)
     parser.add_argument("--sandbox-mode", default="workspace-write")
     parser.add_argument("--approval-policy", default="on-request")
     parser.add_argument("--ui", action="store_true", help="Start a local web UI for progress & interaction.")
@@ -59,8 +46,6 @@ def main() -> int:
             new_task=args.new_task,
             ui=None,
             control=None,
-            history_window_iterations=args.history_window_iterations,
-            history_window_max_tokens=args.history_window_max_tokens,
         )
         return 0
 
@@ -109,8 +94,10 @@ def main() -> int:
     try:  # 关键分支：UI 主循环入口
         force_new_task_once = bool(args.new_task)  # 关键变量：首次强制新任务标记
         while True:  # 关键分支：持续等待启动请求
-            requested_new_task = control.wait_for_start()  # 关键变量：阻塞等待启动请求
+            requested_new_task, ui_task_goal = control.wait_for_start()  # 关键变量：阻塞等待启动请求
             run_new_task = bool(requested_new_task or force_new_task_once)  # 关键变量：是否新任务
+            # 确定本次运行的 user_task：优先使用前端传来的 task_goal，否则使用命令行参数
+            effective_user_task = ui_task_goal if ui_task_goal else args.task
             force_new_task_once = False  # 关键变量：仅强制一次
             if run_new_task:  # 关键分支：新任务需要重置状态
                 ui_runtime.state.update(
@@ -129,12 +116,10 @@ def main() -> int:
                     max_iterations=args.max_iterations,
                     sandbox_mode=args.sandbox_mode,
                     approval_policy=args.approval_policy,
-                    user_task=args.task,
+                    user_task=effective_user_task,
                     new_task=run_new_task,
                     ui=ui_runtime,
                     control=control,
-                    history_window_iterations=args.history_window_iterations,
-                    history_window_max_tokens=args.history_window_max_tokens,
                 )
             except UserInterrupted:  # 关键分支：用户中断
                 ui_runtime.state.update(phase="idle", current_agent="")

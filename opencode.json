@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+ "provider": {
+   "axonhub-openai": {
+     "npm": "@ai-sdk/openai-compatible",
+     "name": "AxonHub OpenAI",
+     "options": {
+       "baseURL": "http://152.53.165.53:3000",
+       "apiKey": "sk-2WbBMMEWvA4sdQuzLqKiM0762hrOP4Ds5uPFY5LTYWQ7MRQv"
+     },
+     "models": {
+       "gpt-5.2-codex": { "id": "gpt-5.2-codex", "name": "gpt-5.2-codex" },
+       "claude-opus-4-5-20251101": { "id": "claude-opus-4-5-20251101", "name": "claude-opus-4-5-20251101" }
+     }
+   }
+ }
+}

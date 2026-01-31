@@ -120,6 +120,25 @@ def _rel_path(path: Path) -> str:
         raise ValueError(f"Path must be under project root: {path}") from exc
 
 
+def _extract_last_iteration_from_history() -> int:
+    """
+    从 project_history.md 提取最后一个迭代号。
+
+    查找格式：## Iteration N: 或 ## Iteration N:
+    返回最大的迭代号，若未找到则返回 0。
+    """
+    import re
+    if not PROJECT_HISTORY_FILE.exists():  # 关键分支：文件不存在
+        return 0
+    content = _read_text(PROJECT_HISTORY_FILE)
+    # 匹配 ## Iteration N: 格式（N 为数字）
+    pattern = r"^## Iteration (\d+):"
+    matches = re.findall(pattern, content, re.MULTILINE)
+    if not matches:  # 关键分支：未找到任何迭代记录
+        return 0
+    return max(int(m) for m in matches)  # 关键变量：最大迭代号
+
+
 def _extract_latest_task_goal() -> str:
     """
     从 project_history.md 提取最新的 Task Goal。

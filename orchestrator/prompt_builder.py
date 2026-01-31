@@ -77,6 +77,8 @@ _COMPRESS_KEEP_PREFIXES = (
     "dev_plan:",
     "finish_review_override:",
 )
+# 兼容旧格式：带列表前缀的字段（如 "- dev_plan:"）
+_COMPRESS_KEEP_PREFIXES_WITH_LIST = tuple(f"- {p}" for p in _COMPRESS_KEEP_PREFIXES)
 _DOC_REF_RE = re.compile(r"@doc:([\w/\-]+\.md)")
 
 
@@ -123,10 +125,18 @@ def _compress_history_entry(entry_lines: list[str]) -> list[str]:
         stripped = line.strip()
         if not stripped:
             continue
+        # 检查标准前缀和带列表前缀的格式
         if any(stripped.startswith(prefix) for prefix in _COMPRESS_KEEP_PREFIXES):
             kept.append(line)
+        elif any(stripped.startswith(prefix) for prefix in _COMPRESS_KEEP_PREFIXES_WITH_LIST):
+            # 兼容旧格式：移除列表前缀后保留
+            kept.append(line)
     if len(kept) == 1:
-        raise RuntimeError("History entry missing required fields for compression")
+        raise RuntimeError(
+            f"History entry missing required fields for compression. "
+            f"Entry must contain at least one of: {', '.join(_COMPRESS_KEEP_PREFIXES)}. "
+            f"Got lines: {entry_lines}"
+        )
     return kept
 
 

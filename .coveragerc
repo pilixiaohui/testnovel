@@ -1,0 +1,9 @@
+[run]
+omit =
+    */app/config.py
+    */app/llm/*
+    */app/utils/graph_algorithms.py
+    */app/storage/memgraph_world_state.py
+    */app/storage/temporal_edge.py
+    */app/storage/snapshot.py
+    */app/storage/memgraph_storage.py

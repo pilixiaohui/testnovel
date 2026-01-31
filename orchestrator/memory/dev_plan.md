@@ -1,28 +1,23 @@
-# Dev Plan (Snapshot)
+# Dev Plan
 
-> 本文件由 MAIN 维护（可覆盖编辑）。它是"当前计划与进度"的快照；事实证据以 `orchestrator/reports/report_review.md` 与 `orchestrator/memory/project_history.md` 为准。
+## Milestone M3: 超时配置统一 - VERIFIED
 
-## 约束（强制）
-- 任务总数必须保持在"几十条"以内（少而硬）
-- 每个任务块必须包含：`status / acceptance / evidence`
-- status 只允许：TODO / DOING / BLOCKED / DONE / VERIFIED
-- 可选字段：`verification_status: <PENDING_DEV_VALIDATION|DEV_VALIDATED|TEST_PASSED|VERIFIED|REVIEW_REJECTED>` 用于验证闭环跟踪
-- 只有 **REVIEW 的证据** 才能把 DONE -> VERIFIED（evidence 必须引用 Iteration 与验证方式）
+### M3-T1: 调查超时问题根因
+- status: VERIFIED
+- acceptance: 输出调查报告，明确前后端超时配置差异和E2E测试mock使用情况
+- evidence: REVIEW报告确认：前端30s硬编码、后端默认30s实际120s、E2E全mock
 
----
+### M3-T2: 统一超时配置为10分钟
+- status: VERIFIED
+- acceptance: 前后端超时配置统一为600000ms(10分钟)
+- evidence: REVIEW验收PASS - 前端600000ms、后端600s、.env=600
 
-## Milestone M0: 引导与黑板契约
+### M3-T3: E2E测试真实接口覆盖
+- status: VERIFIED
+- acceptance: 关键E2E测试支持真实接口测试模式
+- evidence: REVIEW验收PASS - 健康检查+跳过策略+真实请求超时配置
 
-### M0-T1: 建立 dev_plan 状态机
-- status: TODO
-- acceptance:
-- `orchestrator/memory/dev_plan.md` 存在并遵循固定字段
-- 每轮更新在 `orchestrator/memory/project_history.md` 留痕（说明改了什么/为什么）
-- evidence:
+## 已完成里程碑
 
-### M0-T2: 审阅代理输出可核实证据
-- status: TODO
-- acceptance:
-- `orchestrator/reports/report_review.md` 包含可复现的命令与关键输出摘要
-  - 进度核实：逐条对照 dev_plan 的任务给出 PASS/FAIL 与证据
-- evidence:
+## Milestone M1: E2E测试补全 - VERIFIED
+## Milestone M2: 前端实现补齐 - VERIFIED

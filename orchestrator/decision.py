@@ -7,7 +7,7 @@ from queue import Empty
 from .config import PROJECT_HISTORY_FILE
 from .file_ops import _append_log_line
 from .state import UiRuntime, UserInterrupted
-from .types import MainDecision, MainDecisionUser, MainOutput, UserDecisionOption
+from .types import MainDecision, MainDecisionUser, MainOutput, UserDecisionOption, ParallelReviewItem
 
 
 def _extract_json_object(raw_json: str) -> str | None:
@@ -16,6 +16,32 @@ def _extract_json_object(raw_json: str) -> str | None:
     if start == -1 or end == -1 or end <= start:
         return None
     return raw_json[start : end + 1]
+
+
+def _extract_option_description(opt: dict) -> str | None:
+    """从选项对象中提取描述，兼容多种字段格式。
+
+    优先级：description > label + detail > label > detail
+    """
+    # 优先使用标准字段
+    desc = opt.get("description")
+    if isinstance(desc, str) and desc.strip():
+        return desc.strip()
+
+    # 兼容 label/detail 格式
+    label = opt.get("label")
+    detail = opt.get("detail")
+    label_str = label.strip() if isinstance(label, str) and label.strip() else None
+    detail_str = detail.strip() if isinstance(detail, str) and detail.strip() else None
+
+    if label_str and detail_str:
+        return f"{label_str} - {detail_str}"
+    if label_str:
+        return label_str
+    if detail_str:
+        return detail_str
+
+    return None
 
 
 def _load_json_object(raw_json: str) -> dict:
@@ -39,16 +65,46 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
     """
     MAIN decision payload must be a JSON object containing:
     {"next_agent":"DEV","reason":"..."}
+    or for parallel review:
+    {"next_agent":"PARALLEL_REVIEW","reason":"...","parallel_reviews":[...]}
     """
 
     next_agent = decision.get("next_agent")  # 关键变量：目标代理
     reason = decision.get("reason")  # 关键变量：决策理由
 
-    allowed: set[str] = {"TEST", "DEV", "REVIEW", "FINISH", "USER"}
+    allowed: set[str] = {"TEST", "DEV", "REVIEW", "FINISH", "USER", "PARALLEL_REVIEW"}
     if next_agent not in allowed:  # 关键分支：非法代理
         raise ValueError(f"Invalid next_agent: {next_agent!r}, allowed: {sorted(allowed)}")
     if not isinstance(reason, str) or not reason.strip():  # 关键分支：理由缺失
         raise ValueError("Invalid reason: must be a non-empty string")
+
+    # 处理并行审阅决策
+    if next_agent == "PARALLEL_REVIEW":
+        parallel_reviews = decision.get("parallel_reviews")
+        if not isinstance(parallel_reviews, list) or len(parallel_reviews) == 0:
+            raise ValueError("PARALLEL_REVIEW 必须包含非空 parallel_reviews 数组")
+        if len(parallel_reviews) > 4:
+            raise ValueError("parallel_reviews 最多支持 4 个并行审阅")
+
+        parsed_reviews: list[ParallelReviewItem] = []
+        valid_focus = {"requirements", "architecture", "risk", "scope", "custom"}
+        for idx, pr in enumerate(parallel_reviews, start=1):
+            if not isinstance(pr, dict):
+                raise ValueError(f"parallel_reviews[{idx}] 必须是对象")
+            focus = pr.get("focus")
+            task = pr.get("task")
+            if not isinstance(focus, str) or not focus.strip():
+                raise ValueError(f"parallel_reviews[{idx}].focus 必须是非空字符串")
+            if not isinstance(task, str) or not task.strip():
+                raise ValueError(f"parallel_reviews[{idx}].task 必须是非空字符串")
+            # 允许自定义 focus，但建议使用标准类型
+            parsed_reviews.append({"focus": focus.strip(), "task": task.strip()})
+
+        return {
+            "next_agent": "PARALLEL_REVIEW",
+            "reason": reason.strip(),
+            "parallel_reviews": parsed_reviews,
+        }
 
     if next_agent != "USER":  # 关键分支：非 USER 直接返回最小决策
         return {"next_agent": next_agent, "reason": reason.strip()}  # type: ignore[return-value]
@@ -68,18 +124,22 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
     parsed_options: list[UserDecisionOption] = []  # 关键变量：解析后的选项
     seen_ids: set[str] = set()  # 关键变量：去重集合
     for idx, opt in enumerate(options, start=1):  # 关键分支：逐条校验选项
-        if not isinstance(opt, dict):  # 关键分支：选项必须是对象
-            raise ValueError(f"Invalid options[{idx}]: must be an object")
+        # 容错：字符串自动转换为对象格式
+        if isinstance(opt, str):
+            opt = {"option_id": f"opt{idx}", "description": opt}
+        if not isinstance(opt, dict):  # 关键分支：选项必须是对象或字符串
+            raise ValueError(f"Invalid options[{idx}]: must be an object or string")
         option_id = opt.get("option_id")  # 关键变量：选项 id
-        description = opt.get("description")  # 关键变量：选项描述
-        if not isinstance(option_id, str) or not option_id.strip():  # 关键分支：id 缺失
-            raise ValueError(f"Invalid options[{idx}].option_id: must be a non-empty string")
-        if not isinstance(description, str) or not description.strip():  # 关键分支：描述缺失
-            raise ValueError(f"Invalid options[{idx}].description: must be a non-empty string")
+        description = _extract_option_description(opt)  # 关键变量：选项描述（兼容多种格式）
+        # 容错：缺少 option_id 时自动生成
+        if not isinstance(option_id, str) or not option_id.strip():
+            option_id = f"opt{idx}"
+        if not description:  # 关键分支：描述缺失
+            raise ValueError(f"Invalid options[{idx}]: missing description (or label/detail fallback)")
         if option_id in seen_ids:  # 关键分支：重复 id
             raise ValueError(f"Duplicate option_id in options: {option_id!r}")
         seen_ids.add(option_id)
-        parsed_options.append({"option_id": option_id, "description": description.strip()})
+        parsed_options.append({"option_id": option_id, "description": description})
 
     if recommended_option_id is not None:  # 关键分支：推荐项可选
         if not isinstance(recommended_option_id, str) or not recommended_option_id.strip():  # 关键分支：推荐项非法
@@ -97,6 +157,7 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
         "question": question.strip(),
         "options": parsed_options,
         "recommended_option_id": recommended_option_id.strip() if isinstance(recommended_option_id, str) else None,
+        "doc_patches": None,  # 文档修正在 _parse_main_output 中解析
     }
 
 
@@ -124,19 +185,61 @@ def _parse_main_output(raw_json: str) -> MainOutput:
 
     task = payload.get("task")  # 关键变量：工单内容（可为空）
     next_agent = decision["next_agent"]  # 关键变量：目标代理
+
+    # 并行审阅从 decision 中提取
+    parallel_reviews = None
+    if next_agent == "PARALLEL_REVIEW":
+        parallel_reviews = decision.get("parallel_reviews")  # type: ignore[union-attr]
+
     if next_agent in {"TEST", "DEV", "REVIEW"}:  # 关键分支：子代理必须有工单
         if not isinstance(task, str) or not task.strip():  # 关键分支：子代理必须有工单
             raise ValueError(f"Invalid task: must be a non-empty string when next_agent={next_agent}")
+    elif next_agent == "PARALLEL_REVIEW":  # 关键分支：并行审阅不需要 task
+        pass
     else:  # 关键分支：非子代理必须为 null
         if task is not None:  # 关键分支：存在 task 时继续校验
             if not isinstance(task, str) or task.strip():  # 关键分支：非子代理必须为 null
                 raise ValueError(f"Invalid task: must be null when next_agent={next_agent}")
+
+    # 解析文档修正建议（仅 USER 决策时）
+    doc_patches = None
+    if next_agent == "USER":
+        raw_patches = payload.get("doc_patches")
+        if raw_patches is not None:
+            if not isinstance(raw_patches, list):
+                raise ValueError("Invalid doc_patches: must be a list or null")
+            doc_patches = []
+            for idx, patch in enumerate(raw_patches, start=1):
+                if not isinstance(patch, dict):
+                    raise ValueError(f"Invalid doc_patches[{idx}]: must be an object")
+                file_path = patch.get("file")
+                action = patch.get("action")
+                content = patch.get("content")
+                reason = patch.get("reason")
+                if not isinstance(file_path, str) or not file_path.strip():
+                    raise ValueError(f"Invalid doc_patches[{idx}].file: must be a non-empty string")
+                if action not in {"append", "replace", "insert"}:
+                    raise ValueError(f"Invalid doc_patches[{idx}].action: must be append/replace/insert")
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError(f"Invalid doc_patches[{idx}].content: must be a non-empty string")
+                if not isinstance(reason, str) or not reason.strip():
+                    raise ValueError(f"Invalid doc_patches[{idx}].reason: must be a non-empty string")
+                doc_patches.append({
+                    "file": file_path.strip(),
+                    "action": action,
+                    "content": content,
+                    "reason": reason.strip(),
+                    "old_content": patch.get("old_content", ""),
+                    "after_marker": patch.get("after_marker", ""),
+                })
 
     return {
         "decision": decision,
         "history_append": history_append,
         "task": task if isinstance(task, str) else None,
         "dev_plan_next": dev_plan_next if isinstance(dev_plan_next, str) else None,
+        "parallel_reviews": parallel_reviews,
+        "doc_patches": doc_patches,
     }
 
 
@@ -161,6 +264,27 @@ def _append_user_interaction_to_history(
     lines.append(f"- user_choice: {user_choice}")  # 关键变量：用户选择
     if user_comment is not None and user_comment.strip():  # 关键分支：可选备注
         lines.append(f"- user_comment: {user_comment.strip()}")  # 关键变量：用户补充说明
+
+    # 记录文档修正建议（若用户选择 accept 且存在 doc_patches）
+    doc_patches = decision.get("doc_patches")
+    if doc_patches and user_choice == "accept":
+        lines.append("- doc_patches_accepted:")
+        for idx, patch in enumerate(doc_patches, start=1):
+            lines.append(f"  - [{idx}] file: {patch.get('file')}")
+            lines.append(f"    action: {patch.get('action')}")
+            lines.append(f"    reason: {patch.get('reason')}")
+            content = patch.get('content') or ''
+            # 内容可能较长，截断显示
+            if len(content) > 500:
+                content = content[:500] + "...(truncated)"
+            lines.append(f"    content: |")
+            for line in content.split('\n'):
+                lines.append(f"      {line}")
+            if patch.get('old_content'):
+                lines.append(f"    old_content: {patch.get('old_content')[:100]}...")
+            if patch.get('after_marker'):
+                lines.append(f"    after_marker: {patch.get('after_marker')}")
+
     lines.append("")
 
     PROJECT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -173,12 +297,30 @@ def _prompt_user_for_decision(
     iteration: int,
     decision: MainDecisionUser,
     ui: UiRuntime | None,
-) -> None:
+) -> str:
+    """返回用户选择的 option_id"""
+    # 显示文档修正建议（如果有）
+    doc_patches = decision.get("doc_patches")
+
     if ui is None:  # 关键分支：CLI 模式
         print("\n========== USER DECISION REQUIRED ==========")
         print(f"title: {decision['decision_title']}")
         print(f"reason: {decision['reason']}")
         print(f"question: {decision['question']}")
+
+        # 显示文档修正建议
+        if doc_patches:
+            print("\n--- 文档修正建议 ---")
+            for idx, patch in enumerate(doc_patches, start=1):
+                print(f"  [{idx}] 文件: {patch.get('file')}")
+                print(f"      操作: {patch.get('action')}")
+                print(f"      原因: {patch.get('reason')}")
+                content_preview = (patch.get('content') or '')[:100]
+                if len(patch.get('content') or '') > 100:
+                    content_preview += "..."
+                print(f"      内容: {content_preview}")
+            print("--- 文档修正建议结束 ---\n")
+
         print("options:")
         for idx, opt in enumerate(decision["options"], start=1):  # 关键分支：按序号展示选项
             print(f"  {idx}. {opt['option_id']}: {opt['description']}")
@@ -209,7 +351,7 @@ def _prompt_user_for_decision(
             user_comment=user_comment,
         )
         print(f"Recorded user_choice: {user_choice}")
-        return
+        return user_choice
 
     ui.state.update(phase="awaiting_user", iteration=iteration, current_agent="USER", awaiting_user_decision=decision)  # 关键变量：UI 进入等待态
     _append_log_line(f"\nawaiting_user_decision: {decision['decision_title']}\n")
@@ -238,3 +380,4 @@ def _prompt_user_for_decision(
     )
     ui.state.update(phase="running", awaiting_user_decision=None)  # 关键变量：UI 回到运行态
     _append_log_line(f"user_choice_recorded: {user_choice}\n")
+    return user_choice

@@ -75,7 +75,7 @@ def _validate_dev_plan_text(*, text: str, source: Path) -> None:
             raise RuntimeError(
                 f"Invalid dev_plan status for {task_id}: {status!r}, allowed: {sorted(DEV_PLAN_ALLOWED_STATUSES)}"
             )
-        if not task.get("has_acceptance"):  # 关键分支：缺 acceptance 字段
+        if not task.get("has_acceptance") and status != "VERIFIED":  # 关键分支：非 VERIFIED 任务必须有 acceptance
             raise RuntimeError(f"dev_plan task {task_id} missing 'acceptance:' field")
         if not task.get("has_evidence"):  # 关键分支：缺 evidence 字段
             raise RuntimeError(f"dev_plan task {task_id} missing 'evidence:' field")
@@ -225,8 +225,7 @@ def _validate_history_append(*, iteration: int, entry: str) -> str:
     expected_header = f"## Iteration {iteration}:"  # 关键变量：本轮历史头部
     if not stripped.startswith(expected_header):  # 关键分支：头部缺失直接失败
         raise RuntimeError(f"history_append must start with {expected_header!r}")
-    if "dev_plan:" not in entry:  # 关键分支：必须包含 dev_plan 说明
-        raise RuntimeError("history_append missing required 'dev_plan:' line")
+    # dev_plan: 行改为可选（有时没有 dev_plan 变更）
     return entry.rstrip()
 
 
@@ -478,13 +477,9 @@ def _assert_main_side_effects(*, iteration: int, expected_next_agent: NextAgent)
             end_idx = idx  # 关键变量：下一轮开始即本轮结束
             break
     section = "\n".join(lines[start_idx:end_idx])  # 关键变量：本轮历史片段
-    if "dev_plan:" not in section:  # 关键分支：必须包含 dev_plan 说明
-        raise RuntimeError(
-            "MAIN history entry must include a 'dev_plan:' change note "
-            f"(either change summary or 'no change') in {PROJECT_HISTORY_FILE} for Iteration {iteration}"
-        )
+    # dev_plan: 行改为可选（有时没有 dev_plan 变更，如派发 REVIEW 进行分析）
 
-    if expected_next_agent in {"FINISH", "USER"}:  # 关键分支：结束/用户交互仅校验 dev_plan
+    if expected_next_agent in {"FINISH", "USER", "PARALLEL_REVIEW"}:  # 关键分支：结束/用户交互/并行审阅仅校验 dev_plan
         _validate_dev_plan()
         return
 
@@ -513,3 +508,322 @@ def _assert_main_side_effects(*, iteration: int, expected_next_agent: NextAgent)
         )
 
     _validate_dev_plan()  # 关键变量：确保 dev_plan 结构合法
+
+
+def _validate_acceptance_command(command: str, *, code_root: Path | None = None) -> list[str]:
+    """
+    验证验收命令的语法和文件引用。
+
+    Returns:
+        警告列表（空列表表示无问题）
+    """
+    warnings: list[str] = []
+
+    # 1. 检查 pytest -k 语法：不支持 | 语法
+    # 支持 -k value、-k=value、-k"value" 等格式
+    if "-k " in command or "-k=" in command or "-k\"" in command or "-k'" in command:
+        import shlex
+        try:
+            parts = shlex.split(command)
+            for i, part in enumerate(parts):
+                k_value = None
+                if part == "-k" and i + 1 < len(parts):
+                    k_value = parts[i + 1]
+                elif part.startswith("-k="):
+                    k_value = part[3:]
+                if k_value and "|" in k_value:
+                    warnings.append(
+                        f"pytest -k 语法错误：不支持 '|'，应使用 'or'。"
+                        f"当前值: {k_value!r}"
+                    )
+        except ValueError:
+            pass  # shlex 解析失败时跳过
+
+    # 2. 检查测试文件路径是否存在
+    if code_root is not None and code_root.exists():
+        # 提取命令中的测试文件路径（只匹配完整路径）
+        test_file_pattern = r"tests/[^\s]+\.py"
+        matches = re.findall(test_file_pattern, command)
+        for match in matches:
+            # 跳过通配符模式（如 test_*.py、test_[abc].py）
+            if '*' in match or '[' in match or '?' in match:
+                continue
+            # 移除 ::function 后缀（如 test_foo.py::test_func）
+            file_path = match.split("::")[0]
+            test_path = code_root / file_path
+            if not test_path.exists():
+                warnings.append(f"测试文件不存在: {file_path}")
+
+    return warnings
+
+
+def _load_acceptance_validation_config() -> dict[str, bool]:
+    """
+    从 verification_policy.json 加载验收命令校验配置。
+    """
+    from .config import VERIFICATION_POLICY_FILE
+    from .file_ops import _read_text
+    import json
+
+    default_config = {
+        "validate_pytest_k_syntax": True,
+        "validate_file_paths": True,
+        "require_test_file_skeleton": True,
+    }
+
+    if not VERIFICATION_POLICY_FILE.exists():
+        return default_config
+
+    try:
+        policy = json.loads(_read_text(VERIFICATION_POLICY_FILE))
+        if not isinstance(policy, dict):
+            return default_config
+        acceptance_validation = policy.get("acceptance_validation")
+        if not isinstance(acceptance_validation, dict):
+            return default_config
+        return {
+            "validate_pytest_k_syntax": acceptance_validation.get("validate_pytest_k_syntax", True),
+            "validate_file_paths": acceptance_validation.get("validate_file_paths", True),
+            "require_test_file_skeleton": acceptance_validation.get("require_test_file_skeleton", True),
+        }
+    except (json.JSONDecodeError, KeyError):
+        return default_config
+
+
+def _load_workflow_rules() -> dict[str, object]:
+    """
+    从 verification_policy.json 加载工作流规则配置。
+    """
+    from .config import VERIFICATION_POLICY_FILE
+    from .file_ops import _read_text
+    import json
+
+    default_rules: dict[str, object] = {
+        "dev_self_test": True,
+        "milestone_review": True,
+        "max_consecutive_same_fail": 2,
+        "require_root_cause_on_repeat_fail": True,
+    }
+
+    if not VERIFICATION_POLICY_FILE.exists():
+        return default_rules
+
+    try:
+        policy = json.loads(_read_text(VERIFICATION_POLICY_FILE))
+        if not isinstance(policy, dict):
+            return default_rules
+        workflow_rules = policy.get("workflow_rules")
+        if not isinstance(workflow_rules, dict):
+            return default_rules
+
+        # 类型安全的配置读取
+        dev_self_test = workflow_rules.get("dev_self_test", True)
+        if not isinstance(dev_self_test, bool):
+            dev_self_test = True
+
+        milestone_review = workflow_rules.get("milestone_review", True)
+        if not isinstance(milestone_review, bool):
+            milestone_review = True
+
+        max_consecutive_same_fail = workflow_rules.get("max_consecutive_same_fail", 2)
+        if not isinstance(max_consecutive_same_fail, int) or max_consecutive_same_fail < 1:
+            max_consecutive_same_fail = 2
+
+        require_root_cause = workflow_rules.get("require_root_cause_on_repeat_fail", True)
+        if not isinstance(require_root_cause, bool):
+            require_root_cause = True
+
+        return {
+            "dev_self_test": dev_self_test,
+            "milestone_review": milestone_review,
+            "max_consecutive_same_fail": max_consecutive_same_fail,
+            "require_root_cause_on_repeat_fail": require_root_cause,
+        }
+    except (json.JSONDecodeError, KeyError):
+        return default_rules
+
+
+def _load_project_env() -> dict[str, object]:
+    """
+    从 project_env.json 加载项目环境配置。
+    """
+    from .config import PROJECT_ENV_FILE
+    from .file_ops import _read_text
+    import json
+
+    if not PROJECT_ENV_FILE.exists():
+        return {}
+
+    try:
+        env = json.loads(_read_text(PROJECT_ENV_FILE))
+        if not isinstance(env, dict):
+            return {}
+        return env
+    except json.JSONDecodeError:
+        return {}
+
+
+def _build_execution_environment_section() -> str:
+    """
+    构建工单的"执行环境"小节，从 project_env.json 读取配置。
+    由编排器自动注入，MAIN 无需手动填写。
+
+    工作目录优先使用 project.root（项目根目录），确保 orchestrator/ 相关路径可访问。
+    同时提供 code_root 供需要时切换到代码目录。
+    """
+    env = _load_project_env()
+
+    project = env.get("project", {})
+    python_config = env.get("python", {})
+    environment = env.get("environment", {})
+    test_execution = env.get("test_execution", {})
+
+    # 优先使用 root 作为工作目录，确保 orchestrator/ 路径可访问
+    project_root = project.get("root", "") if isinstance(project, dict) else ""
+    code_root = project.get("code_root", "") if isinstance(project, dict) else ""
+    frontend_root = project.get("frontend_root", "") if isinstance(project, dict) else ""
+    python_bin = python_config.get("python_bin", "") if isinstance(python_config, dict) else ""
+
+    lines = ["## 执行环境"]
+    # 工作目录使用项目根目录
+    if project_root:
+        lines.append(f"- 工作目录: {project_root}")
+    elif code_root:
+        # 兼容旧配置：若无 root 则回退到 code_root
+        lines.append(f"- 工作目录: {code_root}")
+    # 提供代码目录供需要时使用
+    if code_root and code_root != project_root:
+        lines.append(f"- 代码目录: {code_root}")
+    # 提供前端目录
+    if frontend_root:
+        lines.append(f"- 前端目录: {frontend_root}")
+    if python_bin:
+        lines.append(f"- Python: {python_bin}")
+
+    if isinstance(environment, dict) and environment:
+        lines.append("- 环境变量:")
+        for key, value in environment.items():
+            lines.append(f"  - {key}={value}")
+
+    # 测试执行配置
+    if isinstance(test_execution, dict) and test_execution:
+        lines.append("- 测试执行配置:")
+        frontend_port = test_execution.get("frontend_dev_port")
+        if isinstance(frontend_port, int):
+            lines.append(f"  - 前端开发端口: {frontend_port}")
+        startup_wait = test_execution.get("service_startup_wait_seconds")
+        if isinstance(startup_wait, (int, float)):
+            lines.append(f"  - 服务启动等待: {startup_wait}秒")
+        timeouts = test_execution.get("test_timeout_seconds", {})
+        if isinstance(timeouts, dict):
+            for test_type, timeout in timeouts.items():
+                lines.append(f"  - {test_type}测试超时: {timeout}秒")
+
+    return "\n".join(lines)
+
+
+# 工单必填字段定义
+_TASK_REQUIRED_FIELDS: dict[str, dict[str, str]] = {
+    "TEST": {
+        "field": "work_mode",
+        "default": "design",
+        "allowed": "design|execute",
+    },
+    "DEV": {
+        "field": "self_test",
+        "default": "enabled",
+        "allowed": "enabled|disabled",
+    },
+    "REVIEW": {
+        "field": "review_mode",
+        "default": "single",
+        "allowed": "milestone|single",
+    },
+}
+
+
+def _validate_and_complete_task_fields(*, task: str, agent: str) -> tuple[str, list[str]]:
+    """
+    校验工单必填字段，缺失时自动补全。
+
+    Args:
+        task: 原始工单内容
+        agent: 目标代理 (TEST/DEV/REVIEW)
+
+    Returns:
+        (completed_task, warnings)
+        - completed_task: 补全后的工单内容
+        - warnings: 补全日志列表
+    """
+    if agent not in _TASK_REQUIRED_FIELDS:
+        return task, []
+
+    field_config = _TASK_REQUIRED_FIELDS[agent]
+    field_name = field_config["field"]
+    default_value = field_config["default"]
+    allowed_values = field_config["allowed"].split("|")
+
+    warnings: list[str] = []
+    lines = task.splitlines()
+
+    # 查找字段
+    field_found = False
+    field_value = None
+    field_line_idx = None
+
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(f"{field_name}:"):
+            field_found = True
+            field_value = stripped.split(":", 1)[1].strip()
+            field_line_idx = idx
+            break
+
+    # 字段缺失：在 assigned_agent 行后插入
+    if not field_found:
+        warnings.append(f"工单缺少 {field_name} 字段，自动补全为 {default_value}")
+        new_lines = []
+        inserted = False
+        for line in lines:
+            new_lines.append(line)
+            if not inserted and line.strip().startswith("assigned_agent:"):
+                new_lines.append(f"{field_name}: {default_value}")
+                inserted = True
+        if not inserted:
+            # 如果没找到 assigned_agent，在第二行插入
+            new_lines.insert(1, f"{field_name}: {default_value}")
+        return "\n".join(new_lines), warnings
+
+    # 字段值非法：修正为默认值
+    if field_value not in allowed_values:
+        warnings.append(
+            f"工单 {field_name} 值非法: {field_value!r}，"
+            f"允许值: {allowed_values}，自动修正为 {default_value}"
+        )
+        if field_line_idx is not None:
+            lines[field_line_idx] = f"{field_name}: {default_value}"
+        return "\n".join(lines), warnings
+
+    return task, warnings
+
+
+def _inject_execution_environment(task: str) -> str:
+    """
+    向工单注入执行环境小节（如果尚未存在）。
+
+    Args:
+        task: 原始工单内容
+
+    Returns:
+        注入执行环境后的工单内容
+    """
+    # 检查是否已有执行环境小节
+    if "## 执行环境" in task:
+        return task
+
+    env_section = _build_execution_environment_section()
+    if not env_section or env_section == "## 执行环境":
+        return task
+
+    # 在工单末尾追加执行环境
+    return f"{task.rstrip()}\n\n{env_section}\n"

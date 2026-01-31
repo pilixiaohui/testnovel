@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-NextAgent = Literal["TEST", "DEV", "REVIEW", "FINISH", "USER"]  # 关键变量：调度目标枚举
+try:
+    from typing import Required
+except ImportError:
+    from typing_extensions import Required
+
+NextAgent = Literal["TEST", "DEV", "REVIEW", "FINISH", "USER", "PARALLEL_REVIEW"]  # 关键变量：调度目标枚举
 ResumePhase = Literal["after_main", "after_subagent", "awaiting_user"]  # 关键变量：续跑阶段枚举
 TaskType = Literal["feature", "bugfix", "refactor", "chore"]  # 关键变量：任务类型标记（dev_plan 可选字段）
 
@@ -15,6 +20,7 @@ class ResumeState(TypedDict):
     main_session_id: str  # 关键变量：MAIN 会话 id
     subagent_session_id: str | None  # 关键变量：子代理会话 id
     blackboard_digest: str  # 关键变量：黑板摘要
+    last_compact_iteration: int  # 关键变量：上次压缩的迭代号（避免重复压缩）
 
 
 class UserDecisionOption(TypedDict):
@@ -22,9 +28,32 @@ class UserDecisionOption(TypedDict):
     description: str  # 关键变量：选项描述
 
 
+class DocPatch(TypedDict, total=False):
+    """文档修正项，用于 USER 决策时提供文档修正建议"""
+    file: str  # 关键变量：要修改的文档文件路径（相对于项目根目录，如 doc/xxx.md 或 project/docs/xxx.md）
+    action: str  # 关键变量：修改类型（append/replace/insert）
+    content: str  # 关键变量：修改内容
+    reason: str  # 关键变量：修改原因
+    old_content: str  # 关键变量：被替换的内容（仅 replace 时需要）
+    after_marker: str  # 关键变量：插入位置标记（仅 insert 时需要）
+
+
 class MainDecisionDispatch(TypedDict):
     next_agent: Literal["TEST", "DEV", "REVIEW", "FINISH"]  # 关键变量：下一代理
     reason: str  # 关键变量：决策理由
+
+
+class ParallelReviewItem(TypedDict):
+    """并行审阅项，用于计划制定阶段的多角度审阅"""
+    focus: str  # 关键变量：审阅侧重点（requirements/architecture/risk/scope）
+    task: str  # 关键变量：审阅工单内容
+
+
+class MainDecisionParallelReview(TypedDict):
+    """并行审阅决策，仅限 iteration 1-2 使用"""
+    next_agent: Literal["PARALLEL_REVIEW"]  # 关键变量：并行审阅标识
+    reason: str  # 关键变量：决策理由
+    parallel_reviews: list[ParallelReviewItem]  # 关键变量：并行审阅列表（1-4 个）
 
 
 class MainDecisionUser(TypedDict):
@@ -34,9 +63,10 @@ class MainDecisionUser(TypedDict):
     question: str  # 关键变量：抉择问题
     options: list[UserDecisionOption]  # 关键变量：选项列表
     recommended_option_id: str | None  # 关键变量：推荐选项（可空）
+    doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空）
 
 
-MainDecision = MainDecisionDispatch | MainDecisionUser
+MainDecision = MainDecisionDispatch | MainDecisionUser | MainDecisionParallelReview
 
 
 class CodexRunResult(TypedDict):
@@ -44,11 +74,13 @@ class CodexRunResult(TypedDict):
     session_id: str | None  # 关键变量：会话 id（可空）
 
 
-class MainOutput(TypedDict):
-    decision: MainDecision  # 关键变量：决策对象
-    history_append: str  # 关键变量：历史追加内容
+class MainOutput(TypedDict, total=False):
+    decision: Required[MainDecision]  # 关键变量：决策对象
+    history_append: Required[str]  # 关键变量：历史追加内容
     task: str | None  # 关键变量：工单内容（可空）
     dev_plan_next: str | None  # 关键变量：计划草案（可空）
+    parallel_reviews: list[ParallelReviewItem] | None  # 关键变量：并行审阅列表（可空）
+    doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空，仅 USER 决策时）
 
 
 class SummaryStep(TypedDict):
@@ -101,16 +133,25 @@ class UploadedDocument(TypedDict):
     upload_time: str  # 关键变量：上传时间戳
 
 
-class IterationSummary(TypedDict):
-    iteration: int  # 关键变量：迭代号
-    main_session_id: str | None  # 关键变量：MAIN 会话 id
-    subagent_session_id: str  # 关键变量：子代理会话 id
-    main_decision: MainDecision  # 关键变量：MAIN 决策
-    subagent: SubagentSummary  # 关键变量：子代理摘要
-    steps: list[SummaryStep]  # 关键变量：步骤列表
-    summary: str  # 关键变量：本轮摘要
+class CodeChanges(TypedDict, total=False):
+    files_modified: list[str]  # 关键变量：修改的文件列表
+    tests_passed: bool  # 关键变量：自测是否通过
+    coverage: float  # 关键变量：覆盖率百分比
+
+
+class IterationSummary(TypedDict, total=False):
+    iteration: Required[int]  # 关键变量：迭代号（必填）
+    main_session_id: Required[str | None]  # 关键变量：MAIN 会话 id（必填）
+    subagent_session_id: Required[str]  # 关键变量：子代理会话 id（必填）
+    main_decision: Required[MainDecision]  # 关键变量：MAIN 决策（必填）
+    subagent: Required[SubagentSummary]  # 关键变量：子代理摘要（必填）
+    steps: Required[list[SummaryStep]]  # 关键变量：步骤列表（必填）
+    summary: Required[str]  # 关键变量：本轮摘要（必填）
+    artifacts: Required[dict]  # 关键变量：关键产物路径（必填）
     progress: ProgressInfo | None  # 关键变量：进度信息（可选）
-    artifacts: dict  # 关键变量：关键产物路径
+    verdict: str  # 关键变量：本轮结论 PASS/FAIL/BLOCKED（可选）
+    key_findings: list[str]  # 关键变量：关键发现列表（可选）
+    changes: CodeChanges  # 关键变量：代码变更信息（可选，仅 DEV）
 
 
 class ReportSummary(TypedDict):

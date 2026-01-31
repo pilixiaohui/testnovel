@@ -1,99 +1,97 @@
-from __future__ import annotations
+"""Kuzu to Memgraph migration utilities."""
 
-import random
-from typing import Any
+from __future__ import annotations
 
 
 class KuzuToMemgraphMigrator:
-    def __init__(self, source: Any, target: Any) -> None:
+    """Export, transform, import, and validate migration payloads."""
+
+    def __init__(self, source=None, target=None) -> None:
         self._source = source
         self._target = target
 
     def export(self) -> dict[str, list[dict]]:
-        nodes = self._source.list_nodes()
-        edges = self._source.list_edges()
-        return {
-            "nodes": [self._clone_item(node) for node in nodes],
-            "edges": [self._clone_item(edge) for edge in edges],
-        }
+        source = self._require_source()
+        nodes = [dict(node) for node in source.list_nodes()]
+        edges = [dict(edge) for edge in source.list_edges()]
+        return {"nodes": nodes, "edges": edges}
 
     def transform(self, exported: dict[str, list[dict]]) -> dict[str, list[dict]]:
-        return {
-            "nodes": [self._clone_item(node) for node in exported["nodes"]],
-            "edges": [self._clone_item(edge) for edge in exported["edges"]],
-        }
+        nodes = [self._normalize_node(node) for node in exported["nodes"]]
+        edges = [self._normalize_edge(edge) for edge in exported["edges"]]
+        return {"nodes": nodes, "edges": edges}
 
-    def import_data(self, transformed: dict[str, list[dict]]) -> dict[str, list[str]]:
-        nodes = transformed["nodes"]
-        edges = transformed["edges"]
-        self._target.insert_nodes(nodes)
-        self._target.insert_edges(edges)
+    def import_data(self, payload: dict[str, list[dict]]) -> dict[str, list[str]]:
+        target = self._require_target()
+        nodes = payload["nodes"]
+        edges = payload["edges"]
+        node_ids = [node["id"] for node in nodes]
+        node_id_set = set(node_ids)
+        for edge in edges:
+            if edge["from_id"] not in node_id_set or edge["to_id"] not in node_id_set:
+                raise ValueError("edge references missing node")
+        target.insert_nodes(nodes)
+        target.insert_edges(edges)
         return {
-            "node_ids": [node["id"] for node in nodes],
+            "node_ids": node_ids,
             "edge_ids": [edge["id"] for edge in edges],
         }
 
     def validate_integrity(
         self,
-        source_data: dict[str, list[dict]],
-        target_snapshot: dict[str, list[dict]],
+        exported: dict[str, list[dict]],
+        snapshot: dict[str, list[dict]],
+        *,
         sample_size: int,
     ) -> None:
-        source_nodes = source_data["nodes"]
-        source_edges = source_data["edges"]
-        target_nodes = target_snapshot["nodes"]
-        target_edges = target_snapshot["edges"]
+        exported_nodes = exported["nodes"]
+        exported_edges = exported["edges"]
+        snapshot_nodes = snapshot["nodes"]
+        snapshot_edges = snapshot["edges"]
+        assert len(exported_nodes) == len(snapshot_nodes)
+        assert len(exported_edges) == len(snapshot_edges)
 
-        if len(source_nodes) != len(target_nodes):
-            raise AssertionError("node count mismatch")
-        if len(source_edges) != len(target_edges):
-            raise AssertionError("edge count mismatch")
+        node_index = {node["id"]: node for node in snapshot_nodes}
+        edge_index = {edge["id"]: edge for edge in snapshot_edges}
 
-        source_node_index = {node["id"]: node for node in source_nodes}
-        target_node_index = {node["id"]: node for node in target_nodes}
-        source_edge_index = {edge["id"]: edge for edge in source_edges}
-        target_edge_index = {edge["id"]: edge for edge in target_edges}
+        node_sample = exported_nodes[-sample_size:] if sample_size else []
+        for node in node_sample:
+            stored = node_index[node["id"]]
+            assert stored["label"] == node["label"]
+            assert stored["properties"] == node["properties"]
 
-        if source_node_index.keys() != target_node_index.keys():
-            raise AssertionError("node ids mismatch")
-        if source_edge_index.keys() != target_edge_index.keys():
-            raise AssertionError("edge ids mismatch")
+        edge_sample = exported_edges[-min(sample_size, len(exported_edges)) :] if sample_size else []
+        for edge in edge_sample:
+            stored = edge_index[edge["id"]]
+            assert stored["type"] == edge["type"]
+            assert stored["from_id"] == edge["from_id"]
+            assert stored["to_id"] == edge["to_id"]
+            assert stored["properties"] == edge["properties"]
 
-        node_ids = sorted(source_node_index)
-        edge_ids = sorted(source_edge_index)
-        node_sample_size = min(sample_size, len(node_ids))
-        edge_sample_size = min(sample_size, len(edge_ids))
-        node_sample = random.Random(node_sample_size).sample(
-            node_ids,
-            node_sample_size,
-        )
-        edge_sample = random.Random(edge_sample_size).sample(
-            edge_ids,
-            edge_sample_size,
-        )
+    def _require_source(self):
+        if self._source is None:
+            raise ValueError("source is required")
+        return self._source
 
-        for node_id in node_sample:
-            source_node = source_node_index[node_id]
-            target_node = target_node_index[node_id]
-            if source_node["label"] != target_node["label"]:
-                raise AssertionError(f"node label mismatch for {node_id}")
-            if source_node["properties"] != target_node["properties"]:
-                raise AssertionError(f"node properties mismatch for {node_id}")
-
-        for edge_id in edge_sample:
-            source_edge = source_edge_index[edge_id]
-            target_edge = target_edge_index[edge_id]
-            if source_edge["type"] != target_edge["type"]:
-                raise AssertionError(f"edge type mismatch for {edge_id}")
-            if source_edge["from_id"] != target_edge["from_id"]:
-                raise AssertionError(f"edge from_id mismatch for {edge_id}")
-            if source_edge["to_id"] != target_edge["to_id"]:
-                raise AssertionError(f"edge to_id mismatch for {edge_id}")
-            if source_edge["properties"] != target_edge["properties"]:
-                raise AssertionError(f"edge properties mismatch for {edge_id}")
+    def _require_target(self):
+        if self._target is None:
+            raise ValueError("target is required")
+        return self._target
 
     @staticmethod
-    def _clone_item(item: dict) -> dict:
-        cloned = dict(item)
-        cloned["properties"] = dict(item["properties"])
-        return cloned
+    def _normalize_node(node: dict) -> dict:
+        return {
+            "id": node["id"],
+            "label": node["label"],
+            "properties": dict(node["properties"]),
+        }
+
+    @staticmethod
+    def _normalize_edge(edge: dict) -> dict:
+        return {
+            "id": edge["id"],
+            "type": edge["type"],
+            "from_id": edge["from_id"],
+            "to_id": edge["to_id"],
+            "properties": dict(edge["properties"]),
+        }

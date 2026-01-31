@@ -10,7 +10,10 @@ from .types import MilestoneProgress, ProgressInfo, TaskProgress
 _TASK_HEADER_RE = re.compile(r"^###\s+([^:]+):\s*(.*)$")
 _TASK_ID_RE = re.compile(r"^(M\d+)-T\d+$")
 _STATUS_RE = re.compile(r"^\s*(?:-\s*)?status:\s*([A-Z]+)\s*$")
-_MILESTONE_HEADER_RE = re.compile(r"^##\s+Milestone\s+(M\d+):\s*(.*)$")
+# 支持两种格式：
+# - "## Milestone M1: 标题" (完整格式)
+# - "## M1: 标题" (简写格式)
+_MILESTONE_HEADER_RE = re.compile(r"^##\s+(?:Milestone\s+)?(M\d+):\s*(.*)$")
 _ALLOWED_STATUSES = {"TODO", "DOING", "BLOCKED", "DONE", "VERIFIED"}
 
 
@@ -56,6 +59,8 @@ def _parse_dev_plan_progress(*, text: str) -> ProgressInfo:
 
             current_task_id = header.group(1).strip()
             current_status = None
+            if current_task_id is None:
+                raise RuntimeError("dev_plan task id is None")
             id_match = _TASK_ID_RE.match(current_task_id)
             if not id_match:
                 raise RuntimeError(f"dev_plan task id invalid: {current_task_id}")

@@ -16,12 +16,17 @@ from .config import (
     TEST_SESSION_ID_FILE,
     DEV_SESSION_ID_FILE,
     REVIEW_SESSION_ID_FILE,
+    get_cli_for_agent,
+    get_cli_extra_args,
 )
 from .errors import PermanentError, TemporaryError
 from .file_ops import _append_log_line, _atomic_write_text, _read_text, _require_file
 from .state import RunControl, UserInterrupted
 from .types import CodexRunResult
 from .validation import _validate_session_id
+
+# 导入 CLI 抽象层
+from .cli import CLIConfig, create_cli_runner
 
 
 def _clear_saved_main_state() -> None:
@@ -335,3 +340,133 @@ def _run_codex_exec(
             retries_left -= 1
             continue
         return {"last_message": last_message, "session_id": session_id}
+
+
+# ============= 统一 CLI 接口 =============
+
+def _run_cli_exec(
+    *,
+    prompt: str,
+    output_last_message: Path,
+    sandbox_mode: str,
+    approval_policy: str,
+    label: str,
+    agent: str = "MAIN",
+    control: RunControl | None = None,
+    resume_session_id: str | None = None,
+    max_empty_last_message_retries: int = 3,
+) -> CodexRunResult:
+    """
+    统一 CLI 执行接口，根据代理配置选择对应的 CLI 工具。
+
+    Args:
+        prompt: 提示词
+        output_last_message: 输出文件路径
+        sandbox_mode: 沙箱模式
+        approval_policy: 审批策略
+        label: 日志标签
+        agent: 代理名称（用于选择 CLI）
+        control: 运行控制
+        resume_session_id: 恢复会话ID
+        max_empty_last_message_retries: 空输出最大重试次数
+
+    Returns:
+        执行结果
+    """
+    # 获取代理配置的 CLI
+    cli_name = get_cli_for_agent(agent)
+    extra_args = get_cli_extra_args(agent)
+
+    # 创建 CLI 运行器
+    runner = create_cli_runner(cli_name, fallback="codex")
+
+    # 构建配置
+    config = CLIConfig(
+        sandbox_mode=sandbox_mode,
+        approval_policy=approval_policy,
+        work_dir=PROJECT_ROOT,
+        output_file=output_last_message,
+        extra_args=extra_args,
+    )
+
+    # 执行
+    result = runner.run(
+        prompt=prompt,
+        config=config,
+        label=label,
+        log_file=ORCHESTRATOR_LOG_FILE,
+        resume_session_id=resume_session_id,
+        control=control,
+        max_empty_retries=max_empty_last_message_retries,
+    )
+
+    # 转换为旧格式（保持兼容性）
+    return {"last_message": result.last_message, "session_id": result.session_id}
+
+
+def _run_cli_exec_with_compact(
+    *,
+    prompt: str,
+    output_last_message: Path,
+    sandbox_mode: str,
+    approval_policy: str,
+    label: str,
+    agent: str = "MAIN",
+    control: RunControl | None = None,
+    resume_session_id: str,
+    compact_instructions: str,
+    max_empty_last_message_retries: int = 3,
+) -> CodexRunResult:
+    """
+    带上下文压缩的 CLI 执行接口（两步合一）。
+
+    流程：
+    1. 先发送 /compact 命令压缩上下文
+    2. 再 resume 会话发送实际 prompt
+
+    Args:
+        prompt: 实际提示词（不含 /compact）
+        output_last_message: 输出文件路径
+        sandbox_mode: 沙箱模式
+        approval_policy: 审批策略
+        label: 日志标签
+        agent: 代理名称（用于选择 CLI）
+        control: 运行控制
+        resume_session_id: 必须提供会话ID
+        compact_instructions: 压缩指令内容
+        max_empty_last_message_retries: 空输出最大重试次数
+
+    Returns:
+        执行结果（来自第二步的实际 prompt）
+    """
+    # 获取代理配置的 CLI
+    cli_name = get_cli_for_agent(agent)
+    extra_args = get_cli_extra_args(agent)
+
+    # 创建 CLI 运行器
+    runner = create_cli_runner(cli_name, fallback="codex")
+
+    # 构建配置
+    config = CLIConfig(
+        sandbox_mode=sandbox_mode,
+        approval_policy=approval_policy,
+        work_dir=PROJECT_ROOT,
+        output_file=output_last_message,
+        extra_args=extra_args,
+    )
+
+    # 执行带压缩的调用
+    result = runner.run_with_compact(
+        prompt=prompt,
+        config=config,
+        label=label,
+        log_file=ORCHESTRATOR_LOG_FILE,
+        resume_session_id=resume_session_id,
+        compact_instructions=compact_instructions,
+        control=control,
+        max_empty_retries=max_empty_last_message_retries,
+    )
+
+    # 转换为旧格式（保持兼容性）
+    return {"last_message": result.last_message, "session_id": result.session_id}
+

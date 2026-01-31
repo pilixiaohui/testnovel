@@ -1,43 +1,34 @@
 {
   "schema_version": 1,
   "summaries": {
-    "orchestrator/reports/report_test.md": {
-      "mtime": 1769241934.489421,
+    "orchestrator/reports/report_dev.md": {
+      "mtime": 1769869598.412472,
       "summary": {
-        "iteration": 14,
-        "agent": "TEST",
-        "verdict": "PASS",
-        "blockers": [],
-        "key_changes": [
-          "project/backend/scripts/performance_benchmark.py:297",
-          "project/backend/scripts/performance_benchmark.py:206",
-          "project/backend/scripts/performance_benchmark.py:241",
-          "doc/PERFORMANCE_REPORT.md:9",
-          "doc/PERFORMANCE_REPORT.md:39",
-          "project/backend/tests/performance/test_benchmark.py:36",
-          "project/backend/tests/performance/test_entity_resolution.py:32",
-          "doc/graph_refactor_final_plan.md:413"
+        "iteration": 21,
+        "agent": "DEV",
+        "verdict": "BLOCKED",
+        "blockers": [
+          "任务要求修改测试代码，但开发规范明确禁止修改测试代码（`**/tests/**`），无法按工单执行。"
         ],
-        "evidence": "环境检查: `docker ps` -> Memgraph 容器运行中（backend-memgraph-1）",
-        "timestamp": "2026-01-24T16:05:34"
+        "key_changes": [],
+        "evidence": "| 序号 | 命令 | 返回码 | 结果摘要 |",
+        "timestamp": "2026-01-31T22:26:38"
       }
     },
-    "orchestrator/reports/report_dev.md": {
-      "mtime": 1769244351.5716734,
+    "orchestrator/reports/report_test.md": {
+      "mtime": 1769870194.3638723,
       "summary": {
-        "iteration": 15,
-        "agent": "DEV",
-        "verdict": "N/A",
-        "blockers": [],
-        "key_changes": [
-          "project/backend/app/storage/memgraph_storage.py:144",
-          "project/backend/app/storage/memgraph_storage.py:250",
-          "project/backend/app/storage/memgraph_storage.py:927",
-          "project/backend/app/storage/memgraph_storage.py:1414",
-          "project/backend/app/storage/memgraph_storage.py:1581"
+        "iteration": 22,
+        "agent": "TEST",
+        "verdict": "BLOCKED",
+        "blockers": [
+          "后端不可用导致真实接口用例跳过，未能验证红灯（环境问题）"
         ],
-        "evidence": "环境检查：`docker ps`（backend-memgraph-1 Running）",
-        "timestamp": "2026-01-24T16:45:51"
+        "key_changes": [
+          "project/frontend/tests/e2e/real-api.spec.ts:1"
+        ],
+        "evidence": "通过（2 个用例被跳过）",
+        "timestamp": "2026-01-31T22:36:34"
       }
     }
   }

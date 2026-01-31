@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..codex_runner import _clear_saved_main_state
 from ..config import ORCHESTRATOR_LOG_FILE, PROJECT_ROOT, RESUME_STATE_FILE, _list_editable_md_files, _resolve_editable_md_path
-from ..documents import add_doc_to_finish_review_config, delete_uploaded_doc, list_uploaded_docs, store_uploaded_doc
+from ..documents import add_doc_to_finish_review_config, delete_uploaded_doc, get_finish_review_docs, list_uploaded_docs, remove_doc_from_finish_review_config, store_uploaded_doc
 from ..log_summary import load_log_summary_config, save_log_summary_config, summarize_logs
 from ..progress import get_progress_info
 from ..file_ops import _append_log_line, _append_new_task_goal_to_history, _append_user_message_to_history, _reset_dev_plan_file, _reset_project_history_file
@@ -148,6 +148,12 @@ def _start_ui_server(
                 return send_json(self, _list_editable_md_files())
             if parsed.path == "/api/uploaded_docs":  # 关键分支：已上传文档列表
                 return send_json(self, list_uploaded_docs())
+            if parsed.path == "/api/finish_review_docs":  # 关键分支：验收文档列表
+                try:
+                    docs = get_finish_review_docs()
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, {"docs": docs})
             if parsed.path == "/api/progress":  # 关键分支：进度查询
                 try:
                     progress = get_progress_info()
@@ -239,7 +245,7 @@ def _start_ui_server(
                     return send_json(self, {"error": str(exc)}, status=400)
                 return send_json(self, {"summary": summary})
             if parsed.path == "/api/control/start":  # 关键分支：启动运行
-                if not control.request_start_with_options(new_task=False):  # 关键分支：已有运行/请求
+                if not control.request_start_with_options(new_task=False, task_goal=""):  # 关键分支：已有运行/请求
                     return send_json(self, {"error": "already running or start pending"}, status=409)
                 state.update(phase="starting", current_agent="orchestrator")  # 关键变量：UI 进入启动态
                 _append_log_line("orchestrator: start_requested\n")
@@ -265,7 +271,7 @@ def _start_ui_server(
                         _reset_dev_plan_file()
 
                 try:  # 关键分支：启动前回调与排队
-                    ok = control.request_start_with_options(new_task=True, before_enqueue=before_enqueue)  # 关键变量：发起新任务
+                    ok = control.request_start_with_options(new_task=True, task_goal=goal, before_enqueue=before_enqueue)  # 关键变量：发起新任务
                 except Exception as exc:  # noqa: BLE001  # 关键分支：启动失败
                     return send_json(self, {"error": str(exc)}, status=500)
                 if not ok:  # 关键分支：已有运行/请求
@@ -367,6 +373,22 @@ def _start_ui_server(
                 except Exception as exc:  # noqa: BLE001
                     return send_json(self, {"error": str(exc)}, status=500)
                 return send_json(self, {"success": True, "path": stored})
+
+            if parsed.path == "/api/remove_from_finish_review":  # 关键分支：从验收配置移除
+                try:  # 关键分支：解析请求体
+                    payload = read_json_body(self)  # 关键变量：请求体
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=400)
+                doc_path = payload.get("doc_path")  # 关键变量：文档路径
+                if not isinstance(doc_path, str) or not doc_path.strip():  # 关键分支：路径为空
+                    return send_json(self, {"error": "doc_path is required"}, status=400)
+                try:  # 关键分支：从配置移除
+                    removed = remove_doc_from_finish_review_config(doc_path.strip())
+                except ValueError as exc:  # 关键分支：输入非法
+                    return send_json(self, {"error": str(exc)}, status=400)
+                except Exception as exc:  # noqa: BLE001
+                    return send_json(self, {"error": str(exc)}, status=500)
+                return send_json(self, {"success": True, "removed": removed})
 
             if parsed.path == "/api/file":  # 关键分支：保存 md 文件
                 if control.is_busy():  # 关键分支：运行中禁止编辑

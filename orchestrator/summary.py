@@ -216,7 +216,44 @@ def _parse_iteration_summary(
         if actual != expected:
             raise ValueError(f"摘要 artifacts.{key} 不匹配：期望 {expected!r}，实际 {actual!r}")
 
-    return {
+    # 解析可选字段：verdict
+    verdict = payload.get("verdict")
+    if verdict is not None:
+        if not isinstance(verdict, str) or verdict not in {"PASS", "FAIL", "BLOCKED"}:
+            verdict = None  # 非法值忽略
+
+    # 解析可选字段：key_findings
+    key_findings = payload.get("key_findings")
+    if key_findings is not None:
+        if not isinstance(key_findings, list):
+            key_findings = None
+        else:
+            key_findings = [
+                str(item).strip() for item in key_findings
+                if isinstance(item, str) and item.strip()
+            ][:4]  # 最多 4 条
+
+    # 解析可选字段：changes（仅 DEV 时有意义）
+    changes = payload.get("changes")
+    if changes is not None:
+        if not isinstance(changes, dict):
+            changes = None
+        else:
+            parsed_changes = {}
+            files_modified = changes.get("files_modified")
+            if isinstance(files_modified, list):
+                parsed_changes["files_modified"] = [
+                    str(f).strip() for f in files_modified if isinstance(f, str)
+                ]
+            tests_passed = changes.get("tests_passed")
+            if isinstance(tests_passed, bool):
+                parsed_changes["tests_passed"] = tests_passed
+            coverage = changes.get("coverage")
+            if isinstance(coverage, (int, float)) and 0 <= coverage <= 100:
+                parsed_changes["coverage"] = float(coverage)
+            changes = parsed_changes if parsed_changes else None
+
+    result: dict = {
         "iteration": summary_iteration,
         "main_session_id": summary_main_session_id,
         "subagent_session_id": summary_sub_session_id,
@@ -227,6 +264,16 @@ def _parse_iteration_summary(
         "progress": progress,
         "artifacts": expected_artifacts,
     }
+
+    # 添加可选字段（仅当有值时）
+    if verdict is not None:
+        result["verdict"] = verdict
+    if key_findings:
+        result["key_findings"] = key_findings
+    if changes:
+        result["changes"] = changes
+
+    return result
 
 
 

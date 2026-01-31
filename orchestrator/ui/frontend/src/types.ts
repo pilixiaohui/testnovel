@@ -3,6 +3,15 @@ export type UserDecisionOption = {
   description: string;
 };
 
+export type DocPatch = {
+  file: string;
+  action: 'append' | 'replace' | 'insert';
+  content: string;
+  reason: string;
+  old_content?: string;
+  after_marker?: string;
+};
+
 export type MainDecisionDispatch = {
   next_agent: 'TEST' | 'DEV' | 'REVIEW' | 'FINISH';
   reason: string;
@@ -19,6 +28,7 @@ export type MainDecisionUser = {
   question: string;
   options: UserDecisionOption[];
   recommended_option_id?: string | null;
+  doc_patches?: DocPatch[] | null;
 };
 
 export type MainDecision = MainDecisionDispatch | MainDecisionUser;
@@ -73,6 +83,12 @@ export type SubagentSummary = {
   report_summary: string;
 };
 
+export type CodeChanges = {
+  files_modified?: string[];
+  tests_passed?: boolean;
+  coverage?: number;
+};
+
 export type IterationSummary = {
   iteration: number;
   main_decision: MainDecision;
@@ -81,6 +97,9 @@ export type IterationSummary = {
   summary: string;
   progress?: ProgressInfo | null;
   artifacts?: Record<string, unknown>;
+  verdict?: string;  // PASS | FAIL | BLOCKED
+  key_findings?: string[];
+  changes?: CodeChanges;
 };
 
 export type UiState = {
