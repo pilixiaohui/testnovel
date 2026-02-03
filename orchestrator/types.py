@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import sys
 from typing import Literal, TypedDict
 
-try:
-    from typing import Required
-except ImportError:
-    from typing_extensions import Required
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, Required
+else:
+    from typing_extensions import NotRequired, Required
 
-NextAgent = Literal["TEST", "DEV", "REVIEW", "FINISH", "USER", "PARALLEL_REVIEW"]  # 关键变量：调度目标枚举
+NextAgent = Literal["IMPLEMENTER", "VALIDATE", "FINISH", "USER"]  # 关键变量：调度目标枚举（Context-centric 架构）
 ResumePhase = Literal["after_main", "after_subagent", "awaiting_user"]  # 关键变量：续跑阶段枚举
 TaskType = Literal["feature", "bugfix", "refactor", "chore"]  # 关键变量：任务类型标记（dev_plan 可选字段）
 
@@ -16,7 +17,7 @@ class ResumeState(TypedDict):
     schema_version: int  # 关键变量：续跑状态版本
     iteration: int  # 关键变量：迭代号
     phase: ResumePhase  # 关键变量：续跑阶段
-    next_agent: Literal["TEST", "DEV", "REVIEW", "USER"]  # 关键变量：续跑目标
+    next_agent: Literal["IMPLEMENTER", "USER"]  # 关键变量：续跑目标（Context-centric 架构）
     main_session_id: str  # 关键变量：MAIN 会话 id
     subagent_session_id: str | None  # 关键变量：子代理会话 id
     blackboard_digest: str  # 关键变量：黑板摘要
@@ -39,21 +40,8 @@ class DocPatch(TypedDict, total=False):
 
 
 class MainDecisionDispatch(TypedDict):
-    next_agent: Literal["TEST", "DEV", "REVIEW", "FINISH"]  # 关键变量：下一代理
+    next_agent: Literal["IMPLEMENTER", "VALIDATE", "FINISH"]  # 关键变量：下一代理（Context-centric 架构）
     reason: str  # 关键变量：决策理由
-
-
-class ParallelReviewItem(TypedDict):
-    """并行审阅项，用于计划制定阶段的多角度审阅"""
-    focus: str  # 关键变量：审阅侧重点（requirements/architecture/risk/scope）
-    task: str  # 关键变量：审阅工单内容
-
-
-class MainDecisionParallelReview(TypedDict):
-    """并行审阅决策，仅限 iteration 1-2 使用"""
-    next_agent: Literal["PARALLEL_REVIEW"]  # 关键变量：并行审阅标识
-    reason: str  # 关键变量：决策理由
-    parallel_reviews: list[ParallelReviewItem]  # 关键变量：并行审阅列表（1-4 个）
 
 
 class MainDecisionUser(TypedDict):
@@ -66,7 +54,28 @@ class MainDecisionUser(TypedDict):
     doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空）
 
 
-MainDecision = MainDecisionDispatch | MainDecisionUser | MainDecisionParallelReview
+MainDecision = MainDecisionDispatch | MainDecisionUser
+
+
+# ============= 验证结果类型（Context-centric 架构） =============
+
+
+class ValidationResult(TypedDict):
+    """单个验证器的输出结果"""
+    validator: str  # 关键变量：验证器名称（TEST_RUNNER/REQUIREMENT_VALIDATOR/ANTI_CHEAT_DETECTOR/EDGE_CASE_TESTER）
+    verdict: Literal["PASS", "FAIL", "BLOCKED"]  # 关键变量：验证结论
+    confidence: float  # 关键变量：置信度（0.0-1.0）
+    findings: list[str]  # 关键变量：发现列表
+    evidence: str  # 关键变量：证据摘要
+    duration_ms: int  # 关键变量：执行耗时（毫秒）
+
+
+class SynthesizerOutput(TypedDict):
+    """SYNTHESIZER 汇总输出"""
+    overall_verdict: Literal["PASS", "FAIL", "REWORK"]  # 关键变量：总体结论
+    results: list[ValidationResult]  # 关键变量：各验证器结果
+    blockers: list[str]  # 关键变量：阻塞项列表
+    recommendations: list[str]  # 关键变量：建议列表
 
 
 class CodexRunResult(TypedDict):
@@ -79,7 +88,6 @@ class MainOutput(TypedDict, total=False):
     history_append: Required[str]  # 关键变量：历史追加内容
     task: str | None  # 关键变量：工单内容（可空）
     dev_plan_next: str | None  # 关键变量：计划草案（可空）
-    parallel_reviews: list[ParallelReviewItem] | None  # 关键变量：并行审阅列表（可空）
     doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空，仅 USER 决策时）
 
 
@@ -152,6 +160,7 @@ class IterationSummary(TypedDict, total=False):
     verdict: str  # 关键变量：本轮结论 PASS/FAIL/BLOCKED（可选）
     key_findings: list[str]  # 关键变量：关键发现列表（可选）
     changes: CodeChanges  # 关键变量：代码变更信息（可选，仅 DEV）
+    user_insight: dict  # 关键变量：用户洞察信息（可选）
 
 
 class ReportSummary(TypedDict):
@@ -178,8 +187,41 @@ class UiState(TypedDict, total=False):
     last_error: str | None  # 关键变量：最近错误
     updated_at: str  # 关键变量：更新时间戳
     version: int  # 关键变量：状态版本
+    main_token_info: object  # 关键变量：MAIN 会话 token 信息
+    subagent_token_info: object  # 关键变量：子代理会话 token 信息
 
 
 class UserDecisionResponse(TypedDict, total=False):
     option_id: str  # 关键变量：用户选择 id
     comment: str  # 关键变量：用户备注
+
+
+# ============= Token 信息类型 =============
+
+
+class TokenUsage(TypedDict, total=False):
+    """Token 使用量"""
+    input_tokens: int           # 关键变量：输入 token 数
+    cached_input_tokens: int    # 关键变量：缓存的输入 token 数（Codex 格式）
+    cache_read_input_tokens: int  # 关键变量：缓存读取 token 数（Claude 格式）
+    output_tokens: int          # 关键变量：输出 token 数
+    reasoning_output_tokens: int  # 关键变量：推理输出 token 数
+    total_tokens: int           # 关键变量：总 token 数
+
+
+class TokenInfo(TypedDict, total=False):
+    """Token 信息"""
+    session_id: str             # 关键变量：会话 ID
+    current_context_tokens: int  # 关键变量：当前上下文 token 数
+    context_window: int         # 关键变量：上下文窗口大小
+    usage_percentage: float     # 关键变量：使用率百分比
+    total_usage: TokenUsage     # 关键变量：累计使用量
+    last_usage: TokenUsage      # 关键变量：最近一次使用量
+
+
+class CompactResult(TypedDict, total=False):
+    """压缩结果"""
+    before_tokens: int          # 关键变量：压缩前 token 数
+    after_tokens: int           # 关键变量：压缩后 token 数
+    reduction: int              # 关键变量：减少的 token 数
+    reduction_percentage: float  # 关键变量：减少百分比

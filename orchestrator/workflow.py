@@ -20,13 +20,13 @@ from .codex_runner import (
     _save_subagent_session_id,
     _clear_all_subagent_sessions,
 )
+from .token_info import get_session_token_info, format_token_info
 from .config import (
     CODEX_STATE_DIR,
     RESUME_STATE_FILE,
     CONFIG,
     DEV_PLAN_FILE,
     DEV_PLAN_STAGED_FILE,
-    DEV_TASK_FILE,
     FINISH_REVIEW_CONFIG_FILE,
     VERIFICATION_POLICY_FILE,
     GLOBAL_CONTEXT_FILE,
@@ -36,17 +36,12 @@ from .config import (
     PROJECT_ROOT,
     PROMPTS_DIR,
     PROJECT_ENV_FILE,
-    REPORT_DEV_FILE,
     REPORT_MAIN_DECISION_FILE,
     REPORT_ITERATION_SUMMARY_FILE,
     REPORT_ITERATION_SUMMARY_HISTORY_FILE,
-    REPORT_REVIEW_FILE,
     REPORT_FINISH_REVIEW_FILE,
-    REPORT_TEST_FILE,
     REPORTS_DIR,
     REPORT_SUMMARY_CACHE_FILE,
-    REVIEW_TASK_FILE,
-    TEST_TASK_FILE,
     WORKSPACE_DIR,
     ProjectTemplates,
     ACCEPTANCE_SCOPE_FILE,
@@ -60,11 +55,31 @@ from .config import (
     SUBAGENT_HISTORY_LOOKBACK,
     UPLOADED_DOCS_DIR,
     UPLOADED_DOCS_CATEGORIES,
-    MAX_PARALLEL_REVIEWS,
-    PARALLEL_REVIEW_ITERATIONS,
+    USER_DECISION_PATTERNS_FILE,
+    ITERATION_METADATA_FILE,
+    REPORT_SUPERVISOR_FILE,
+    REPORT_SUPERVISOR_HISTORY_FILE,
+    get_cli_for_agent,
+    # Context-centric 架构新增
+    IMPLEMENTER_TASK_FILE,
+    REPORT_IMPLEMENTER_FILE,
+    VALIDATOR_WORKSPACE_DIR,
+    VALIDATOR_REPORTS_DIR,
+    SYNTHESIZER_REPORT_FILE,
+    VALIDATION_RESULTS_FILE,
+    PARALLEL_VALIDATORS,
+    MAX_PARALLEL_VALIDATORS,
+    VALIDATOR_TIMEOUT_MS,
 )
-from .decision import _parse_main_output, _prompt_user_for_decision
-from .summary import _append_iteration_summary_history, _load_iteration_summary_history, _parse_iteration_summary
+from .decision import _parse_main_output, _prompt_user_for_decision, _update_user_decision_patterns
+from .summary import (
+    _append_iteration_summary_history,
+    _load_iteration_summary_history,
+    _parse_iteration_summary,
+    _parse_user_insight,
+    _generate_user_insight_report,
+    _append_user_insight_history,
+)
 from .telemetry import log_event, new_trace_id
 from .file_ops import (
     _append_history_entry,
@@ -84,13 +99,14 @@ from .file_ops import (
 )
 from .prompt_builder import (
     _inject_file,
+    _inject_project_history_head,
     _inject_report_with_level,
     _load_system_prompt,
     _task_file_for_agent,
 )
 from .errors import PermanentError, TemporaryError
 from .state import RunControl, UiRuntime, UserInterrupted
-from .types import MainOutput, ResumeState, MainDecisionUser, ParallelReviewItem
+from .types import MainOutput, ResumeState, MainDecisionUser, ValidationResult, SynthesizerOutput
 from .dev_plan import count_overall_task_statuses, parse_overall_task_statuses
 from .parsing import extract_report_verdict, parse_report_rules
 from .validation import (
@@ -120,9 +136,8 @@ def _ensure_initial_md_files() -> None:
     for category in UPLOADED_DOCS_CATEGORIES:  # 关键变量：上传文档目录
         (UPLOADED_DOCS_DIR / category).mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：报告目录
-    (WORKSPACE_DIR / "test").mkdir(parents=True, exist_ok=True)  # 关键变量：TEST 工单目录
-    (WORKSPACE_DIR / "dev").mkdir(parents=True, exist_ok=True)  # 关键变量：DEV 工单目录
-    (WORKSPACE_DIR / "review").mkdir(parents=True, exist_ok=True)  # 关键变量：REVIEW 工单目录
+    (WORKSPACE_DIR / "implementer").mkdir(parents=True, exist_ok=True)  # 关键变量：IMPLEMENTER 工单目录
+    (WORKSPACE_DIR / "validators").mkdir(parents=True, exist_ok=True)  # 关键变量：验证器工单目录
     (WORKSPACE_DIR / "main").mkdir(parents=True, exist_ok=True)  # 关键变量：MAIN 工作区目录
     ORCHESTRATOR_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)  # 关键变量：日志目录
     ORCHESTRATOR_LOG_FILE.touch(exist_ok=True)  # 关键变量：确保日志文件存在
@@ -137,13 +152,9 @@ def _ensure_initial_md_files() -> None:
     _write_text_if_missing(OUT_OF_SCOPE_ISSUES_FILE, ProjectTemplates.out_of_scope_issues())  # 关键变量：范围外问题记录模板
     _write_text_if_missing(DEV_PLAN_ARCHIVED_FILE, ProjectTemplates.dev_plan_archived())  # 关键变量：已归档任务模板
 
-    _write_text_if_missing(TEST_TASK_FILE, ProjectTemplates.task_file("TEST", 0))  # 关键变量：TEST 工单模板
-    _write_text_if_missing(DEV_TASK_FILE, ProjectTemplates.task_file("DEV", 0))  # 关键变量：DEV 工单模板
-    _write_text_if_missing(REVIEW_TASK_FILE, ProjectTemplates.task_file("REVIEW", 0))  # 关键变量：REVIEW 工单模板
-
-    _write_text_if_missing(REPORT_TEST_FILE, ProjectTemplates.report_file("TEST"))  # 关键变量：TEST 报告模板
-    _write_text_if_missing(REPORT_DEV_FILE, ProjectTemplates.report_file("DEV"))  # 关键变量：DEV 报告模板
-    _write_text_if_missing(REPORT_REVIEW_FILE, ProjectTemplates.report_file("REVIEW"))  # 关键变量：REVIEW 报告模板
+    # Context-centric 架构：IMPLEMENTER 工单模板
+    _write_text_if_missing(IMPLEMENTER_TASK_FILE, ProjectTemplates.task_file("IMPLEMENTER", 0))  # 关键变量：IMPLEMENTER 工单模板
+    _write_text_if_missing(REPORT_IMPLEMENTER_FILE, ProjectTemplates.report_file("IMPLEMENTER"))  # 关键变量：IMPLEMENTER 报告模板
     _write_text_if_missing(REPORT_FINISH_REVIEW_FILE, ProjectTemplates.report_file("FINISH_REVIEW"))  # 关键变量：FINISH_REVIEW 报告模板
 
     # NOTE: prompts are NOT initialized here.
@@ -341,17 +352,15 @@ def _guarded_blackboard_paths() -> list[Path]:
         DEV_PLAN_ARCHIVED_FILE,  # 关键变量：已归档任务
         FINISH_REVIEW_CONFIG_FILE,  # 关键变量：最终审阅配置
         DEV_PLAN_STAGED_FILE,  # 关键变量：dev_plan 暂存
-        TEST_TASK_FILE,  # 关键变量：TEST 工单
-        DEV_TASK_FILE,  # 关键变量：DEV 工单
-        REVIEW_TASK_FILE,  # 关键变量：REVIEW 工单
-        REPORT_TEST_FILE,  # 关键变量：TEST 报告
-        REPORT_DEV_FILE,  # 关键变量：DEV 报告
-        REPORT_REVIEW_FILE,  # 关键变量：REVIEW 报告
+        IMPLEMENTER_TASK_FILE,  # 关键变量：IMPLEMENTER 工单
+        REPORT_IMPLEMENTER_FILE,  # 关键变量：IMPLEMENTER 报告
         REPORT_FINISH_REVIEW_FILE,  # 关键变量：FINISH_REVIEW 报告
         REPORT_MAIN_DECISION_FILE,  # 关键变量：MAIN 决策输出
         REPORT_ITERATION_SUMMARY_FILE,  # 关键变量：每轮摘要输出
         REPORT_ITERATION_SUMMARY_HISTORY_FILE,  # 关键变量：摘要历史输出
         REPORT_SUMMARY_CACHE_FILE,  # 关键变量：报告摘要缓存
+        SYNTHESIZER_REPORT_FILE,  # 关键变量：SYNTHESIZER 报告
+        VALIDATION_RESULTS_FILE,  # 关键变量：验证结果
     ]
 
 
@@ -360,10 +369,10 @@ _RESUME_SCHEMA_VERSION = 1  # 关键变量：续跑状态版本
 
 def _resume_blackboard_paths(*, phase: str, next_agent: str) -> tuple[list[Path], list[Path]]:
     required = [PROJECT_HISTORY_FILE, DEV_PLAN_FILE, REPORT_MAIN_DECISION_FILE]
-    if next_agent in {"TEST", "DEV", "REVIEW"}:
-        required.append(_task_file_for_agent(next_agent))
+    if next_agent == "IMPLEMENTER":
+        required.append(IMPLEMENTER_TASK_FILE)
         if phase == "after_subagent":
-            required.append(_resolve_report_path(next_agent))
+            required.append(REPORT_IMPLEMENTER_FILE)
     optional = [DEV_PLAN_STAGED_FILE]
     return required, optional
 
@@ -381,7 +390,7 @@ def _resume_blackboard_digest(*, phase: str, next_agent: str) -> str:
 
 
 _RESUME_PHASES = {"after_main", "after_subagent", "awaiting_user"}  # 关键变量：可恢复阶段
-_RESUME_AGENTS = {"TEST", "DEV", "REVIEW", "USER"}  # 关键变量：可恢复代理
+_RESUME_AGENTS = {"IMPLEMENTER", "USER"}  # 关键变量：可恢复代理（Context-centric 架构）
 
 _MAX_STAGE_RETRIES = 2  # 关键变量：可重试次数
 _BACKOFF_BASE_SECONDS = 1.0  # 关键变量：退避基数
@@ -522,6 +531,74 @@ def _history_has_user_decision(*, iteration: int) -> bool:
     return needle in _read_text(PROJECT_HISTORY_FILE)
 
 
+# ============= 迭代元数据管理（用于监督代理并行化） =============
+
+
+def _append_iteration_metadata(
+    *,
+    iteration: int,
+    agent: str,
+    session_id: str,
+    report_file: Path,
+) -> None:
+    """
+    写入轻量级迭代元数据（同步，极快）。
+
+    主流程在每轮子代理完成后调用，记录必要的元数据。
+    用于替代从 SUMMARY 历史文件获取信息的依赖。
+    """
+    record = {
+        "iteration": iteration,
+        "agent": agent,
+        "session_id": session_id,
+        "report_file": str(report_file.relative_to(PROJECT_ROOT)),
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+    }
+    ITERATION_METADATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with ITERATION_METADATA_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _load_iteration_metadata() -> list[dict]:
+    """加载所有迭代元数据"""
+    if not ITERATION_METADATA_FILE.exists():
+        return []
+    raw = ITERATION_METADATA_FILE.read_text(encoding="utf-8").strip()
+    if not raw:
+        return []
+    records: list[dict] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+            if isinstance(record, dict):
+                records.append(record)
+        except json.JSONDecodeError:
+            continue
+    return records
+
+
+def _get_last_subagent_from_metadata(iteration: int) -> str | None:
+    """
+    从迭代元数据获取指定迭代的子代理类型。
+
+    优先使用元数据文件，若不存在则回退到摘要历史文件。
+    """
+    # 优先从元数据文件获取
+    metadata = _load_iteration_metadata()
+    for record in reversed(metadata):
+        if record.get("iteration") == iteration:
+            agent = record.get("agent")
+            if isinstance(agent, str) and agent in {"IMPLEMENTER", "VALIDATE"}:
+                return agent
+            break
+
+    # 回退到摘要历史文件（兼容旧数据）
+    return _get_last_subagent_from_history(iteration)
+
+
 def _get_last_subagent_from_history(iteration: int) -> str | None:
     """
     从迭代摘要历史中获取指定迭代运行的子代理类型。
@@ -533,10 +610,45 @@ def _get_last_subagent_from_history(iteration: int) -> str | None:
             subagent = summary.get("subagent")
             if isinstance(subagent, dict):
                 agent = subagent.get("agent")
-                if isinstance(agent, str) and agent in {"TEST", "DEV", "REVIEW"}:
+                if isinstance(agent, str) and agent in {"IMPLEMENTER", "VALIDATE"}:
                     return agent
             break
     return None
+
+
+def _find_recent_reports_from_metadata(*, agent: str, lookback: int) -> list[Path]:
+    """
+    从迭代元数据查找最近报告。
+
+    优先使用元数据文件，若不存在则回退到摘要历史文件。
+    """
+    if lookback < 1:
+        return []
+
+    # 优先从元数据文件获取
+    metadata = _load_iteration_metadata()
+    if metadata:
+        found: list[Path] = []
+        for record in reversed(metadata):
+            if record.get("agent") != agent:
+                continue
+            report_rel = record.get("report_file")
+            if not isinstance(report_rel, str) or not report_rel.strip():
+                continue
+            report_path = (PROJECT_ROOT / report_rel).resolve()
+            try:
+                report_path.relative_to(PROJECT_ROOT)
+                if report_path.exists():
+                    found.append(report_path)
+                    if len(found) >= lookback:
+                        break
+            except ValueError:
+                continue
+        if found:
+            return list(reversed(found))
+
+    # 回退到摘要历史文件（兼容旧数据）
+    return _find_recent_reports(agent=agent, lookback=lookback)
 
 
 def _resolve_report_path(next_agent: str) -> Path:
@@ -544,31 +656,13 @@ def _resolve_report_path(next_agent: str) -> Path:
 
 
 def _build_subagent_history_context(*, target_agent: str) -> str:
+    """Context-centric 架构：IMPLEMENTER 不需要历史上下文注入，因为它保持完整 TDD 上下文"""
     if SUBAGENT_HISTORY_LOOKBACK <= 0:
         return ""
-    agent_map = {
-        "DEV": ["TEST"],
-        "TEST": ["DEV"],
-        "REVIEW": ["TEST", "DEV"],
-    }
-    related_agents = agent_map.get(target_agent)
-    if not related_agents:
+    # Context-centric 架构中，IMPLEMENTER 拥有完整上下文，不需要注入历史
+    if target_agent == "IMPLEMENTER":
         return ""
-    summaries: list[str] = []
-    for agent in related_agents:
-        reports = _find_recent_reports(agent=agent, lookback=SUBAGENT_HISTORY_LOOKBACK)
-        for report_path in reports:
-            summaries.append(
-                _inject_report_with_level(
-                    report_path=report_path,
-                    agent=agent,
-                    level=2,
-                    label_suffix=" - 最近相关摘要",
-                )
-            )
-    if not summaries:
-        return ""
-    return "\n\n".join(["## 历史上下文摘要", "以下是最近相关报告摘要，供参考。", *summaries])
+    return ""
 
 
 def _find_recent_reports(*, agent: str, lookback: int) -> list[Path]:
@@ -613,7 +707,13 @@ def _run_subagent_stage(
         ui.state.update(phase=f"running_{next_agent.lower()}", current_agent=next_agent)
 
     # 加载子代理的历史会话 ID（用于 resume）
-    resume_session_id = _load_subagent_session_id(next_agent)
+    # 根据配置决定是否启用 resume 模式
+    from .config import is_resume_enabled
+    if is_resume_enabled(next_agent):
+        resume_session_id = _load_subagent_session_id(next_agent)
+    else:
+        # 禁用 resume 模式：每次新开会话（codex /compact 无效时使用）
+        resume_session_id = None
     is_resume = resume_session_id is not None
 
     injected_global_context = _inject_file(GLOBAL_CONTEXT_FILE)  # 关键变量：注入全局上下文
@@ -669,11 +769,25 @@ def _run_subagent_stage(
     if extra_prompt_parts:
         prompt_parts.extend(extra_prompt_parts)
 
+    # 获取 CLI 配置用于运行时信息行
+    from .config import get_cli_for_agent
+    cli_name = get_cli_for_agent(next_agent)
+
+    # 构建运行时信息行（借鉴 OpenClaw 设计）
+    from .prompt_builder import _build_runtime_line
+    runtime_line = _build_runtime_line(
+        iteration=iteration,
+        agent=next_agent,
+        cli_name=cli_name,
+        session_id=resume_session_id,
+    )
+
     prompt_parts.extend([
         injected_task,
         "重要：所有需要的上下文（工单、需求、历史）已注入到提示词中，禁止读取 `orchestrator/` 目录下的文件。",
         "重要：禁止直接写入 `orchestrator/reports/`（不要使用任何工具/命令写 `orchestrator/reports/report_*.md`）。",
         f"请把\"完整报告\"作为你最后的输出；编排器会自动保存你的最后一条消息到：`{_rel_path(report_path)}`。",
+        runtime_line,  # 运行时信息行
     ])
 
     sub_prompt = "\n\n".join(prompt_parts)
@@ -931,22 +1045,39 @@ def _run_summary_stage(
         ui.state.update(phase="running_summary", current_agent="SUMMARY")
 
     summary_file = REPORT_ITERATION_SUMMARY_FILE  # 关键变量：摘要输出路径
-    summary_prompt = "\n\n".join(
-        [
-            _load_system_prompt("summary"),
-            _inject_file(REPORT_MAIN_DECISION_FILE),
-            _inject_file(DEV_PLAN_FILE),
-            _inject_file(task_file),
-            _inject_file(report_path),
-            f"[iteration]: {iteration}",
-            f"[main_session_id]: {main_session_id}",
-            f"[subagent_session_id]: {subagent_session_id}",
-            f"[main_decision_file]: {_rel_path(REPORT_MAIN_DECISION_FILE)}",
-            f"[task_file]: {_rel_path(task_file)}",
-            f"[report_file]: {_rel_path(report_path)}",
-            f"[summary_file]: {_rel_path(summary_file)}",
-        ]
+
+    # 构建 SUMMARY 提示词注入列表
+    summary_injections = [
+        _load_system_prompt("summary"),
+        _inject_file(REPORT_MAIN_DECISION_FILE),
+        _inject_file(DEV_PLAN_FILE),
+        _inject_file(task_file),
+        _inject_file(report_path),
+    ]
+
+    # 新增：注入用户原始需求（project_history 前 100 行，包含 Task Goal）
+    summary_injections.append(
+        _inject_project_history_head(max_lines=100, label_suffix="用户原始需求（Task Goal）")
     )
+
+    # 新增：注入用户决策历史（用于习惯分析，可选）
+    if USER_DECISION_PATTERNS_FILE.exists():
+        summary_injections.append(
+            _inject_file(USER_DECISION_PATTERNS_FILE, label_suffix="用户决策历史")
+        )
+
+    # 添加元数据字段
+    summary_injections.extend([
+        f"[iteration]: {iteration}",
+        f"[main_session_id]: {main_session_id}",
+        f"[subagent_session_id]: {subagent_session_id}",
+        f"[main_decision_file]: {_rel_path(REPORT_MAIN_DECISION_FILE)}",
+        f"[task_file]: {_rel_path(task_file)}",
+        f"[report_file]: {_rel_path(report_path)}",
+        f"[summary_file]: {_rel_path(summary_file)}",
+    ])
+
+    summary_prompt = "\n\n".join(summary_injections)
     summary_guard_paths = [path for path in _guarded_blackboard_paths() if path != summary_file]  # 关键变量：SUMMARY 可写排除清单
     retry_notice = (
         "上次 SUMMARY 输出不符合 JSON/校验要求。"
@@ -987,6 +1118,25 @@ def _run_summary_stage(
                 summary=summary_output,
             )
             _append_log_line(f"orchestrator: summary_written path={_rel_path(summary_file)}\n")
+
+            # 【新增】生成用户洞察报告（从摘要 JSON 中解析 user_insight 字段）
+            try:
+                user_insight = _parse_user_insight(summary_output)
+                if user_insight:
+                    _generate_user_insight_report(
+                        iteration=iteration,
+                        summary=summary_output,
+                        user_insight=user_insight,
+                    )
+                    _append_user_insight_history(
+                        iteration=iteration,
+                        user_insight=user_insight,
+                    )
+                    _append_log_line(f"orchestrator: user_insight_report generated for iteration {iteration}\n")
+            except Exception as exc:
+                # 洞察报告生成失败不阻塞主流程
+                _append_log_line(f"orchestrator: user_insight_report error: {exc}\n")
+
             if ui is not None:  # 关键分支：UI 更新摘要
                 ui.state.update(
                     last_iteration_summary=summary_output,
@@ -1003,6 +1153,447 @@ def _run_summary_stage(
             _sleep_backoff(label="SUMMARY", attempt=attempt)
             attempt += 1
 
+
+# ============= 监督代理后台执行 =============
+
+import concurrent.futures
+from dataclasses import dataclass
+
+# 全局线程池（单线程，保证顺序）
+_supervisor_executor: concurrent.futures.ThreadPoolExecutor | None = None
+
+
+def _get_supervisor_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """获取或创建监督代理线程池"""
+    global _supervisor_executor
+    if _supervisor_executor is None:
+        _supervisor_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="supervisor"
+        )
+    return _supervisor_executor
+
+
+@dataclass
+class SupervisorTask:
+    """监督任务数据"""
+    iteration: int
+    next_agent: str
+    main_session_id: str
+    subagent_session_id: str
+    task_file: Path
+    report_path: Path
+    sandbox_mode: str
+    approval_policy: str
+
+
+def _load_supervisor_history() -> list[dict]:
+    """加载监督历史"""
+    if not REPORT_SUPERVISOR_HISTORY_FILE.exists():
+        return []
+    raw = REPORT_SUPERVISOR_HISTORY_FILE.read_text(encoding="utf-8").strip()
+    if not raw:
+        return []
+    history: list[dict] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+            if isinstance(record, dict):
+                history.append(record)
+        except json.JSONDecodeError:
+            continue
+    return history
+
+
+def _update_ui_with_supervisor_result(ui: UiRuntime, iteration: int) -> None:
+    """从文件读取监督结果并更新 UI（线程安全）"""
+    try:
+        if REPORT_SUPERVISOR_FILE.exists():
+            raw = REPORT_SUPERVISOR_FILE.read_text(encoding="utf-8").strip()
+            if raw:
+                summary = json.loads(raw)
+                history = _load_supervisor_history()
+                ui.state.update(
+                    last_iteration_summary=summary,
+                    last_summary_path=_rel_path(REPORT_SUPERVISOR_FILE),
+                    summary_history=history,
+                )
+    except Exception as exc:
+        _append_log_line(f"supervisor: ui_update error iter={iteration}: {exc}\n")
+
+
+def _run_supervisor_task_with_ui(
+    task: SupervisorTask,
+    ui: UiRuntime | None,
+) -> None:
+    """执行监督任务并更新 UI"""
+    try:
+        _run_summary_stage(
+            iteration=task.iteration,
+            next_agent=task.next_agent,
+            main_session_id=task.main_session_id,
+            subagent_session_id=task.subagent_session_id,
+            task_file=task.task_file,
+            report_path=task.report_path,
+            sandbox_mode=task.sandbox_mode,
+            approval_policy=task.approval_policy,
+            ui=None,  # 不在后台更新 phase（避免干扰主流程状态）
+            control=None,
+        )
+
+        # 监督完成后更新 UI 摘要（线程安全）
+        if ui is not None:
+            _update_ui_with_supervisor_result(ui, task.iteration)
+
+        _append_log_line(f"supervisor: completed iter={task.iteration}\n")
+
+    except Exception as exc:
+        _append_log_line(f"supervisor: error iter={task.iteration}: {exc}\n")
+
+
+def _submit_supervisor_task(
+    *,
+    iteration: int,
+    next_agent: str,
+    main_session_id: str,
+    subagent_session_id: str,
+    task_file: Path,
+    report_path: Path,
+    sandbox_mode: str,
+    approval_policy: str,
+    ui: UiRuntime | None,
+) -> None:
+    """提交监督任务到后台执行（非阻塞）"""
+    task = SupervisorTask(
+        iteration=iteration,
+        next_agent=next_agent,
+        main_session_id=main_session_id,
+        subagent_session_id=subagent_session_id,
+        task_file=task_file,
+        report_path=report_path,
+        sandbox_mode=sandbox_mode,
+        approval_policy=approval_policy,
+    )
+
+    def run() -> None:
+        _run_supervisor_task_with_ui(task, ui)
+
+    executor = _get_supervisor_executor()
+    executor.submit(run)
+    _append_log_line(f"supervisor: submitted iter={iteration}\n")
+
+
+def _shutdown_supervisor(timeout: float = 60.0) -> None:
+    """等待所有监督任务完成并关闭线程池"""
+    global _supervisor_executor
+    if _supervisor_executor is not None:
+        _append_log_line("supervisor: shutting down...\n")
+        _supervisor_executor.shutdown(wait=True)
+        _supervisor_executor = None
+        _append_log_line("supervisor: shutdown complete\n")
+
+
+# ============= Context-centric 架构：并行验证函数 =============
+
+
+def _build_validator_task(
+    *,
+    validator: str,
+    iteration: int,
+) -> str:
+    """
+    构建验证器工单内容。
+    黑盒验证器只需要最小上下文：命令和路径。
+    """
+    # 从 IMPLEMENTER 报告中提取必要信息
+    implementer_report = ""
+    if REPORT_IMPLEMENTER_FILE.exists():
+        implementer_report = _read_text(REPORT_IMPLEMENTER_FILE)
+
+    # 从 dev_plan 提取当前任务信息
+    dev_plan_text = _read_text(DEV_PLAN_FILE)
+
+    task_lines = [
+        f"# Validator Task (Iteration {iteration})",
+        f"validator: {validator}",
+        "",
+        "## 检测目标",
+        "",
+        f"- 代码目录: project/",
+        f"- 测试目录: project/tests/",
+        "",
+        "## IMPLEMENTER 报告摘要",
+        "",
+        implementer_report[:2000] if implementer_report else "(无报告)",
+        "",
+        "## Dev Plan 摘要",
+        "",
+        dev_plan_text[:1000] if dev_plan_text else "(无计划)",
+        "",
+    ]
+
+    return "\n".join(task_lines)
+
+
+def _run_single_validator(
+    *,
+    validator: str,
+    iteration: int,
+    task_file: Path,
+    report_path: Path,
+    sandbox_mode: str,
+    approval_policy: str,
+    control: RunControl | None,
+) -> ValidationResult:
+    """
+    执行单个验证器。
+    返回结构化的验证结果。
+    """
+    started = time.monotonic()
+
+    try:
+        # 加载验证器提示词
+        validator_prompt_name = validator.lower()
+        prompt_file = PROMPTS_DIR / f"subagent_prompt_{validator_prompt_name}.md"
+
+        if not prompt_file.exists():
+            return {
+                "validator": validator,
+                "verdict": "BLOCKED",
+                "confidence": 0.0,
+                "findings": [f"提示词文件不存在: {prompt_file}"],
+                "evidence": "",
+                "duration_ms": int((time.monotonic() - started) * 1000),
+            }
+
+        # 构建验证器提示词
+        prompt_parts = [
+            _load_system_prompt(validator_prompt_name),
+            _inject_file(task_file),
+            f"[iteration]: {iteration}",
+            "请执行验证并输出 JSON 结果。",
+        ]
+        prompt = "\n\n".join(prompt_parts)
+
+        # 执行验证器
+        run = _run_cli_exec(
+            prompt=prompt,
+            output_last_message=report_path,
+            sandbox_mode=sandbox_mode,
+            approval_policy=approval_policy,
+            label=validator,
+            agent=validator,
+            control=control,
+        )
+
+        # 解析验证器输出
+        output_text = run["last_message"]
+        try:
+            # 尝试从输出中提取 JSON
+            import re
+            json_match = re.search(r'\{[^{}]*"validator"[^]*\}', output_text, re.DOTALL)
+            if json_match:
+                result = json.loads(json_match.group())
+                result["duration_ms"] = int((time.monotonic() - started) * 1000)
+                return result
+            else:
+                # 无法解析 JSON，返回默认结果
+                return {
+                    "validator": validator,
+                    "verdict": "BLOCKED",
+                    "confidence": 0.0,
+                    "findings": ["无法解析验证器输出"],
+                    "evidence": output_text[:500],
+                    "duration_ms": int((time.monotonic() - started) * 1000),
+                }
+        except json.JSONDecodeError:
+            return {
+                "validator": validator,
+                "verdict": "BLOCKED",
+                "confidence": 0.0,
+                "findings": ["验证器输出 JSON 解析失败"],
+                "evidence": output_text[:500],
+                "duration_ms": int((time.monotonic() - started) * 1000),
+            }
+
+    except Exception as exc:
+        return {
+            "validator": validator,
+            "verdict": "BLOCKED",
+            "confidence": 0.0,
+            "findings": [f"验证器执行失败: {exc}"],
+            "evidence": "",
+            "duration_ms": int((time.monotonic() - started) * 1000),
+        }
+
+
+def _run_parallel_validation(
+    *,
+    iteration: int,
+    sandbox_mode: str,
+    approval_policy: str,
+    ui: UiRuntime | None,
+    control: RunControl | None,
+) -> dict[str, ValidationResult]:
+    """
+    并行执行所有黑盒验证代理。
+    符合 Anthropic 原则：验证代理是黑盒，不需要理解设计决策。
+    """
+    if ui is not None:
+        ui.state.update(phase="running_validate", current_agent="VALIDATE")
+
+    validators = PARALLEL_VALIDATORS
+    results: dict[str, ValidationResult] = {}
+
+    # 准备验证器工单
+    VALIDATOR_WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+    VALIDATOR_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_PARALLEL_VALIDATORS) as executor:
+        future_to_validator: dict[concurrent.futures.Future, str] = {}
+
+        for validator in validators:
+            task_file = VALIDATOR_WORKSPACE_DIR / f"{validator.lower()}_task.md"
+            report_path = VALIDATOR_REPORTS_DIR / f"{validator.lower()}.md"
+
+            # 构建验证器工单
+            task_content = _build_validator_task(
+                validator=validator,
+                iteration=iteration,
+            )
+            _atomic_write_text(task_file, task_content)
+
+            future = executor.submit(
+                _run_single_validator,
+                validator=validator,
+                iteration=iteration,
+                task_file=task_file,
+                report_path=report_path,
+                sandbox_mode=sandbox_mode,
+                approval_policy=approval_policy,
+                control=control,
+            )
+            future_to_validator[future] = validator
+
+        # 收集结果
+        completed = 0
+        for future in concurrent.futures.as_completed(future_to_validator):
+            validator = future_to_validator[future]
+            completed += 1
+            try:
+                result = future.result()
+                results[validator] = result
+                status = result["verdict"]
+                print(f"  [{completed}/{len(validators)}] {validator}: {status}")
+                _append_log_line(
+                    f"orchestrator: validator {validator} done verdict={status} "
+                    f"confidence={result['confidence']} duration_ms={result['duration_ms']}\n"
+                )
+            except Exception as exc:
+                results[validator] = {
+                    "validator": validator,
+                    "verdict": "BLOCKED",
+                    "confidence": 0.0,
+                    "findings": [f"执行失败: {exc}"],
+                    "evidence": "",
+                    "duration_ms": 0,
+                }
+                print(f"  [{completed}/{len(validators)}] {validator}: BLOCKED (error)")
+                _append_log_line(f"orchestrator: validator {validator} error: {exc}\n")
+
+    # 保存结构化结果
+    _atomic_write_text(VALIDATION_RESULTS_FILE, json.dumps(results, ensure_ascii=False, indent=2))
+    return results
+
+
+def _run_synthesizer(
+    *,
+    iteration: int,
+    validation_results: dict[str, ValidationResult],
+    sandbox_mode: str,
+    approval_policy: str,
+    ui: UiRuntime | None,
+    control: RunControl | None,
+) -> SynthesizerOutput:
+    """
+    执行 SYNTHESIZER 代理，汇总所有验证器的输出并做出最终决策。
+    """
+    if ui is not None:
+        ui.state.update(phase="running_synthesizer", current_agent="SYNTHESIZER")
+
+    # 构建 SYNTHESIZER 工单
+    task_lines = [
+        f"# Synthesizer Task (Iteration {iteration})",
+        "",
+        "## 验证器结果",
+        "",
+    ]
+
+    for validator, result in validation_results.items():
+        task_lines.extend([
+            f"### {validator}",
+            "```json",
+            json.dumps(result, ensure_ascii=False, indent=2),
+            "```",
+            "",
+        ])
+
+    task_content = "\n".join(task_lines)
+    synthesizer_task_file = VALIDATOR_WORKSPACE_DIR / "synthesizer_task.md"
+    _atomic_write_text(synthesizer_task_file, task_content)
+
+    # 构建 SYNTHESIZER 提示词
+    prompt_parts = [
+        _load_system_prompt("synthesizer"),
+        _inject_file(synthesizer_task_file),
+        f"[iteration]: {iteration}",
+        "请汇总验证结果并输出最终决策。",
+    ]
+    prompt = "\n\n".join(prompt_parts)
+
+    # 执行 SYNTHESIZER
+    try:
+        run = _run_cli_exec(
+            prompt=prompt,
+            output_last_message=SYNTHESIZER_REPORT_FILE,
+            sandbox_mode=sandbox_mode,
+            approval_policy=approval_policy,
+            label="SYNTHESIZER",
+            agent="SYNTHESIZER",
+            control=control,
+        )
+
+        # 解析输出，提取 overall_verdict
+        output_text = run["last_message"]
+
+        # 从报告中提取 verdict
+        overall_verdict: str = "REWORK"
+        for line in output_text.splitlines():
+            if "overall_verdict:" in line or "结论：" in line or "结论:" in line:
+                if "PASS" in line.upper():
+                    overall_verdict = "PASS"
+                elif "BLOCKED" in line.upper():
+                    overall_verdict = "BLOCKED"
+                break
+
+        return {
+            "overall_verdict": overall_verdict,  # type: ignore
+            "results": list(validation_results.values()),
+            "blockers": [],
+            "recommendations": [],
+        }
+
+    except Exception as exc:
+        _append_log_line(f"orchestrator: SYNTHESIZER error: {exc}\n")
+        return {
+            "overall_verdict": "BLOCKED",
+            "results": list(validation_results.values()),
+            "blockers": [str(exc)],
+            "recommendations": [],
+        }
 
 
 def _resume_pending_iteration(
@@ -1046,8 +1637,21 @@ def _resume_pending_iteration(
         # 将 doc_patches 合并到 decision 中（doc_patches 在 main_output 顶层解析）
         user_decision = dict(decision)
         user_decision["doc_patches"] = main_output.get("doc_patches")
-        _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
+        user_choice, user_comment = _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
         _clear_resume_state()
+
+        # 【新增】续跑时 USER 决策后也更新决策模式文档
+        try:
+            _update_user_decision_patterns(
+                iteration=iteration,
+                decision=user_decision,  # type: ignore[arg-type]
+                user_choice=user_choice,
+                user_comment=user_comment,
+            )
+            _append_log_line(f"orchestrator: decision_patterns updated for iteration {iteration}\n")
+        except Exception as exc:
+            _append_log_line(f"orchestrator: decision_patterns error: {exc}\n")
+
         return
 
     if phase == "after_main":  # 关键分支：补跑子代理与摘要
@@ -1153,6 +1757,10 @@ def _resume_pending_iteration(
 
 
 def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, str | None, str | None]:
+    """准备 MAIN 输出内容。
+
+    校验失败时抛出 TemporaryError，允许 MAIN 重试修正。
+    """
     decision = output["decision"]  # 关键变量：MAIN 决策对象
     history_entry = _validate_history_append(iteration=iteration, entry=output["history_append"])  # 关键变量：历史追加内容
     dev_plan_next = output.get("dev_plan_next")  # 关键变量：计划草案（可为空）
@@ -1161,10 +1769,11 @@ def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, st
 
     task_content = None  # 关键变量：工单内容（可为空）
     next_agent = decision["next_agent"]  # 关键变量：下一步代理
-    if next_agent in {"TEST", "DEV", "REVIEW"}:  # 关键分支：子代理必须有工单
+    # Context-centric 架构：IMPLEMENTER 需要工单
+    if next_agent == "IMPLEMENTER":
         task = output.get("task")  # 关键变量：RAW 工单文本
         if task is None:  # 关键分支：缺工单直接失败
-            raise RuntimeError(f"Missing task for next_agent={next_agent}")
+            raise TemporaryError(f"Missing task for next_agent={next_agent}")
         task_content = _validate_task_content(iteration=iteration, expected_agent=next_agent, task=task)  # 关键变量：校验后的工单
 
         # P0: 工单字段校验与自动补全
@@ -1211,23 +1820,24 @@ def _detect_milestone_change(last_subagent: str | None) -> bool:
     """
     检测是否发生里程碑变更（用于触发上下文压缩）。
 
+    Context-centric 架构：
     里程碑变更条件：
-    1. 上一轮是 REVIEW 且报告结论为 PASS（表示 Milestone 验收通过）
+    1. 上一轮是 VALIDATE 且 SYNTHESIZER 报告结论为 PASS
     2. project_history 中最近一条记录包含 [MILESTONE] 标记
     """
-    if last_subagent != "REVIEW":
+    if last_subagent != "VALIDATE":
         return False
 
-    # 检查 REVIEW 报告是否为 PASS
-    if not REPORT_REVIEW_FILE.exists():
+    # 检查 SYNTHESIZER 报告是否为 PASS
+    if not SYNTHESIZER_REPORT_FILE.exists():
         return False
 
     try:
-        review_text = _read_text(REPORT_REVIEW_FILE)
+        synthesizer_text = _read_text(SYNTHESIZER_REPORT_FILE)
         # 检查报告结论
-        for line in review_text.splitlines():
+        for line in synthesizer_text.splitlines():
             stripped = line.strip()
-            if stripped.startswith("结论:") or stripped.startswith("结论："):
+            if stripped.startswith("结论:") or stripped.startswith("结论：") or "overall_verdict" in stripped:
                 if "PASS" in stripped.upper():
                     return True
                 break
@@ -1322,15 +1932,23 @@ def _build_main_prompt(
     # 1. 里程碑变更（Milestone 状态变化，如全部 VERIFIED）
     # 2. 距离上次压缩超过 N 轮迭代（可配置）
     # 注意：不再在 prompt 中包含 /compact 命令，而是返回标志让调用处单独执行压缩
+    #
+    # 特殊情况：用户决策后的下一轮不触发压缩
+    # 原因：用户决策后上下文通常很小（只有用户选择），压缩没有意义且可能丢失重要信息
     from .config import COMPACT_INTERVAL
     if is_resume and iteration > 1 and COMPACT_INTERVAL > 0:
-        iterations_since_compact = iteration - last_compact_iteration
-        should_compact = milestone_changed or iterations_since_compact >= COMPACT_INTERVAL
+        # 用户决策后的下一轮跳过压缩
+        if last_user_decision_iteration is not None:
+            # 用户刚做完决策，不压缩
+            pass
+        else:
+            iterations_since_compact = iteration - last_compact_iteration
+            should_compact = milestone_changed or iterations_since_compact >= COMPACT_INTERVAL
 
-        if should_compact:
-            # 标记需要压缩，但不在 prompt 中添加 /compact 命令
-            # 调用处会先单独执行压缩，然后再 resume 发送新 prompt
-            did_compact = True
+            if should_compact:
+                # 标记需要压缩，但不在 prompt 中添加 /compact 命令
+                # 调用处会先单独执行压缩，然后再 resume 发送新 prompt
+                did_compact = True
 
     parts.extend([
         _load_system_prompt("main"),
@@ -1381,26 +1999,16 @@ def _build_main_prompt(
 
     # ========== 注入上一轮子代理报告 ==========
 
-    # 强制注入上一轮子代理报告（避免 MAIN 使用过期记忆）
-    if last_subagent == "TEST" and REPORT_TEST_FILE.exists():
+    # Context-centric 架构：强制注入上一轮子代理报告
+    if last_subagent == "IMPLEMENTER" and REPORT_IMPLEMENTER_FILE.exists():
         parts.append(
-            f"[上一轮 TEST 报告（强制注入，请基于此做决策）]:\n"
-            f"{_inject_file(REPORT_TEST_FILE, label_suffix='上一轮 TEST 报告')}"
+            f"[上一轮 IMPLEMENTER 报告（强制注入，请基于此做决策）]:\n"
+            f"{_inject_file(REPORT_IMPLEMENTER_FILE, label_suffix='上一轮 IMPLEMENTER 报告')}"
         )
-    elif last_subagent == "DEV" and REPORT_DEV_FILE.exists():
+    elif last_subagent == "VALIDATE" and SYNTHESIZER_REPORT_FILE.exists():
         parts.append(
-            f"[上一轮 DEV 报告（强制注入，请基于此做决策）]:\n"
-            f"{_inject_file(REPORT_DEV_FILE, label_suffix='上一轮 DEV 报告')}"
-        )
-    elif last_subagent == "REVIEW" and REPORT_REVIEW_FILE.exists():
-        parts.append(
-            f"[上一轮 REVIEW 报告（强制注入，请基于此做决策）]:\n"
-            f"{_inject_file(REPORT_REVIEW_FILE, label_suffix='上一轮 REVIEW 报告')}"
-        )
-    elif last_subagent == "PARALLEL_REVIEW" and REPORT_REVIEW_FILE.exists():
-        parts.append(
-            f"[上一轮并行审阅报告（强制注入，请基于此整合结论并制定计划）]:\n"
-            f"{_inject_file(REPORT_REVIEW_FILE, label_suffix='上一轮并行审阅报告')}"
+            f"[上一轮验证结果（强制注入，请基于此做决策）]:\n"
+            f"{_inject_file(SYNTHESIZER_REPORT_FILE, label_suffix='上一轮验证结果')}"
         )
 
     # ========== 额外指令和输出要求 ==========
@@ -1410,7 +2018,7 @@ def _build_main_prompt(
     parts.append(
         '[强制输出要求]\n'
         '你的最终输出必须且只能是 1 行纯 JSON（无 Markdown 代码块、无额外文本）。\n'
-        '格式：{"next_agent":"TEST|DEV|REVIEW|USER|FINISH","reason":"...","history_append":"...","task":"...","dev_plan_next":null}\n'
+        '格式：{"next_agent":"IMPLEMENTER|VALIDATE|USER|FINISH","reason":"...","history_append":"...","task":"...","dev_plan_next":null}\n'
         '禁止无限探索文件而不输出 JSON。立即完成分析并输出决策。'
     )
     return "\n\n".join(parts), did_compact
@@ -1442,7 +2050,8 @@ def _build_finish_check_prompt(
     dev_plan_summary = f"任务状态计数: {status_counts}"
 
     # 构建精简的系统提示（仅保留 FINISH_CHECK 相关规则）
-    finish_check_system_prompt = """你是 MAIN 代理，正在执行 FINISH_CHECK 复核。
+    # Context-centric 架构：使用 IMPLEMENTER 替代 TEST/DEV/REVIEW
+    finish_check_system_prompt = f"""你是 MAIN 代理，正在执行 FINISH_CHECK 复核。
 
 ## 任务
 根据 FINISH_REVIEW 的结论，决定是否最终完成任务。
@@ -1450,18 +2059,26 @@ def _build_finish_check_prompt(
 ## 决策规则
 1. 若 FINISH_REVIEW 结论为 PASS 且满足 readiness（所有非 TODO 任务均 VERIFIED）：输出 `FINISH`
 2. 若 FINISH_REVIEW 结论为 FAIL/BLOCKED：
-   - 采纳：根据问题类型选择 DEV/TEST/REVIEW 并生成工单
+   - 采纳：选择 IMPLEMENTER/USER 并生成工单
    - 忽略：输出 FINISH 并在 history_append 写明 `finish_review_override: ignore` 与理由
-3. 若 readiness 不满足（存在 DONE/DOING/BLOCKED）：禁止 FINISH，必须派发子代理
+3. 若 readiness 不满足（存在 DONE/DOING/BLOCKED）：禁止 FINISH，必须派发 IMPLEMENTER
+
+## 迭代号规则（重要）
+- 当前 FINISH 尝试的迭代号是 {iteration}
+- 若输出 FINISH：history_append 使用 `## Iteration {iteration}:`
+- 若输出非 FINISH（IMPLEMENTER/USER）：history_append 使用 `## Iteration {iteration + 1}:`（下一轮迭代号）
 
 ## 输出格式（必须严格遵守）
 输出 **1 行 JSON**（无其它文本）：
-- 采纳 FAIL 派发 DEV：`{"next_agent":"DEV","reason":"...","history_append":"## Iteration N:\\n...","task":"# Current Task (Iteration N)\\nassigned_agent: DEV\\n...","dev_plan_next":null}`
-- 采纳 FAIL 派发 REVIEW：`{"next_agent":"REVIEW","reason":"...","history_append":"...","task":"...","dev_plan_next":null}`
-- 忽略 FAIL 直接完成：`{"next_agent":"FINISH","reason":"...","history_append":"## Iteration N:\\n...\\nfinish_review_override: ignore\\n理由：...","task":null,"dev_plan_next":null}`
-- 全部通过直接完成：`{"next_agent":"FINISH","reason":"...","history_append":"...","task":null,"dev_plan_next":null}`
+- 采纳 FAIL 派发 IMPLEMENTER：`{{"next_agent":"IMPLEMENTER","reason":"...","history_append":"## Iteration {iteration + 1}:\\n...","task":"# Current Task (Iteration {iteration + 1})\\nassigned_agent: IMPLEMENTER\\n...","dev_plan_next":null}}`
+- 忽略 FAIL 直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:\\n...\\nfinish_review_override: ignore\\n理由：...","task":null,"dev_plan_next":null}}`
+- 全部通过直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:\\n...","task":null,"dev_plan_next":null}}`
+- 需要用户决策：`{{"next_agent":"USER","reason":"...","decision_title":"简短标题","question":"详细问题描述","options":[{{"option_id":"opt1","description":"选项1说明"}},{{"option_id":"opt2","description":"选项2说明"}}],"recommended_option_id":"opt1","history_append":"## Iteration {iteration + 1}:\\n...","task":null,"dev_plan_next":null}}`
 
-**重要**：你必须输出完整 JSON，禁止空输出。"""
+**重要**：
+1. 必须输出完整 JSON，禁止空输出
+2. USER 决策时字段名必须是 `options`（不是 `decision_options`），且至少包含 2 个选项
+3. 非 FINISH 决策的 history_append 必须使用迭代号 {iteration + 1}"""
 
     # 构建上下文部分
     context_parts = [
@@ -1478,23 +2095,18 @@ def _build_finish_check_prompt(
         context_parts.append("")
         context_parts.append(f"⚠️ 警告：{check_msg}")
 
-    def build_prompt(*, review_level: int, dev_level: int) -> str:
-        injected_test = _inject_report_with_level(
-            report_path=REPORT_TEST_FILE,
-            agent="TEST",
+    def build_prompt(*, implementer_level: int) -> str:
+        # Context-centric 架构：注入 IMPLEMENTER 和 SYNTHESIZER 报告
+        injected_implementer = _inject_report_with_level(
+            report_path=REPORT_IMPLEMENTER_FILE,
+            agent="IMPLEMENTER",
+            level=implementer_level,
+            label_suffix=" - FINISH_CHECK",
+        )
+        injected_synthesizer = _inject_report_with_level(
+            report_path=SYNTHESIZER_REPORT_FILE,
+            agent="SYNTHESIZER",
             level=3,
-            label_suffix=" - FINISH_CHECK",
-        )
-        injected_dev = _inject_report_with_level(
-            report_path=REPORT_DEV_FILE,
-            agent="DEV",
-            level=dev_level,
-            label_suffix=" - FINISH_CHECK",
-        )
-        injected_review = _inject_report_with_level(
-            report_path=REPORT_REVIEW_FILE,
-            agent="REVIEW",
-            level=review_level,
             label_suffix=" - FINISH_CHECK",
         )
         injected_finish_review = _inject_report_with_level(
@@ -1506,32 +2118,23 @@ def _build_finish_check_prompt(
         return "\n\n".join(
             [
                 finish_check_system_prompt,
-                injected_test,
-                injected_dev,
-                injected_review,
+                injected_implementer,
+                injected_synthesizer,
                 injected_finish_review,
                 "\n".join(context_parts),
                 "请根据以上信息输出 JSON 决策。",
             ]
         )
 
-    review_level = 3
-    dev_level = 3
-    prompt = build_prompt(review_level=review_level, dev_level=dev_level)
+    implementer_level = 3
+    prompt = build_prompt(implementer_level=implementer_level)
 
     if len(prompt) > MAX_PROMPT_SIZE:
-        review_level = 1
+        implementer_level = 1
         _append_log_line(
-            "orchestrator: finish_check_prompt downgrade review to summary due to size\n"
+            "orchestrator: finish_check_prompt downgrade implementer to summary due to size\n"
         )
-        prompt = build_prompt(review_level=review_level, dev_level=dev_level)
-
-    if len(prompt) > MAX_PROMPT_SIZE:
-        dev_level = 1
-        _append_log_line(
-            "orchestrator: finish_check_prompt downgrade dev to summary due to size\n"
-        )
-        prompt = build_prompt(review_level=review_level, dev_level=dev_level)
+        prompt = build_prompt(implementer_level=implementer_level)
 
     if len(prompt) > MAX_PROMPT_SIZE:
         raise RuntimeError(
@@ -1540,7 +2143,7 @@ def _build_finish_check_prompt(
 
     _append_log_line(
         "orchestrator: finish_check_prompt_size "
-        f"len={len(prompt)} review_level={review_level} dev_level={dev_level}\n"
+        f"len={len(prompt)} implementer_level={implementer_level}\n"
     )
     return prompt
 
@@ -1633,15 +2236,12 @@ def _preflight() -> None:
     _require_file(FINISH_REVIEW_CONFIG_FILE)  # 关键变量：最终审阅配置必须存在
     _require_file(VERIFICATION_POLICY_FILE)  # 关键变量：验证策略配置必须存在
     _require_file(OUT_OF_SCOPE_ISSUES_FILE)  # 关键变量：范围外问题记录必须存在
-    _require_file(TEST_TASK_FILE)  # 关键变量：TEST 工单必须存在
-    _require_file(DEV_TASK_FILE)  # 关键变量：DEV 工单必须存在
-    _require_file(REVIEW_TASK_FILE)  # 关键变量：REVIEW 工单必须存在
-    _require_file(REPORT_TEST_FILE)  # 关键变量：TEST 报告必须存在
-    _require_file(REPORT_DEV_FILE)  # 关键变量：DEV 报告必须存在
-    _require_file(REPORT_REVIEW_FILE)  # 关键变量：REVIEW 报告必须存在
+    _require_file(IMPLEMENTER_TASK_FILE)  # 关键变量：IMPLEMENTER 工单必须存在
+    _require_file(REPORT_IMPLEMENTER_FILE)  # 关键变量：IMPLEMENTER 报告必须存在
     _require_file(REPORT_FINISH_REVIEW_FILE)  # 关键变量：FINISH_REVIEW 报告必须存在
 
-    for agent in ("main", "test", "dev", "review", "summary", "finish_review"):  # 关键分支：逐个检查提示词
+    # Context-centric 架构：检查新提示词文件
+    for agent in ("main", "implementer", "test_runner", "requirement_validator", "anti_cheat", "edge_case", "synthesizer", "summary", "finish_review"):
         _require_file(PROMPTS_DIR / f"subagent_prompt_{agent}.md")  # 关键变量：提示词必须存在
 
     _validate_dev_plan()  # 关键变量：计划结构校验
@@ -1727,8 +2327,8 @@ def workflow_loop(
     # 关键变量：上一轮运行的子代理（用于注入报告到 MAIN 提示词）
     last_subagent: str | None = None
     if last_iteration > 0:
-        # 从 resume_state 恢复上一轮子代理信息
-        last_subagent = _get_last_subagent_from_history(last_iteration)
+        # 从元数据或摘要历史恢复上一轮子代理信息
+        last_subagent = _get_last_subagent_from_metadata(last_iteration)
         if last_subagent:
             print(f"Restored last subagent: {last_subagent}")
 
@@ -1740,6 +2340,18 @@ def workflow_loop(
         _append_log_line(banner)
         log_event("iteration_start", trace_id=trace_id, iteration=iteration)
         finish_attempted = False  # 关键变量：本轮是否触发 FINISH 尝试
+
+        # ========== 记录 MAIN 会话 token 使用情况 ==========
+        if main_session_id:
+            cli_name = get_cli_for_agent("MAIN")
+            main_token_info = get_session_token_info(main_session_id, cli_name)
+            if main_token_info:
+                token_msg = f"orchestrator: iteration {iteration} MAIN context: {format_token_info(main_token_info)}\n"
+                _append_log_line(token_msg)
+                print(token_msg, end="", flush=True)
+                if ui is not None:
+                    ui.state.update(main_token_info=main_token_info)
+
         if ui is not None:  # 关键分支：UI 同步 MAIN 运行态
             ui.state.update(phase="running_main", iteration=iteration, current_agent="MAIN")
 
@@ -1821,26 +2433,81 @@ def workflow_loop(
         ]  # 关键变量：MAIN 可写排除清单
         main_started = time.monotonic()
 
-        main_output, captured_session_id = _run_main_decision_stage(
-            prompt=main_prompt,
-            guard_paths=main_guard_paths,
-            label="MAIN",
-            sandbox_mode=sandbox_mode,
-            approval_policy=approval_policy,
-            control=control,
-            resume_session_id=main_session_id,
-            post_validate=None,
-            compact_instructions=compact_instructions_to_use,
-        )
-        if main_session_id is None:  # 关键分支：首次运行需要保存会话 id
-            session_id = captured_session_id  # 关键变量：首次会话 id
-            if session_id is None:  # 关键分支：必须拿到会话 id
-                raise RuntimeError("Failed to capture MAIN session id from codex output")
-            _save_main_session_id(session_id)
-            main_session_id = session_id
-            print(f"Saved MAIN session id: {main_session_id}")
-            if ui is not None:  # 关键分支：UI 更新会话 id
-                ui.state.update(main_session_id=main_session_id)
+        # ========== MAIN 决策阶段（含输出校验重试）==========
+        # 将 _run_main_decision_stage 和 _prepare_main_output 合并到重试循环中
+        # 当 MAIN 输出校验失败（如 next_agent 与 task.assigned_agent 不一致）时，
+        # resume 会话并告知错误原因，让 MAIN 重新输出
+        main_output_retry_attempt = 0
+        max_main_output_retries = 3
+        last_prepare_error: str | None = None
+
+        while True:
+            if main_output_retry_attempt > 0:
+                # 构建重试提示词，告知 MAIN 上次输出的错误
+                retry_prompt = (
+                    f"你上次的输出校验失败：{last_prepare_error}\n\n"
+                    "请重新输出完整的 JSON，确保：\n"
+                    "1. next_agent 与 task 中的 assigned_agent 一致\n"
+                    "2. 所有必填字段都存在且格式正确\n\n"
+                    "请仅输出 JSON，不要附加任何解释。"
+                )
+                main_output, captured_session_id = _run_main_decision_stage(
+                    prompt=retry_prompt,
+                    guard_paths=main_guard_paths,
+                    label="MAIN_RETRY",
+                    sandbox_mode=sandbox_mode,
+                    approval_policy=approval_policy,
+                    control=control,
+                    resume_session_id=main_session_id,
+                    post_validate=None,
+                    compact_instructions=None,  # 重试时不压缩
+                )
+            else:
+                main_output, captured_session_id = _run_main_decision_stage(
+                    prompt=main_prompt,
+                    guard_paths=main_guard_paths,
+                    label="MAIN",
+                    sandbox_mode=sandbox_mode,
+                    approval_policy=approval_policy,
+                    control=control,
+                    resume_session_id=main_session_id,
+                    post_validate=None,
+                    compact_instructions=compact_instructions_to_use,
+                )
+
+            if main_session_id is None:  # 关键分支：首次运行需要保存会话 id
+                session_id = captured_session_id  # 关键变量：首次会话 id
+                if session_id is None:  # 关键分支：必须拿到会话 id
+                    raise RuntimeError("Failed to capture MAIN session id from codex output")
+                _save_main_session_id(session_id)
+                main_session_id = session_id
+                print(f"Saved MAIN session id: {main_session_id}")
+                if ui is not None:  # 关键分支：UI 更新会话 id
+                    ui.state.update(main_session_id=main_session_id)
+
+            # 尝试准备输出，校验失败时重试
+            try:
+                # 先检查 dev_plan 是否被直接修改
+                if _sha256_text(_read_text(DEV_PLAN_FILE)) != dev_plan_before_hash:
+                    raise RuntimeError(
+                        "MAIN must not modify `memory/dev_plan.md` directly. "
+                        f"Write the full next dev_plan to `{_rel_path(DEV_PLAN_STAGED_FILE)}` instead."
+                    )
+                decision = main_output["decision"]  # 关键变量：决策字段
+                break  # 校验通过，退出重试循环
+            except TemporaryError as exc:
+                main_output_retry_attempt += 1
+                if main_output_retry_attempt >= max_main_output_retries:
+                    raise RuntimeError(
+                        f"MAIN 输出校验失败，已重试 {max_main_output_retries} 次: {exc}"
+                    ) from exc
+                last_prepare_error = str(exc)
+                _append_log_line(
+                    f"orchestrator: MAIN output validation failed, retrying "
+                    f"({main_output_retry_attempt}/{max_main_output_retries}): {exc}\n"
+                )
+                print(f"Warning: MAIN output validation failed, retrying: {exc}")
+                continue
 
         log_event(
             "stage_complete",
@@ -1849,12 +2516,6 @@ def workflow_loop(
             stage="MAIN",
             duration_ms=int((time.monotonic() - main_started) * 1000),
         )
-        if _sha256_text(_read_text(DEV_PLAN_FILE)) != dev_plan_before_hash:  # 关键分支：禁止直接改 dev_plan
-            raise RuntimeError(
-                "MAIN must not modify `memory/dev_plan.md` directly. "
-                f"Write the full next dev_plan to `{_rel_path(DEV_PLAN_STAGED_FILE)}` instead."
-            )
-        decision = main_output["decision"]  # 关键变量：决策字段
 
         if decision["next_agent"] == "FINISH":  # 关键分支：触发最终审阅
             finish_attempts += 1
@@ -1938,16 +2599,76 @@ def workflow_loop(
                 check_msg=check_msg,
             )
             main_finish_started = time.monotonic()
-            main_output, _ = _run_main_decision_stage(
-                prompt=main_prompt,
-                guard_paths=main_guard_paths,
-                label="MAIN_FINISH_CHECK",
-                sandbox_mode=sandbox_mode,
-                approval_policy=approval_policy,
-                control=control,
-                resume_session_id=main_session_id,
-                post_validate=None,
-            )
+
+            # MAIN_FINISH_CHECK 独立重试循环，避免异常传播导致 FINISH_REVIEW 重复运行
+            finish_check_retry_attempt = 0
+            max_finish_check_retries = 3
+            last_finish_check_error: str | None = None
+
+            while True:
+                if finish_check_retry_attempt > 0:
+                    # 构建重试提示词，告知 MAIN 上次输出的错误
+                    retry_prompt = (
+                        f"你上次的输出校验失败：{last_finish_check_error}\n\n"
+                        "请重新输出完整的 JSON，确保：\n"
+                        "1. USER 决策时必须包含 `decision_title`、`question`、`options` 字段\n"
+                        "2. `options` 字段名必须是 `options`（不是 `decision_options`）\n"
+                        "3. 所有必填字段都存在且格式正确\n\n"
+                        "请仅输出 JSON，不要附加任何解释。"
+                    )
+                    main_output, _ = _run_main_decision_stage(
+                        prompt=retry_prompt,
+                        guard_paths=main_guard_paths,
+                        label="MAIN_FINISH_CHECK_RETRY",
+                        sandbox_mode=sandbox_mode,
+                        approval_policy=approval_policy,
+                        control=control,
+                        resume_session_id=main_session_id,
+                        post_validate=None,
+                    )
+                else:
+                    main_output, _ = _run_main_decision_stage(
+                        prompt=main_prompt,
+                        guard_paths=main_guard_paths,
+                        label="MAIN_FINISH_CHECK",
+                        sandbox_mode=sandbox_mode,
+                        approval_policy=approval_policy,
+                        control=control,
+                        resume_session_id=main_session_id,
+                        post_validate=None,
+                    )
+
+                try:
+                    if _sha256_text(_read_text(DEV_PLAN_FILE)) != dev_plan_before_hash:
+                        raise RuntimeError(
+                            "MAIN must not modify `memory/dev_plan.md` directly. "
+                            f"Write the full next dev_plan to `{_rel_path(DEV_PLAN_STAGED_FILE)}` instead."
+                        )
+                    decision = main_output["decision"]
+                    break  # 校验通过，退出重试循环
+                except (TemporaryError, RuntimeError) as exc:
+                    finish_check_retry_attempt += 1
+                    if finish_check_retry_attempt >= max_finish_check_retries:
+                        # 重试耗尽，降级为直接 FINISH（忽略 FINISH_REVIEW 结果）
+                        _append_log_line(
+                            f"orchestrator: MAIN_FINISH_CHECK 重试耗尽，降级为直接 FINISH: {exc}\n"
+                        )
+                        decision = {"next_agent": "FINISH", "reason": f"FINISH_CHECK 重试耗尽: {exc}"}
+                        main_output = {
+                            "decision": decision,
+                            "history_append": f"## Iteration {iteration}:\nnext_agent: FINISH\nreason: FINISH_CHECK 重试耗尽，降级完成\nfinish_review_override: retry_exhausted",
+                            "task": None,
+                            "dev_plan_next": None,
+                        }
+                        break
+                    last_finish_check_error = str(exc)
+                    _append_log_line(
+                        f"orchestrator: MAIN_FINISH_CHECK 输出校验失败，重试 "
+                        f"({finish_check_retry_attempt}/{max_finish_check_retries}): {exc}\n"
+                    )
+                    print(f"Warning: MAIN_FINISH_CHECK 输出校验失败，重试: {exc}")
+                    continue
+
             log_event(
                 "stage_complete",
                 trace_id=trace_id,
@@ -1955,12 +2676,6 @@ def workflow_loop(
                 stage="MAIN_FINISH_CHECK",
                 duration_ms=int((time.monotonic() - main_finish_started) * 1000),
             )
-            if _sha256_text(_read_text(DEV_PLAN_FILE)) != dev_plan_before_hash:  # 关键分支：禁止直接改 dev_plan
-                raise RuntimeError(
-                    "MAIN must not modify `memory/dev_plan.md` directly. "
-                    f"Write the full next dev_plan to `{_rel_path(DEV_PLAN_STAGED_FILE)}` instead."
-                )
-            decision = main_output["decision"]  # 关键变量：最终决策字段
 
         # FINISH_CHECK 后如果决定继续（非 FINISH），使用下一个迭代号
         effective_iteration = iteration
@@ -1977,18 +2692,18 @@ def workflow_loop(
             changed = _count_dev_plan_status_changes(before=dev_plan_text, after=dev_plan_next)
             if changed > 5:
                 milestone_labels.append(f"dev_plan 重大更新({changed})")
-        # 提取 TEST 报告的 verdict 用于里程碑标记
-        last_test_verdict: str | None = None
-        if REPORT_TEST_FILE.exists():
+        # 提取 IMPLEMENTER 报告的 verdict 用于里程碑标记
+        last_implementer_verdict: str | None = None
+        if REPORT_IMPLEMENTER_FILE.exists():
             try:
-                test_report_text = _read_text(REPORT_TEST_FILE)
-                last_test_verdict = extract_report_verdict(
-                    report_text=test_report_text,
+                implementer_report_text = _read_text(REPORT_IMPLEMENTER_FILE)
+                last_implementer_verdict = extract_report_verdict(
+                    report_text=implementer_report_text,
                     report_rules=parse_report_rules(),
                 )
             except Exception:
                 pass  # 提取失败时忽略，不影响主流程
-        if last_test_verdict == "PASS" and not _history_has_milestone_tag("首次测试通过"):
+        if last_implementer_verdict == "PASS" and not _history_has_milestone_tag("首次测试通过"):
             milestone_labels.append("首次测试通过")
         history_entry = _mark_history_entry_milestone(
             iteration=iteration,
@@ -2053,142 +2768,108 @@ def workflow_loop(
             # 将 doc_patches 合并到 decision 中（doc_patches 在 main_output 顶层解析）
             user_decision = dict(decision)
             user_decision["doc_patches"] = main_output.get("doc_patches")
-            _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
+            user_choice, user_comment = _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
             _clear_resume_state()
+
+            # 【新增】USER 决策后立即更新决策模式文档
+            try:
+                _update_user_decision_patterns(
+                    iteration=iteration,
+                    decision=user_decision,  # type: ignore[arg-type]
+                    user_choice=user_choice,
+                    user_comment=user_comment,
+                )
+                _append_log_line(f"orchestrator: decision_patterns updated for iteration {iteration}\n")
+            except Exception as exc:
+                _append_log_line(f"orchestrator: decision_patterns error: {exc}\n")
+
             last_user_decision_iteration = iteration  # 关键变量：记录用户决策迭代号，供下一轮注入
             continue
 
-        # 处理并行审阅决策
-        if decision["next_agent"] == "PARALLEL_REVIEW":
-            if iteration not in PARALLEL_REVIEW_ITERATIONS:
-                raise ValueError(f"PARALLEL_REVIEW 仅允许在 iteration {PARALLEL_REVIEW_ITERATIONS} 使用，当前 iteration={iteration}")
-            parallel_reviews = main_output.get("parallel_reviews") or []
-            if not parallel_reviews:
-                raise ValueError("PARALLEL_REVIEW 决策缺少 parallel_reviews 列表")
+        # Context-centric 架构：处理 VALIDATE 决策（并行验证）
+        if decision["next_agent"] == "VALIDATE":
+            print(f"MAIN => VALIDATE (并行验证)")
+            _append_log_line(f"orchestrator: VALIDATE start, validators={PARALLEL_VALIDATORS}\n")
 
-            print(f"MAIN => PARALLEL_REVIEW ({len(parallel_reviews)} 个并发审阅)")
-            _append_log_line(f"orchestrator: PARALLEL_REVIEW start, count={len(parallel_reviews)}\n")
+            # 执行并行验证
+            validation_results = _run_parallel_validation(
+                iteration=iteration,
+                sandbox_mode=sandbox_mode,
+                approval_policy=approval_policy,
+                ui=ui,
+                control=control,
+            )
 
-            # 准备所有审阅任务的工单文件
-            review_tasks: list[tuple[str, Path, Path]] = []  # (focus, task_file, report_path)
-            for pr in parallel_reviews:
-                focus = pr["focus"]
-                task_content = pr["task"]
-                review_task_file = WORKSPACE_DIR / "review" / f"current_task_{focus}.md"
-                review_report_path = REPORTS_DIR / f"report_review_{focus}.md"
-                review_task_file.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_write_text(review_task_file, task_content + "\n")
-                review_tasks.append((focus, review_task_file, review_report_path))
-
-            # 并发执行所有审阅任务
-            import concurrent.futures
-            parallel_results: list[tuple[str, str, Path, float, str | None]] = []  # (focus, content, path, duration, error)
-
-            def run_single_review(task_info: tuple[str, Path, Path]) -> tuple[str, str, Path, float, str | None]:
-                focus, task_file, report_path = task_info
-                started = time.monotonic()
-                try:
-                    _run_subagent_stage(
-                        iteration=iteration,
-                        next_agent="REVIEW",
-                        sandbox_mode=sandbox_mode,
-                        approval_policy=approval_policy,
-                        ui=None,  # 并发时不更新 UI，避免竞争
-                        control=control,
-                        report_path_override=report_path,
-                        task_file_override=task_file,
-                        extra_prompt_parts=[f"[审阅侧重点]: {focus}"],
-                    )
-                    content = _read_text(report_path)
-                    duration = time.monotonic() - started
-                    return (focus, content, report_path, duration, None)
-                except Exception as exc:
-                    duration = time.monotonic() - started
-                    return (focus, f"审阅失败: {exc}", report_path, duration, str(exc))
-
-            # 使用线程池并发执行（最多 4 个并发）
-            with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(review_tasks), MAX_PARALLEL_REVIEWS)) as executor:
-                # 提交所有任务
-                future_to_focus = {executor.submit(run_single_review, task): task[0] for task in review_tasks}
-
-                # 收集结果并打印进度
-                completed = 0
-                for future in concurrent.futures.as_completed(future_to_focus):
-                    focus = future_to_focus[future]
-                    completed += 1
-                    try:
-                        result = future.result()
-                        parallel_results.append(result)
-                        status = "DONE" if result[4] is None else f"ERROR: {result[4]}"
-                        print(f"  [{completed}/{len(review_tasks)}] REVIEW(focus={focus}) {status} ({result[3]:.1f}s)")
-                        _append_log_line(f"orchestrator: PARALLEL_REVIEW done focus={focus} duration_ms={int(result[3] * 1000)} error={result[4]}\n")
-                    except Exception as exc:
-                        print(f"  [{completed}/{len(review_tasks)}] REVIEW(focus={focus}) FAILED: {exc}")
-                        _append_log_line(f"orchestrator: PARALLEL_REVIEW failed focus={focus}: {exc}\n")
-
-            # 按原始顺序排序结果
-            focus_order = [t[0] for t in review_tasks]
-            parallel_results.sort(key=lambda r: focus_order.index(r[0]))
-
-            # 将所有并行审阅报告合并写入主 REVIEW 报告，供下一轮 MAIN 读取
-            success_count = sum(1 for r in parallel_results if r[4] is None)
-            error_count = len(parallel_results) - success_count
-            combined_report_lines = [
-                f"# 并行审阅报告 (Iteration {iteration})",
-                f"共 {len(parallel_results)} 个审阅，成功 {success_count} 个，失败 {error_count} 个",
-                "",
-            ]
-            for focus, content, path, duration, error in parallel_results:
-                status = "成功" if error is None else f"失败: {error}"
-                combined_report_lines.extend([
-                    f"## 审阅: {focus} ({status}, {duration:.1f}s)",
-                    f"报告路径: {_rel_path(path)}",
-                    "",
-                    content,
-                    "",
-                    "---",
-                    "",
-                ])
-            _atomic_write_text(REPORT_REVIEW_FILE, "\n".join(combined_report_lines))
+            # 执行 SYNTHESIZER 汇总结果
+            synthesizer_output = _run_synthesizer(
+                iteration=iteration,
+                validation_results=validation_results,
+                sandbox_mode=sandbox_mode,
+                approval_policy=approval_policy,
+                ui=ui,
+                control=control,
+            )
 
             _clear_resume_state()
-            last_subagent = "PARALLEL_REVIEW"
+            last_subagent = "VALIDATE"
             continue
 
-        # 2) 子代理：只读工单并输出报告（报告由 --output-last-message 落盘）
-        sub_started = time.monotonic()
-        sub_session_id, task_file, report_path = _run_subagent_stage(
-            iteration=iteration,
-            next_agent=decision["next_agent"],
-            sandbox_mode=sandbox_mode,
-            approval_policy=approval_policy,
-            ui=ui,
-            control=control,
-        )
-        log_event(
-            "stage_complete",
-            trace_id=trace_id,
-            iteration=iteration,
-            stage=decision["next_agent"],
-            duration_ms=int((time.monotonic() - sub_started) * 1000),
-        )
-
-        _write_resume_state(
-            iteration=iteration,
-            phase="after_subagent",
-            next_agent=decision["next_agent"],
-            main_session_id=main_session_id,
-            subagent_session_id=sub_session_id,
-            last_compact_iteration=last_compact_iteration,
-        )
-
-        # SUMMARY 同步执行，确保摘要写入后再进入下一轮
-        # 虽然增加约 30-50 秒延迟，但保证摘要不会因程序中断而丢失
-        summary_started = time.monotonic()
-        try:
-            _run_summary_stage(
+        # Context-centric 架构：处理 IMPLEMENTER 决策
+        if decision["next_agent"] == "IMPLEMENTER":
+            # 2) 子代理：只读工单并输出报告（报告由 --output-last-message 落盘）
+            sub_started = time.monotonic()
+            sub_session_id, task_file, report_path = _run_subagent_stage(
                 iteration=iteration,
-                next_agent=decision["next_agent"],
+                next_agent="IMPLEMENTER",
+                sandbox_mode=sandbox_mode,
+                approval_policy=approval_policy,
+                ui=ui,
+                control=control,
+            )
+
+            # ========== 记录子代理会话 token 使用情况 ==========
+            if sub_session_id:
+                sub_cli_name = get_cli_for_agent("IMPLEMENTER")
+                sub_token_info = get_session_token_info(sub_session_id, sub_cli_name)
+                if sub_token_info:
+                    sub_token_msg = (
+                        f"orchestrator: iteration {iteration} IMPLEMENTER context: "
+                        f"{format_token_info(sub_token_info)}\n"
+                    )
+                    _append_log_line(sub_token_msg)
+                    print(sub_token_msg, end="", flush=True)
+                    if ui is not None:
+                        ui.state.update(subagent_token_info=sub_token_info)
+
+            log_event(
+                "stage_complete",
+                trace_id=trace_id,
+                iteration=iteration,
+                stage="IMPLEMENTER",
+                duration_ms=int((time.monotonic() - sub_started) * 1000),
+            )
+
+            _write_resume_state(
+                iteration=iteration,
+                phase="after_subagent",
+                next_agent="IMPLEMENTER",
+                main_session_id=main_session_id,
+                subagent_session_id=sub_session_id,
+                last_compact_iteration=last_compact_iteration,
+            )
+
+            # 写入迭代元数据（同步，极快）- 用于替代 SUMMARY 历史的依赖
+            _append_iteration_metadata(
+                iteration=iteration,
+                agent="IMPLEMENTER",
+                session_id=sub_session_id,
+                report_file=report_path,
+            )
+
+            # SUMMARY 改为后台异步执行，不阻塞主流程
+            _submit_supervisor_task(
+                iteration=iteration,
+                next_agent="IMPLEMENTER",
                 main_session_id=main_session_id,
                 subagent_session_id=sub_session_id,
                 task_file=task_file,
@@ -2196,21 +2877,15 @@ def workflow_loop(
                 sandbox_mode=sandbox_mode,
                 approval_policy=approval_policy,
                 ui=ui,
-                control=control,
             )
-            log_event(
-                "stage_complete",
-                trace_id=trace_id,
-                iteration=iteration,
-                stage="SUMMARY",
-                duration_ms=int((time.monotonic() - summary_started) * 1000),
-            )
-        except Exception as exc:
-            # SUMMARY 失败不影响主流程，仅记录日志
-            _append_log_line(f"orchestrator: SUMMARY error: {exc}\n")
 
-        _clear_resume_state()
-        # 记录本轮运行的子代理，供下一轮 MAIN 注入报告
-        last_subagent = decision["next_agent"]
+            _clear_resume_state()
+            last_subagent = "IMPLEMENTER"
+            continue
 
+        # 未知的 next_agent
+        raise RuntimeError(f"Unknown next_agent: {decision['next_agent']}")
+
+    # 等待所有后台监督任务完成
+    _shutdown_supervisor()
     raise RuntimeError(f"Reached max_iterations={max_iterations} without FINISH")

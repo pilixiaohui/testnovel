@@ -13,9 +13,7 @@ from .config import (
     ORCHESTRATOR_LOG_FILE,
     PROJECT_ROOT,
     RESUME_STATE_FILE,
-    TEST_SESSION_ID_FILE,
-    DEV_SESSION_ID_FILE,
-    REVIEW_SESSION_ID_FILE,
+    IMPLEMENTER_SESSION_ID_FILE,
     get_cli_for_agent,
     get_cli_extra_args,
 )
@@ -86,9 +84,7 @@ def _save_main_iteration(iteration: int) -> None:
 # ============= 子代理会话管理 =============
 
 _SUBAGENT_SESSION_FILES: dict[str, Path] = {
-    "TEST": TEST_SESSION_ID_FILE,
-    "DEV": DEV_SESSION_ID_FILE,
-    "REVIEW": REVIEW_SESSION_ID_FILE,
+    "IMPLEMENTER": IMPLEMENTER_SESSION_ID_FILE,
 }
 
 
@@ -110,7 +106,8 @@ def _save_subagent_session_id(agent: str, session_id: str) -> None:
     """保存子代理的会话 ID（用于后续 resume）"""
     session_file = _SUBAGENT_SESSION_FILES.get(agent)
     if session_file is None:
-        raise ValueError(f"Unknown subagent: {agent}")
+        # Context-centric 架构：验证器不需要保存会话
+        return
     _validate_session_id(session_id)
     session_file.parent.mkdir(parents=True, exist_ok=True)
     _atomic_write_text(session_file, f"{session_id}\n")

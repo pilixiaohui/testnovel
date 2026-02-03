@@ -4,10 +4,14 @@ import json
 from datetime import datetime
 from queue import Empty
 
-from .config import PROJECT_HISTORY_FILE
+from .config import (
+    PROJECT_HISTORY_FILE,
+    USER_DECISION_PATTERNS_FILE,
+    ENABLE_DECISION_PATTERNS,
+)
 from .file_ops import _append_log_line
 from .state import UiRuntime, UserInterrupted
-from .types import MainDecision, MainDecisionUser, MainOutput, UserDecisionOption, ParallelReviewItem
+from .types import MainDecision, MainDecisionUser, MainOutput, UserDecisionOption
 
 
 def _extract_json_object(raw_json: str) -> str | None:
@@ -72,39 +76,15 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
     next_agent = decision.get("next_agent")  # 关键变量：目标代理
     reason = decision.get("reason")  # 关键变量：决策理由
 
-    allowed: set[str] = {"TEST", "DEV", "REVIEW", "FINISH", "USER", "PARALLEL_REVIEW"}
+    # Context-centric 架构：IMPLEMENTER 合并 TEST+DEV，VALIDATE 触发并行验证
+    allowed: set[str] = {"IMPLEMENTER", "VALIDATE", "FINISH", "USER"}
     if next_agent not in allowed:  # 关键分支：非法代理
         raise ValueError(f"Invalid next_agent: {next_agent!r}, allowed: {sorted(allowed)}")
     if not isinstance(reason, str) or not reason.strip():  # 关键分支：理由缺失
         raise ValueError("Invalid reason: must be a non-empty string")
 
-    # 处理并行审阅决策
-    if next_agent == "PARALLEL_REVIEW":
-        parallel_reviews = decision.get("parallel_reviews")
-        if not isinstance(parallel_reviews, list) or len(parallel_reviews) == 0:
-            raise ValueError("PARALLEL_REVIEW 必须包含非空 parallel_reviews 数组")
-        if len(parallel_reviews) > 4:
-            raise ValueError("parallel_reviews 最多支持 4 个并行审阅")
-
-        parsed_reviews: list[ParallelReviewItem] = []
-        valid_focus = {"requirements", "architecture", "risk", "scope", "custom"}
-        for idx, pr in enumerate(parallel_reviews, start=1):
-            if not isinstance(pr, dict):
-                raise ValueError(f"parallel_reviews[{idx}] 必须是对象")
-            focus = pr.get("focus")
-            task = pr.get("task")
-            if not isinstance(focus, str) or not focus.strip():
-                raise ValueError(f"parallel_reviews[{idx}].focus 必须是非空字符串")
-            if not isinstance(task, str) or not task.strip():
-                raise ValueError(f"parallel_reviews[{idx}].task 必须是非空字符串")
-            # 允许自定义 focus，但建议使用标准类型
-            parsed_reviews.append({"focus": focus.strip(), "task": task.strip()})
-
-        return {
-            "next_agent": "PARALLEL_REVIEW",
-            "reason": reason.strip(),
-            "parallel_reviews": parsed_reviews,
-        }
+    # 处理并行审阅决策 - Context-centric 架构已移除 PARALLEL_REVIEW
+    # 保留代码以兼容旧数据，但不再支持新的 PARALLEL_REVIEW 决策
 
     if next_agent != "USER":  # 关键分支：非 USER 直接返回最小决策
         return {"next_agent": next_agent, "reason": reason.strip()}  # type: ignore[return-value]
@@ -186,20 +166,20 @@ def _parse_main_output(raw_json: str) -> MainOutput:
     task = payload.get("task")  # 关键变量：工单内容（可为空）
     next_agent = decision["next_agent"]  # 关键变量：目标代理
 
-    # 并行审阅从 decision 中提取
-    parallel_reviews = None
-    if next_agent == "PARALLEL_REVIEW":
-        parallel_reviews = decision.get("parallel_reviews")  # type: ignore[union-attr]
-
-    if next_agent in {"TEST", "DEV", "REVIEW"}:  # 关键分支：子代理必须有工单
-        if not isinstance(task, str) or not task.strip():  # 关键分支：子代理必须有工单
+    # Context-centric 架构：IMPLEMENTER 需要工单
+    if next_agent == "IMPLEMENTER":
+        if not isinstance(task, str) or not task.strip():
             raise ValueError(f"Invalid task: must be a non-empty string when next_agent={next_agent}")
-    elif next_agent == "PARALLEL_REVIEW":  # 关键分支：并行审阅不需要 task
+    elif next_agent in {"VALIDATE", "FINISH"}:
+        # VALIDATE 和 FINISH 不需要 task
+        if task is not None and isinstance(task, str) and task.strip():
+            raise ValueError(f"Invalid task: must be null when next_agent={next_agent}")
+    elif next_agent == "USER":
+        # USER 决策不需要 task
         pass
-    else:  # 关键分支：非子代理必须为 null
-        if task is not None:  # 关键分支：存在 task 时继续校验
-            if not isinstance(task, str) or task.strip():  # 关键分支：非子代理必须为 null
-                raise ValueError(f"Invalid task: must be null when next_agent={next_agent}")
+    else:
+        # 其他情况：task 可选
+        pass
 
     # 解析文档修正建议（仅 USER 决策时）
     doc_patches = None
@@ -238,7 +218,6 @@ def _parse_main_output(raw_json: str) -> MainOutput:
         "history_append": history_append,
         "task": task if isinstance(task, str) else None,
         "dev_plan_next": dev_plan_next if isinstance(dev_plan_next, str) else None,
-        "parallel_reviews": parallel_reviews,
         "doc_patches": doc_patches,
     }
 
@@ -297,8 +276,8 @@ def _prompt_user_for_decision(
     iteration: int,
     decision: MainDecisionUser,
     ui: UiRuntime | None,
-) -> str:
-    """返回用户选择的 option_id"""
+) -> tuple[str, str | None]:
+    """返回 (user_choice, user_comment) 元组"""
     # 显示文档修正建议（如果有）
     doc_patches = decision.get("doc_patches")
 
@@ -351,7 +330,7 @@ def _prompt_user_for_decision(
             user_comment=user_comment,
         )
         print(f"Recorded user_choice: {user_choice}")
-        return user_choice
+        return user_choice, user_comment if user_comment else None
 
     ui.state.update(phase="awaiting_user", iteration=iteration, current_agent="USER", awaiting_user_decision=decision)  # 关键变量：UI 进入等待态
     _append_log_line(f"\nawaiting_user_decision: {decision['decision_title']}\n")
@@ -380,4 +359,83 @@ def _prompt_user_for_decision(
     )
     ui.state.update(phase="running", awaiting_user_decision=None)  # 关键变量：UI 回到运行态
     _append_log_line(f"user_choice_recorded: {user_choice}\n")
-    return user_choice
+    return user_choice, user_comment
+
+
+def _update_user_decision_patterns(
+    *,
+    iteration: int,
+    decision: MainDecisionUser,
+    user_choice: str,
+    user_comment: str | None,
+) -> None:
+    """
+    USER 决策后立即更新决策模式文档。
+
+    此函数在 workflow.py 的 USER 分支中调用，
+    因为 USER 决策后直接 continue，不经过 SUMMARY 阶段。
+    """
+    if not ENABLE_DECISION_PATTERNS:
+        return
+
+    timestamp = datetime.now().isoformat(timespec="seconds")
+
+    # 读取现有内容或创建新文件
+    if USER_DECISION_PATTERNS_FILE.exists():
+        existing = USER_DECISION_PATTERNS_FILE.read_text(encoding="utf-8")
+    else:
+        existing = _create_decision_patterns_header()
+
+    # 提取决策信息
+    decision_title = decision.get("decision_title", "")
+    options = decision.get("options", [])
+    recommended = decision.get("recommended_option_id")
+
+    # 找到用户选择的选项描述
+    choice_desc = ""
+    for opt in options:
+        if opt.get("option_id") == user_choice:
+            choice_desc = opt.get("description", "")
+            break
+
+    # 构建新记录
+    new_entry = [
+        "",
+        f"### Iteration {iteration} ({timestamp})",
+        "",
+        f"**问题**: {decision_title}",
+        "",
+        f"- **选择**: {user_choice} - {choice_desc}",
+    ]
+
+    if recommended:
+        was_recommended = "是" if user_choice == recommended else "否"
+        new_entry.append(f"- **是否采纳推荐**: {was_recommended}（推荐: {recommended}）")
+
+    if user_comment and user_comment.strip():
+        # 截断过长的备注
+        comment = user_comment.strip()
+        if len(comment) > 200:
+            comment = comment[:200] + "..."
+        new_entry.append(f"- **用户备注**: {comment}")
+
+    new_entry.append("")
+
+    # 写入文件
+    USER_DECISION_PATTERNS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    USER_DECISION_PATTERNS_FILE.write_text(
+        existing + "\n".join(new_entry),
+        encoding="utf-8"
+    )
+    _append_log_line(f"decision_patterns: updated for iteration {iteration}\n")
+
+
+def _create_decision_patterns_header() -> str:
+    """创建决策模式文档头部"""
+    return """# 用户决策习惯整合
+
+> 此文档记录您在工作流中的决策历史，帮助您了解自己的决策模式。
+
+## 决策记录
+
+"""

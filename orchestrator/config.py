@@ -16,10 +16,8 @@ MAIN_SESSION_ID_FILE = CODEX_STATE_DIR / "main_session_id.txt"  # 关键变量�
 MAIN_ITERATION_FILE = CODEX_STATE_DIR / "main_iteration.txt"  # 关键变量：MAIN 迭代文件
 RESUME_STATE_FILE = CODEX_STATE_DIR / "resume_state.json"  # 关键变量：中断续跑状态文件
 
-# 子代理会话文件（用于 resume）
-TEST_SESSION_ID_FILE = CODEX_STATE_DIR / "test_session_id.txt"  # 关键变量：TEST 会话文件
-DEV_SESSION_ID_FILE = CODEX_STATE_DIR / "dev_session_id.txt"  # 关键变量：DEV 会话文件
-REVIEW_SESSION_ID_FILE = CODEX_STATE_DIR / "review_session_id.txt"  # 关键变量：REVIEW 会话文件
+# 子代理会话文件（用于 resume）- Context-centric 架构
+IMPLEMENTER_SESSION_ID_FILE = CODEX_STATE_DIR / "implementer_session_id.txt"  # 关键变量：IMPLEMENTER 会话文件
 
 # 从配置获取路径（保持全局变量兼容性）
 MEMORY_DIR = CONFIG.memory_dir  # 关键变量：memory 目录
@@ -33,18 +31,27 @@ DEV_PLAN_FILE = CONFIG.dev_plan_file  # 关键变量：计划文件
 FINISH_REVIEW_CONFIG_FILE = CONFIG.finish_review_config_file  # 关键变量：最终审阅配置文件
 VERIFICATION_POLICY_FILE = CONFIG.verification_policy_file  # 关键变量：验证策略配置文件
 DEV_PLAN_STAGED_FILE = CONFIG.dev_plan_staged_file  # 关键变量：计划暂存文件
-TEST_TASK_FILE = CONFIG.test_task_file  # 关键变量：TEST 工单
-DEV_TASK_FILE = CONFIG.dev_task_file  # 关键变量：DEV 工单
-REVIEW_TASK_FILE = CONFIG.review_task_file  # 关键变量：REVIEW 工单
 
-REPORT_TEST_FILE = CONFIG.report_test_file  # 关键变量：TEST 报告
-REPORT_DEV_FILE = CONFIG.report_dev_file  # 关键变量：DEV 报告
-REPORT_REVIEW_FILE = CONFIG.report_review_file  # 关键变量：REVIEW 报告
+# Context-centric 架构：IMPLEMENTER 工单和报告
+IMPLEMENTER_TASK_FILE = WORKSPACE_DIR / "implementer" / "current_task.md"  # 关键变量：IMPLEMENTER 工单
+REPORT_IMPLEMENTER_FILE = REPORTS_DIR / "report_implementer.md"  # 关键变量：IMPLEMENTER 报告
+
+# Context-centric 架构：验证器工作区和报告
+VALIDATOR_WORKSPACE_DIR = WORKSPACE_DIR / "validators"  # 关键变量：验证器工作区目录
+VALIDATOR_REPORTS_DIR = REPORTS_DIR / "report_validators"  # 关键变量：验证器报告目录
+SYNTHESIZER_REPORT_FILE = REPORTS_DIR / "report_synthesizer.md"  # 关键变量：SYNTHESIZER 报告
+VALIDATION_RESULTS_FILE = REPORTS_DIR / "validation_results.json"  # 关键变量：结构化验证结果
+
 REPORT_FINISH_REVIEW_FILE = CONFIG.report_finish_review_file  # 关键变量：FINISH_REVIEW 报告
 REPORT_MAIN_DECISION_FILE = CONFIG.report_main_decision_file  # 关键变量：MAIN 决策输出
 REPORT_ITERATION_SUMMARY_FILE = CONFIG.report_iteration_summary_file  # 关键变量：每轮摘要输出
 REPORT_ITERATION_SUMMARY_HISTORY_FILE = CONFIG.report_iteration_summary_history_file  # 关键变量：摘要历史输出
 ORCHESTRATOR_LOG_FILE = REPORTS_DIR / "orchestrator.log"  # 关键变量：编排器日志
+
+# 监督代理并行化相关文件
+ITERATION_METADATA_FILE = REPORTS_DIR / "iteration_metadata.jsonl"  # 关键变量：迭代元数据（主流程写入）
+REPORT_SUPERVISOR_FILE = REPORTS_DIR / "report_supervisor.json"  # 关键变量：监督代理输出
+REPORT_SUPERVISOR_HISTORY_FILE = REPORTS_DIR / "report_supervisor_history.jsonl"  # 关键变量：监督历史
 ORCHESTRATOR_EVENTS_FILE = REPORTS_DIR / "orchestrator_events.jsonl"  # 关键变量：编排器事件日志
 
 REPORTS_BACKUP_DIR = CONFIG.reports_backup_dir  # 关键变量：报告备份目录
@@ -62,9 +69,10 @@ MAX_ITERATIONS = 100  # 关键变量：最大迭代轮数
 MAX_FINISH_ATTEMPTS = 3  # 关键变量：最大 FINISH 尝试次数
 REQUIRE_ALL_VERIFIED_FOR_FINISH = True  # 关键变量：是否要求所有任务 VERIFIED 才能 FINISH
 
-# 并行审阅参数
-MAX_PARALLEL_REVIEWS = 4  # 关键变量：最大并行审阅数量
-PARALLEL_REVIEW_ITERATIONS = {1, 2}  # 关键变量：允许并行审阅的迭代（仅计划制定阶段）
+# 并行验证参数（Context-centric 架构）
+PARALLEL_VALIDATORS = ["TEST_RUNNER", "REQUIREMENT_VALIDATOR", "ANTI_CHEAT_DETECTOR", "EDGE_CASE_TESTER"]  # 关键变量：并行验证器列表
+MAX_PARALLEL_VALIDATORS = 4  # 关键变量：最大并行验证器数量
+VALIDATOR_TIMEOUT_MS = 300000  # 关键变量：验证器超时时间（5分钟）
 
 # 上下文管理参数（新增）
 KEEP_RECENT_MILESTONES = 2  # 关键变量：dev_plan 保留最近 N 个 Milestone
@@ -95,6 +103,15 @@ UPLOADED_DOCS_MAX_BYTES = 5 * 1024 * 1024  # 关键变量：上传文档大小�
 # 新增缓存路径
 REPORT_SUMMARY_CACHE_FILE = PROJECT_ROOT / "orchestrator" / "cache" / "report_summaries.json"  # 关键变量：报告摘要缓存
 
+# ============= 用户洞察与决策模式配置 =============
+USER_INSIGHT_REPORT_FILE = REPORTS_DIR / "user_insight_report.md"  # 关键变量：用户洞察报告
+USER_INSIGHT_HISTORY_FILE = REPORTS_DIR / "user_insight_history.jsonl"  # 关键变量：洞察历史
+USER_DECISION_PATTERNS_FILE = MEMORY_DIR / "user_decision_patterns.md"  # 关键变量：用户决策模式
+
+# 功能开关
+ENABLE_BEHAVIOR_AUDIT = True  # 关键变量：是否启用行为审计
+ENABLE_DECISION_PATTERNS = True  # 关键变量：是否启用决策模式整合
+
 # 上下文压缩配置
 COMPACT_INTERVAL = 3  # 每 N 轮压缩一次（0 表示禁用）
 COMPACT_INSTRUCTIONS = """侧重保留：
@@ -110,37 +127,59 @@ COMPACT_INSTRUCTIONS = """侧重保留：
 - 项目目录结构
 - 全局上下文（压缩后会重新注入）"""
 
-# 子代理压缩指令（针对 TEST/DEV/REVIEW）
+# 子代理压缩指令（针对 IMPLEMENTER）
 SUBAGENT_COMPACT_INSTRUCTIONS = """你的任务是/compact当前对话上下文后退出，不需要执行其他的任务。压缩过程侧重保留：
 1. 当前任务的关键发现和结论
 2. 已执行的命令及其结果摘要
 3. 遇到的问题和解决方案
-4. 代码修改的关键决策（DEV）/ 测试设计思路（TEST）/ 审查发现（REVIEW）
+4. TDD 流程中的测试设计思路和实现决策
 """
 
-# ============= CLI 工具配置 =============
+# ============= CLI 工具配置（Context-centric 架构） =============
 # 每个代理可以配置使用不同的 CLI 工具
 # 支持的 CLI: codex, claude, opencode
-CLI_CONFIG: dict[str, dict[str, str | list[str]]] = {
+CLI_CONFIG: dict[str, dict[str, str | list[str] | bool]] = {
     "MAIN": {
         "cli": "claude",           # MAIN 使用 claude CLI
         "extra_args": [],         # 额外参数
+        "enable_resume": True,    # MAIN 保持 resume 模式
     },
-    "DEV": {
+    # Context-centric 架构：IMPLEMENTER（合并 TEST+DEV）
+    "IMPLEMENTER": {
         "cli": "codex",
         "extra_args": ["--model", "gpt-5.2-codex"],
+        "enable_resume": False,   # 暂时禁用 resume（codex /compact 无效）
     },
-    "TEST": {
-        "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2-codex"],
-    },
-    "REVIEW": {
+    # Context-centric 架构：并行验证器（轻量级）
+    "TEST_RUNNER": {
         "cli": "codex",
         "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
+    },
+    "REQUIREMENT_VALIDATOR": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
+    },
+    "ANTI_CHEAT_DETECTOR": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
+    },
+    "EDGE_CASE_TESTER": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
+    },
+    "SYNTHESIZER": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
     },
     "SUMMARY": {
         "cli": "codex",
         "extra_args": ["--model", "gpt-5.2"],
+        "enable_resume": False,
     },
 }
 
@@ -148,8 +187,8 @@ CLI_CONFIG: dict[str, dict[str, str | list[str]]] = {
 # 配置哪些代理需要注入 MCP 工具指南
 MCP_TOOLS_GUIDE_FILE = PROMPTS_DIR / "mcp_tools_guide.md"  # 关键变量：MCP 工具指南文件
 
-# 需要注入 MCP 工具指南的代理列表（默认所有子代理）
-MCP_TOOLS_INJECT_AGENTS: set[str] = {"DEV", "TEST", "REVIEW", "FINISH_REVIEW"}
+# 需要注入 MCP 工具指南的代理列表（Context-centric 架构）
+MCP_TOOLS_INJECT_AGENTS: set[str] = {"IMPLEMENTER", "FINISH_REVIEW"}
 
 
 def get_cli_for_agent(agent: str) -> str:
@@ -163,6 +202,16 @@ def get_cli_extra_args(agent: str) -> list[str]:
     agent_config = CLI_CONFIG.get(agent, {})
     extra = agent_config.get("extra_args", [])
     return list(extra) if extra else []
+
+
+def is_resume_enabled(agent: str) -> bool:
+    """检查指定代理是否启用 resume 模式
+
+    返回 False 时，子代理每次都新开会话（不使用历史会话 ID）。
+    中断重续场景由 workflow 层单独处理，不受此配置影响。
+    """
+    agent_config = CLI_CONFIG.get(agent, {})
+    return bool(agent_config.get("enable_resume", True))
 
 
 def _list_editable_md_files() -> list[str]:
