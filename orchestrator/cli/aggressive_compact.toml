@@ -10,4 +10,4 @@ base_url = "http://152.53.165.53:3000/v1"
 wire_api = "responses"
 env_key = "PP_CODEX"
 
-auto_compact_limit = 5000
+auto_compact_limit = 150000

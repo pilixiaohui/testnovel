@@ -9,7 +9,7 @@ from typing import Iterable
 
 from .config import DEV_PLAN_FILE, ORCHESTRATOR_LOG_FILE, PROJECT_HISTORY_FILE, PROJECT_ROOT
 
-from project import ProjectTemplates
+from .project import ProjectTemplates
 
 
 def _require_file(path: Path) -> None:
@@ -107,6 +107,43 @@ def _assert_files_unchanged(before: dict[Path, str | None], *, label: str) -> No
         else:  # 关键分支：文件消失
             if digest is not None:  # 关键分支：原本存在却被删除
                 raise RuntimeError(f"{label} deleted required file: {_rel_path(path)}")
+
+
+def _assert_files_unchanged_tolerant(
+    before: dict[Path, str | None],
+    *,
+    label: str,
+    tolerate_paths: frozenset[Path],
+) -> dict[Path, str | None]:
+    """
+    与 _assert_files_unchanged 相同逻辑，但对 tolerate_paths 中的文件
+    仅记录变更而非抛异常。
+
+    Returns:
+        dict 映射 {被容忍且确实发生变更的路径: 变更后的哈希(或 None 表示被删)}
+    """
+    changed: dict[Path, str | None] = {}
+    for path, digest in before.items():
+        if path.exists():
+            if digest is None:
+                if path in tolerate_paths:
+                    changed[path] = _sha256_text(_read_text(path))
+                else:
+                    raise RuntimeError(f"{label} created forbidden file: {_rel_path(path)}")
+            else:
+                current = _sha256_text(_read_text(path))
+                if current != digest:
+                    if path in tolerate_paths:
+                        changed[path] = current
+                    else:
+                        raise RuntimeError(f"{label} modified forbidden file: {_rel_path(path)}")
+        else:
+            if digest is not None:
+                if path in tolerate_paths:
+                    changed[path] = None
+                else:
+                    raise RuntimeError(f"{label} deleted required file: {_rel_path(path)}")
+    return changed
 
 
 def _sha256_text(text: str) -> str:

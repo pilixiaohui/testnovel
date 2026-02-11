@@ -34,8 +34,12 @@ class CodexRunner(CLIRunner):
 
     @property
     def supports_compact(self) -> bool:
-        """Codex 通过 auto_compact_limit 支持自动压缩"""
-        return True
+        """Codex 不支持 /compact 命令
+
+        Codex 的 auto_compact_limit 只是一个配置参数，不是真正的压缩命令。
+        /compact 会被当作普通文本发送给模型，不会实际压缩上下文。
+        """
+        return False
 
     def build_command(
         self,

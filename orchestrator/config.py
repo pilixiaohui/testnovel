@@ -4,9 +4,29 @@ import os
 
 from pathlib import Path
 
-from project import ProjectConfig, ProjectTemplates
+from .project import ProjectConfig, ProjectTemplates
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]  # 关键变量：项目根目录
+
+ORCHESTRATOR_HOME_ENV = "AINOVEL_ORCHESTRATOR_HOME"
+
+
+def _resolve_orchestrator_home() -> Path:
+    source_root = Path(__file__).resolve().parents[1]
+    if (source_root / "orchestrator.py").is_file():
+        configured = os.getenv(ORCHESTRATOR_HOME_ENV)
+        if configured:
+            raise RuntimeError(
+                f"{ORCHESTRATOR_HOME_ENV} is no longer supported. "
+                "Use repository mode only: unset this variable and run ./dev-start.sh"
+            )
+        return source_root
+
+    raise RuntimeError(
+        "orchestrator must run inside source tree (repository mode only)"
+    )
+
+
+PROJECT_ROOT = _resolve_orchestrator_home()  # 关键变量：编排器工作根目录
 
 # 初始化项目配置
 CONFIG = ProjectConfig(PROJECT_ROOT)  # 关键变量：项目配置实例
@@ -57,6 +77,7 @@ ORCHESTRATOR_EVENTS_FILE = REPORTS_DIR / "orchestrator_events.jsonl"  # 关键�
 REPORTS_BACKUP_DIR = CONFIG.reports_backup_dir  # 关键变量：报告备份目录
 WORKSPACE_BACKUP_DIR = CONFIG.workspace_backup_dir  # 关键变量：工单备份目录
 MEMORY_BACKUP_DIR = CONFIG.memory_backup_dir  # 关键变量：memory 备份目录
+ITERATION_ARCHIVE_DIR = REPORTS_DIR / "iterations"  # 关键变量：迭代归档根目录
 
 # 从配置获取验证规则（保持全局变量兼容性）
 DEV_PLAN_ALLOWED_STATUSES: set[str] = CONFIG.dev_plan_allowed_statuses  # 关键变量：合法状态集合
@@ -69,10 +90,93 @@ MAX_ITERATIONS = 100  # 关键变量：最大迭代轮数
 MAX_FINISH_ATTEMPTS = 3  # 关键变量：最大 FINISH 尝试次数
 REQUIRE_ALL_VERIFIED_FOR_FINISH = True  # 关键变量：是否要求所有任务 VERIFIED 才能 FINISH
 
+# 重试与退避配置
+MAX_STAGE_RETRIES = 4  # 关键变量：stage 级最大重试次数（总共 N+1 次尝试）
+BACKOFF_BASE_SECONDS = 300.0  # 关键变量：退避基数（秒），300 = 5分钟
+BACKOFF_MAX_SECONDS = 600.0  # 关键变量：单次退避上限（秒），600 = 10分钟
+
+# MAIN 专用重试与退避配置（仅用于 MAIN 决策阶段）
+MAIN_MAX_STAGE_RETRIES = 2  # 关键变量：MAIN 最大重试次数（总共 N+1 次尝试）
+MAIN_BACKOFF_BASE_SECONDS = 2.0  # 关键变量：MAIN 退避基数（秒）
+MAIN_BACKOFF_MAX_SECONDS = 8.0  # 关键变量：MAIN 退避上限（秒）
+
+# MAIN 专用权限策略（保持 MAIN 只做决策、不做执行）
+MAIN_SANDBOX_MODE = "read-only"  # 关键变量：MAIN 强制只读
+MAIN_APPROVAL_POLICY = "on-request"  # 关键变量：MAIN 使用请求式审批
+
 # 并行验证参数（Context-centric 架构）
 PARALLEL_VALIDATORS = ["TEST_RUNNER", "REQUIREMENT_VALIDATOR", "ANTI_CHEAT_DETECTOR", "EDGE_CASE_TESTER"]  # 关键变量：并行验证器列表
 MAX_PARALLEL_VALIDATORS = 4  # 关键变量：最大并行验证器数量
-VALIDATOR_TIMEOUT_MS = 300000  # 关键变量：验证器超时时间（5分钟）
+VALIDATOR_TIMEOUT_MS = 30000000  # 关键变量：验证器超时时间（500分钟）
+
+# ============= 验证器上下文配置（配置驱动） =============
+from .types import ValidatorContextConfig
+
+# 默认验证器配置
+_DEFAULT_VALIDATOR_CONFIG: ValidatorContextConfig = {
+    "validator": "",
+    "requires_implementer_report": True,
+    "requires_dev_plan": True,
+    "requires_code_root": True,
+    "requires_test_commands": False,
+    "requires_api_signatures": False,
+    "requires_modified_files": False,
+    "custom_context_keys": [],
+}
+
+# 各验证器的上下文配置
+VALIDATOR_CONTEXT_CONFIG: dict[str, ValidatorContextConfig] = {
+    "TEST_RUNNER": {
+        "validator": "TEST_RUNNER",
+        "requires_implementer_report": True,
+        "requires_dev_plan": False,
+        "requires_code_root": True,
+        "requires_test_commands": True,
+        "requires_api_signatures": False,
+        "requires_modified_files": False,
+        "custom_context_keys": ["test_dir"],
+    },
+    "REQUIREMENT_VALIDATOR": {
+        "validator": "REQUIREMENT_VALIDATOR",
+        "requires_implementer_report": True,
+        "requires_dev_plan": True,
+        "requires_code_root": False,
+        "requires_test_commands": False,
+        "requires_api_signatures": True,
+        "requires_modified_files": False,
+        "custom_context_keys": [],
+    },
+    "ANTI_CHEAT_DETECTOR": {
+        "validator": "ANTI_CHEAT_DETECTOR",
+        "requires_implementer_report": True,
+        "requires_dev_plan": False,
+        "requires_code_root": True,
+        "requires_test_commands": False,
+        "requires_api_signatures": False,
+        "requires_modified_files": True,
+        "custom_context_keys": ["test_dir"],
+    },
+    "EDGE_CASE_TESTER": {
+        "validator": "EDGE_CASE_TESTER",
+        "requires_implementer_report": True,
+        "requires_dev_plan": False,
+        "requires_code_root": True,
+        "requires_test_commands": True,
+        "requires_api_signatures": False,
+        "requires_modified_files": True,
+        "custom_context_keys": [],
+    },
+}
+
+
+def get_validator_context_config(validator: str) -> ValidatorContextConfig:
+    """获取验证器配置，未配置时返回默认配置"""
+    if validator in VALIDATOR_CONTEXT_CONFIG:
+        return VALIDATOR_CONTEXT_CONFIG[validator]
+    # 返回默认配置的副本，设置 validator 名称
+    config = dict(_DEFAULT_VALIDATOR_CONFIG)
+    config["validator"] = validator
+    return config  # type: ignore[return-value]
 
 # 上下文管理参数（新增）
 KEEP_RECENT_MILESTONES = 2  # 关键变量：dev_plan 保留最近 N 个 Milestone
@@ -101,7 +205,7 @@ UPLOADED_DOCS_CATEGORIES = ("requirements", "specs", "references")  # 关键变�
 UPLOADED_DOCS_MAX_BYTES = 5 * 1024 * 1024  # 关键变量：上传文档大小上限（5MB）
 
 # 新增缓存路径
-REPORT_SUMMARY_CACHE_FILE = PROJECT_ROOT / "orchestrator" / "cache" / "report_summaries.json"  # 关键变量：报告摘要缓存
+REPORT_SUMMARY_CACHE_FILE = CONFIG.orchestrator_dir / "cache" / "report_summaries.json"  # 关键变量：报告摘要缓存
 
 # ============= 用户洞察与决策模式配置 =============
 USER_INSIGHT_REPORT_FILE = REPORTS_DIR / "user_insight_report.md"  # 关键变量：用户洞察报告
@@ -112,8 +216,13 @@ USER_DECISION_PATTERNS_FILE = MEMORY_DIR / "user_decision_patterns.md"  # 关键
 ENABLE_BEHAVIOR_AUDIT = True  # 关键变量：是否启用行为审计
 ENABLE_DECISION_PATTERNS = True  # 关键变量：是否启用决策模式整合
 
+# Orchestrator 层上下文保险配置（与 CLI 环境变量独立）
+# 注意：输出超限（32k）通常在输入上下文较大时发生，需要更早触发压缩
+ORCHESTRATOR_CONTEXT_THRESHOLD_PERCENT = 40  # 触发压缩的上下文占比阈值（40% = 80k tokens）
+ORCHESTRATOR_CONTEXT_WINDOW = 200000  # Claude Opus 4.5 上下文窗口
+
 # 上下文压缩配置
-COMPACT_INTERVAL = 3  # 每 N 轮压缩一次（0 表示禁用）
+COMPACT_INTERVAL = 2  # 每 N 轮压缩一次（0 表示禁用）- 降低以避免输出超限
 COMPACT_INSTRUCTIONS = """侧重保留：
 1. 决策推理过程（为什么选择某个 next_agent）
 2. 跨轮问题分析（连续 FAIL 的根因判断）
@@ -141,44 +250,50 @@ SUBAGENT_COMPACT_INSTRUCTIONS = """你的任务是/compact当前对话上下文�
 CLI_CONFIG: dict[str, dict[str, str | list[str] | bool]] = {
     "MAIN": {
         "cli": "claude",           # MAIN 使用 claude CLI
-        "extra_args": [],         # 额外参数
+        "extra_args": ["--model", "claude-opus-4-6"],         # 额外参数
         "enable_resume": True,    # MAIN 保持 resume 模式
     },
     # Context-centric 架构：IMPLEMENTER（合并 TEST+DEV）
     "IMPLEMENTER": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2-codex"],
-        "enable_resume": False,   # 暂时禁用 resume（codex /compact 无效）
+        "extra_args": ["--model", "gpt-5.3-codex"],
+        "enable_resume": True,    # 启用 resume（codex 内部自动 compact）
     },
     # Context-centric 架构：并行验证器（轻量级）
     "TEST_RUNNER": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
     "REQUIREMENT_VALIDATOR": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
     "ANTI_CHEAT_DETECTOR": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
     "EDGE_CASE_TESTER": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
     "SYNTHESIZER": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
     "SUMMARY": {
         "cli": "codex",
-        "extra_args": ["--model", "gpt-5.2"],
+        "extra_args": ["--model", "gpt-5.3-codex"],
+        "enable_resume": False,
+    },
+    # Context-centric 架构：FINISH_REVIEW 最终审阅
+    "FINISH_REVIEW": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": False,
     },
 }

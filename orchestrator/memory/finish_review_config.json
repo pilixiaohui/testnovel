@@ -2,9 +2,9 @@
   "task_goal_anchor": "## Task Goal (New Task)",
   "task_goal_anchor_mode": "prefix_latest",
   "docs": [
-    "orchestrator/memory/uploaded_docs/requirements/e2e_test_evaluation_report.md",
     "orchestrator/memory/uploaded_docs/requirements/frontend_implementation_spec.md",
-    "orchestrator/memory/uploaded_docs/requirements/系统架构与技术规格.md"
+    "orchestrator/memory/uploaded_docs/requirements/系统架构与技术规格.md",
+    "orchestrator/memory/uploaded_docs/requirements/frontend_issues_analysis.md"
   ],
   "code_root": "project"
 }

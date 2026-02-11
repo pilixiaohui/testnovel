@@ -1,0 +1,72 @@
+{
+  "root_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb",
+  "logline": "渡劫期大能何方穿越至灵气枯竭的赛博世界，为重返仙界，他引高压电入体以代修行，在财阀垄断与义体飞升的霓虹都市中，以雷法击穿科技神话，成就独一无二的赛博雷仙。",
+  "theme": "在科技与修真的剧烈碰撞中，探讨‘道’的本质：无论是灵气还是电流，唯有打破规则、重塑自我的意志，才是通往彼岸的唯一通途。",
+  "ending": "何方吞噬超级AI与轨道雷劫，不仅恢复修为更突破位面限制，将整个赛博世界炼化为自己的本命法宝，成为掌控物理法则与电子数据的‘万机雷祖’，在霓虹废土之上建立起全新的修仙秩序。",
+  "three_disasters_count": 0,
+  "acts": 3,
+  "chapters": 10,
+  "anchors": 10,
+  "rendered_chapters": 10,
+  "chapter_clean_len": {
+    "min": 2647,
+    "max": 3540,
+    "avg": 3046.7
+  },
+  "keyword_hits": {
+    "hefang": 239,
+    "cyber": 15
+  },
+  "chapter_status": [
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:1:ch:1",
+      "status": 200,
+      "clean_len": 3540
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:1:ch:2",
+      "status": 200,
+      "clean_len": 2841
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:1:ch:3",
+      "status": 200,
+      "clean_len": 3126
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:1:ch:4",
+      "status": 200,
+      "clean_len": 2647
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:2:ch:1",
+      "status": 200,
+      "clean_len": 3480
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:2:ch:2",
+      "status": 200,
+      "clean_len": 3142
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:2:ch:3",
+      "status": 200,
+      "clean_len": 2737
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:3:ch:1",
+      "status": 200,
+      "clean_len": 2877
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:3:ch:2",
+      "status": 200,
+      "clean_len": 2979
+    },
+    {
+      "chapter_id": "64f2f042-99af-4bb9-8d81-e6aa3ab1ecfb:act:3:ch:3",
+      "status": 200,
+      "clean_len": 3098
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 # AI Novel V4.0 前端实现技术规格
 
-**文档版本**: 1.2
-**最后更新**: 2026-01-30
-**对应后端版本**: V4.1
+**文档版本**: 1.3
+**最后更新**: 2026-02-04
+**对应后端版本**: V4.2
 
 ---
 
@@ -50,7 +50,7 @@ project/frontend/
 ├── src/
 │   ├── api/                      # API 调用层
 │   │   ├── index.ts              # Axios 实例配置
-│   │   ├── snowflake.ts          # 雪花流程 API
+│   │   ├── snowflake.ts          # 雪花流程 API（含提示词/草稿/进度）
 │   │   ├── anchor.ts             # 锚点管理 API
 │   │   ├── agent.ts              # 角色代理 API
 │   │   ├── dm.ts                 # DM 裁决 API
@@ -71,12 +71,28 @@ project/frontend/
 │   │   │   ├── LoadingOverlay.vue
 │   │   │   └── EmptyState.vue
 │   │   ├── snowflake/            # 雪花流程组件
-│   │   │   ├── StepIndicator.vue
-│   │   │   ├── LoglineSelector.vue
-│   │   │   ├── CharacterCard.vue
-│   │   │   ├── SceneCard.vue
-│   │   │   ├── ActCard.vue
-│   │   │   └── ChapterCard.vue
+│   │   │   ├── SnowflakeWizard.vue      # 向导容器
+│   │   │   ├── WizardHeader.vue         # 向导头部（步骤指示器）
+│   │   │   ├── WizardContent.vue        # 向导内容区域
+│   │   │   ├── WizardFooter.vue         # 向导底部（操作按钮）
+│   │   │   ├── Step1Content.vue         # Step1 内容
+│   │   │   ├── Step2Content.vue         # Step2 内容
+│   │   │   ├── Step3Content.vue         # Step3 内容
+│   │   │   ├── Step4Content.vue         # Step4 内容
+│   │   │   ├── Step5Content.vue         # Step5 内容
+│   │   │   ├── Step6Content.vue         # Step6 内容
+│   │   │   ├── PromptEditor.vue         # 提示词编辑抽屉
+│   │   │   ├── BranchCreateDialog.vue   # 分支创建对话框
+│   │   │   ├── StepIndicator.vue        # 步骤指示器（旧，可复用）
+│   │   │   ├── LoglineSelector.vue      # Logline 选择器
+│   │   │   └── editable/                # 可编辑卡片组件
+│   │   │       ├── EditableLoglineCard.vue
+│   │   │       ├── EditableRootCard.vue
+│   │   │       ├── EditableCharacterCard.vue
+│   │   │       ├── EditableSceneCard.vue
+│   │   │       ├── EditableActCard.vue
+│   │   │       ├── EditableChapterCard.vue
+│   │   │       └── EditableAnchorCard.vue
 │   │   ├── simulation/           # 推演系统组件
 │   │   │   ├── AgentStatePanel.vue
 │   │   │   ├── ActionTimeline.vue
@@ -105,14 +121,14 @@ project/frontend/
 │   ├── stores/                   # Pinia 状态管理
 │   │   ├── index.ts              # Store 导出
 │   │   ├── project.ts            # 项目状态
-│   │   ├── snowflake.ts          # 雪花流程状态
+│   │   ├── snowflake.ts          # 雪花流程状态（重构版）
 │   │   ├── simulation.ts         # 推演状态
 │   │   ├── editor.ts             # 编辑器状态
 │   │   └── world.ts              # 世界观状态
 │   │
 │   ├── types/                    # TypeScript 类型定义
 │   │   ├── index.ts              # 类型导出
-│   │   ├── snowflake.ts          # 雪花流程类型
+│   │   ├── snowflake.ts          # 雪花流程类型（含草稿/进度/提示词）
 │   │   ├── simulation.ts         # 推演系统类型
 │   │   ├── scene.ts              # 场景类型
 │   │   ├── entity.ts             # 实体类型
@@ -120,6 +136,7 @@ project/frontend/
 │   │
 │   ├── composables/              # 组合式函数
 │   │   ├── useSnowflake.ts       # 雪花流程逻辑
+│   │   ├── useSnowflakeDraft.ts  # 草稿自动保存逻辑
 │   │   ├── useSimulation.ts      # 推演控制逻辑
 │   │   ├── usePolling.ts         # 轮询逻辑
 │   │   └── useNotification.ts    # 通知逻辑
@@ -134,7 +151,8 @@ project/frontend/
 │   │
 │   ├── utils/                    # 工具函数
 │   │   ├── format.ts             # 格式化函数
-│   │   └── validation.ts         # 验证函数
+│   │   ├── validation.ts         # 验证函数
+│   │   └── debounce.ts           # 防抖函数
 │   │
 │   ├── App.vue                   # 根组件
 │   └── main.ts                   # 入口文件
@@ -182,6 +200,10 @@ export interface SceneNode {
   parent_act_id: string;
   chapter_id?: string;
   is_skeleton: boolean;
+  expected_outcome?: string;           // 预期结果
+  conflict_type?: string;              // 冲突类型
+  actual_outcome?: string;             // 实际结果
+  is_dirty?: boolean;                  // 脏标记
 }
 
 // 幕结构
@@ -221,6 +243,54 @@ export interface QualityScores {
   word_count: number;             // 字数
   repetition_ratio: number;       // 重复内容比例 (0-1)
 }
+
+// 雪花流程提示词集合
+export interface SnowflakePromptSet {
+  step1: string;                  // Step1 提示词
+  step2: string;                  // Step2 提示词
+  step3: string;                  // Step3 提示词
+  step4: string;                  // Step4 提示词
+  step5: string;                  // Step5 提示词
+  step6: string;                  // Step6 提示词
+}
+
+// 雪花流程草稿
+export interface SnowflakeDraft {
+  id: string;
+  root_id: string;
+  branch_id: string;
+  current_step: SnowflakeStep;
+  step1_data?: {
+    idea: string;
+    loglines: string[];
+    selected_logline?: string;
+  };
+  step2_data?: SnowflakeRoot;
+  step3_data?: CharacterSheet[];
+  step4_data?: SceneNode[];
+  step5_data?: {
+    acts: Act[];
+    chapters: Chapter[];
+  };
+  step6_data?: StoryAnchor[];
+  created_at: string;
+  updated_at: string;
+}
+
+// 雪花流程进度
+export interface SnowflakeProgress {
+  id: string;
+  root_id: string;
+  branch_id: string;
+  current_step: SnowflakeStep;
+  completed_steps: number[];
+  step_committed: Record<number, boolean>;
+  created_at: string;
+  updated_at: string;
+}
+
+// 步骤类型
+export type SnowflakeStep = 1 | 2 | 3 | 4 | 5 | 6;
 ```
 
 ### 2.2 推演系统类型 (`types/simulation.ts`)
@@ -369,6 +439,7 @@ export interface StoryAnchor {
   required_conditions: string[];
   earliest_chapter_seq?: number;  // 最早可达成章节序号
   latest_chapter_seq?: number;    // 最晚应达成章节序号 (deadline)
+  deadline_scene?: number;        // 截止场景序号
   achieved: boolean;
 }
 
@@ -446,6 +517,7 @@ export interface WorldSnapshot {
 
 ```typescript
 export const snowflakeApi = {
+  // === 生成 API ===
   generateLoglines(idea: string) -> string[]           // POST /snowflake/step1; 生成 10 个 logline
   generateStructure(logline: string) -> SnowflakeRoot  // POST /snowflake/step2; 扩展故事结构
   generateCharacters(root: SnowflakeRoot) -> CharacterSheet[]  // POST /snowflake/step3
@@ -455,6 +527,29 @@ export const snowflakeApi = {
   listActs(rootId: string) -> Act[]                    // GET /roots/{id}/acts
   listChapters(actId: string) -> Chapter[]             // GET /acts/{id}/chapters
   renderChapter(chapterId: string) -> { ok: boolean, content: string, quality_scores: QualityScores }  // POST /chapters/{id}/render; 渲染章节内容
+
+  // === 提示词管理 API ===
+  getPrompts(rootId: string, branchId: string) -> SnowflakePromptSet  // GET /roots/{id}/snowflake/prompts
+  savePrompts(rootId: string, branchId: string, prompts: SnowflakePromptSet) -> void  // PUT /roots/{id}/snowflake/prompts
+  resetPrompts(rootId: string, branchId: string) -> SnowflakePromptSet  // POST /roots/{id}/snowflake/prompts/reset
+
+  // === 草稿管理 API ===
+  getDraft(rootId: string, branchId: string) -> SnowflakeDraft | null  // GET /roots/{id}/snowflake/draft
+  saveDraft(rootId: string, branchId: string, draft: Partial<SnowflakeDraft>) -> SnowflakeDraft  // PUT /roots/{id}/snowflake/draft
+  deleteDraft(rootId: string, branchId: string) -> void  // DELETE /roots/{id}/snowflake/draft
+
+  // === 进度管理 API ===
+  getProgress(rootId: string, branchId: string) -> SnowflakeProgress  // GET /roots/{id}/snowflake/progress
+  commitStep(rootId: string, branchId: string, step: number, data: any) -> SnowflakeProgress  // POST /roots/{id}/snowflake/step/{step}/commit
+  rollbackToStep(rootId: string, branchId: string, step: number, newBranchId: string) -> { root_id, branch_id, progress: SnowflakeProgress }  // POST /roots/{id}/snowflake/step/{step}/rollback
+
+  // === 内容更新 API ===
+  updateLogline(rootId: string, loglines: string[]) -> void  // PUT /roots/{id}/snowflake/logline
+  updateRoot(rootId: string, root: Partial<SnowflakeRoot>) -> SnowflakeRoot  // PUT /roots/{id}/snowflake/root
+  updateCharacter(rootId: string, branchId: string, characterId: string, data: Partial<CharacterSheet>) -> CharacterSheet  // PUT /roots/{id}/entities/{cid}
+  updateAct(actId: string, data: Partial<Act>) -> Act  // PUT /acts/{id}
+  updateChapter(chapterId: string, data: Partial<Chapter>) -> Chapter  // PUT /chapters/{id}
+  updateScene(sceneId: string, data: Partial<SceneNode>) -> SceneNode  // PUT /scenes/{id}
 }
 ```
 
@@ -625,34 +720,89 @@ export const useProjectStore = defineStore('project', () => {
 export type SnowflakeStep = 1 | 2 | 3 | 4 | 5 | 6;  // 6 = 锚点生成
 
 export const useSnowflakeStore = defineStore('snowflake', () => {
-  // State
+  // === 基础状态 ===
+  rootId: Ref<string | null>             // 当前项目 ID
+  branchId: Ref<string>                  // 当前分支 ID, 默认 'main'
   currentStep: Ref<SnowflakeStep>        // 当前步骤
   loading: Ref<boolean>
   error: Ref<string | null>
+
+  // === 进度状态 ===
+  completedSteps: Ref<number[]>          // 已完成步骤列表 [1, 2, 3]
+  stepCommitted: Ref<Record<number, boolean>>  // 各步骤提交状态
+
+  // === 草稿状态 ===
+  draft: Ref<SnowflakeDraft | null>      // 当前草稿
+  draftDirty: Ref<boolean>               // 草稿是否有未保存变更
+  lastSavedAt: Ref<Date | null>          // 最后保存时间
+
+  // === 提示词状态 ===
+  prompts: Ref<SnowflakePromptSet>       // 提示词集合
+  promptsDirty: Ref<boolean>             // 提示词是否有未保存变更
+
+  // === 内容状态 ===
   idea: Ref<string>                      // Step 1: 用户想法
   loglineOptions: Ref<string[]>          // Step 1: 生成的 logline 选项
   selectedLogline: Ref<string | null>    // Step 1: 选中的 logline
   root: Ref<SnowflakeRoot | null>        // Step 2: 故事结构
   characters: Ref<CharacterSheet[]>      // Step 3: 角色列表
   scenes: Ref<SceneNode[]>               // Step 4: 场景列表
-  rootId: Ref<string | null>             // Step 4: 创建的 root_id
   acts: Ref<Act[]>                       // Step 5: 幕列表
   chapters: Ref<Chapter[]>               // Step 5: 章列表
   anchors: Ref<StoryAnchor[]>            // Step 6: 锚点列表
 
-  // Getters
-  canProceed: ComputedRef<boolean>       // 根据 currentStep 判断是否可进入下一步
-  progress: ComputedRef<number>          // (currentStep / 6) * 100
+  // === 编辑状态 ===
+  editingMode: Ref<boolean>              // 是否处于编辑模式
+  editingItemId: Ref<string | null>      // 正在编辑的项目 ID
 
-  // Actions
-  executeStep1() -> void                 // 调用 snowflakeApi.generateLoglines
-  executeStep2() -> void                 // 调用 snowflakeApi.generateStructure
-  executeStep3() -> void                 // 调用 snowflakeApi.generateCharacters
-  executeStep4() -> void                 // 调用 snowflakeApi.generateScenes
-  executeStep5() -> void                 // 调用 generateActs + generateChapters
-  executeStep6(branchId?) -> void        // 调用 anchorApi.generateAnchors
-  selectLogline(logline) -> void         // 选择 logline
+  // === Getters ===
+  canProceed: ComputedRef<boolean>       // 根据 currentStep 判断是否可进入下一步
+  canGoBack: ComputedRef<boolean>        // 是否可以返回上一步 (currentStep > 1)
+  progress: ComputedRef<number>          // (completedSteps.length / 6) * 100
+  isStepCommitted: (step: number) => boolean  // 判断某步骤是否已提交
+
+  // === Actions: 初始化 ===
+  initialize(rootId: string, branchId: string) -> Promise<void>  // 初始化/恢复状态
   reset() -> void                        // 重置所有状态
+
+  // === Actions: 步骤执行 ===
+  executeStep(step: number) -> Promise<void>  // 执行指定步骤生成
+  executeStep1() -> Promise<void>        // 调用 snowflakeApi.generateLoglines
+  executeStep2() -> Promise<void>        // 调用 snowflakeApi.generateStructure
+  executeStep3() -> Promise<void>        // 调用 snowflakeApi.generateCharacters
+  executeStep4() -> Promise<void>        // 调用 snowflakeApi.generateScenes
+  executeStep5() -> Promise<void>        // 调用 generateActs + generateChapters
+  executeStep6() -> Promise<void>        // 调用 anchorApi.generateAnchors
+
+  // === Actions: 步骤导航 ===
+  goToNextStep() -> Promise<void>        // 进入下一步
+  goBackWithBranch(targetStep: number, newBranchId: string) -> Promise<void>  // 返回并创建分支
+  commitStep(step: number) -> Promise<void>  // 提交定稿当前步骤
+
+  // === Actions: 草稿管理 ===
+  saveDraft() -> Promise<void>           // 保存草稿（手动/自动）
+  loadDraft() -> Promise<void>           // 加载草稿
+  deleteDraft() -> Promise<void>         // 删除草稿
+  markDraftDirty() -> void               // 标记草稿为脏
+
+  // === Actions: 提示词管理 ===
+  loadPrompts() -> Promise<void>         // 加载提示词
+  savePrompts() -> Promise<void>         // 保存提示词
+  resetPrompts() -> Promise<void>        // 重置提示词为默认值
+
+  // === Actions: 内容更新 ===
+  selectLogline(logline: string) -> void // 选择 logline
+  updateCharacter(id: string, data: Partial<CharacterSheet>) -> Promise<void>
+  updateAct(id: string, data: Partial<Act>) -> Promise<void>
+  updateChapter(id: string, data: Partial<Chapter>) -> Promise<void>
+  updateScene(id: string, data: Partial<SceneNode>) -> Promise<void>
+  updateAnchor(id: string, data: Partial<StoryAnchor>) -> Promise<void>
+  updateRoot(data: Partial<SnowflakeRoot>) -> Promise<void>
+  updateLoglines(loglines: string[]) -> Promise<void>
+
+  // === Actions: 编辑模式 ===
+  enterEditMode(itemId?: string) -> void // 进入编辑模式
+  exitEditMode() -> void                 // 退出编辑模式
 })
 ```
 
@@ -743,23 +893,118 @@ export const useWorldStore = defineStore('world', () => {
 
 ---
 
-### Phase 2: 雪花流程页面
+### Phase 2: 雪花流程页面（向导式重构）
 
 **Step 2.1: 雪花流程主页面**
-- **Action**: `Create src/views/SnowflakeView.vue`
-- **Spec**: el-steps 6 步指示器; 根据 store.currentStep 切换 Step1-6Panel; 上一步/下一步按钮
+- **Action**: `Refactor src/views/SnowflakeView.vue`
+- **Spec**:
+  - 向导式分步流程，每次只显示当前步骤
+  - 使用 SnowflakeWizard 容器组件
+  - 集成提示词编辑抽屉
 - **Test**:
   - Case: 输入想法 -> 生成 10 个 logline
   - Case: 选择 logline -> 生成故事结构
   - Case: 完成 Step 6 -> 跳转到编辑器
+  - Case: 返回修改已完成步骤 -> 创建新分支
 
-**Step 2.2: Step1 想法输入面板**
-- **Action**: `Create src/components/snowflake/Step1Panel.vue`
-- **Spec**: el-input textarea 输入想法; 生成按钮调用 store.executeStep1; el-radio-group 展示 loglineOptions
+**Step 2.2: 向导容器组件**
+- **Action**: `Create src/components/snowflake/SnowflakeWizard.vue`
+- **Spec**:
+  - 包含 WizardHeader、WizardContent、WizardFooter 三部分
+  - 管理步骤切换逻辑
+  - 处理分支创建对话框
 
-**Step 2.3: 角色卡片组件**
-- **Action**: `Create src/components/snowflake/CharacterCard.vue`
-- **Spec**: el-card 展示 name, ambition, conflict, epiphany, voice_dna; el-tag 显示 arc_status
+**Step 2.3: 向导头部组件**
+- **Action**: `Create src/components/snowflake/WizardHeader.vue`
+- **Spec**:
+  - el-steps 6 步指示器
+  - 显示已完成/进行中/未开始状态
+  - 点击已完成步骤时弹出分支创建确认框
+
+**Step 2.4: 向导内容组件**
+- **Action**: `Create src/components/snowflake/WizardContent.vue`
+- **Spec**:
+  - 根据 currentStep 动态渲染对应 StepContent
+  - 管理编辑模式切换
+  - 处理自动保存草稿（防抖 2 秒）
+
+**Step 2.5: 向导底部组件**
+- **Action**: `Create src/components/snowflake/WizardFooter.vue`
+- **Spec**:
+  - 操作按钮：生成、编辑、保存草稿、提交定稿、下一步、返回修改
+  - 根据当前状态动态显示/禁用按钮
+  - 显示草稿保存状态
+
+**Step 2.6: Step1 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step1Panel.vue` -> `Step1Content.vue`
+- **Spec**:
+  - el-input textarea 输入想法
+  - 生成按钮调用 store.executeStep1
+  - 可编辑的 logline 列表（EditableLoglineCard）
+  - 选择 logline 功能
+
+**Step 2.7: Step2 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step2Panel.vue` -> `Step2Content.vue`
+- **Spec**:
+  - 可编辑的故事结构展示（EditableRootCard）
+  - 编辑 logline、theme、ending、three_disasters
+
+**Step 2.8: Step3 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step3Panel.vue` -> `Step3Content.vue`
+- **Spec**:
+  - 可编辑的角色卡片列表（EditableCharacterCard）
+  - 支持添加/删除角色
+
+**Step 2.9: Step4 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step4Panel.vue` -> `Step4Content.vue`
+- **Spec**:
+  - 可编辑的场景卡片列表（EditableSceneCard）
+  - 显示 title、expected_outcome、conflict_type
+  - 支持拖拽排序
+
+**Step 2.10: Step5 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step5Panel.vue` -> `Step5Content.vue`
+- **Spec**:
+  - 可编辑的幕卡片列表（EditableActCard）
+  - 可编辑的章卡片列表（EditableChapterCard）
+  - 幕-章层级展示
+
+**Step 2.11: Step6 内容组件**
+- **Action**: `Refactor src/components/snowflake/Step6Panel.vue` -> `Step6Content.vue`
+- **Spec**:
+  - 可编辑的锚点卡片列表（EditableAnchorCard）
+  - 显示 anchor_type、description、constraint_type、required_conditions
+
+**Step 2.12: 可编辑卡片组件**
+- **Action**: `Create src/components/snowflake/editable/`
+- **Spec**:
+  - EditableLoglineCard.vue - logline 编辑卡片
+  - EditableRootCard.vue - 故事结构编辑卡片
+  - EditableCharacterCard.vue - 角色编辑卡片
+  - EditableSceneCard.vue - 场景编辑卡片
+  - EditableActCard.vue - 幕编辑卡片
+  - EditableChapterCard.vue - 章编辑卡片
+  - EditableAnchorCard.vue - 锚点编辑卡片
+- **共同特性**:
+  - 支持只读/编辑模式切换
+  - 编辑时显示表单，只读时显示卡片
+  - 编辑变更触发 draftDirty 标记
+
+**Step 2.13: 提示词编辑器**
+- **Action**: `Create src/components/snowflake/PromptEditor.vue`
+- **Spec**:
+  - el-drawer 抽屉式编辑器
+  - 6 个步骤的提示词 textarea
+  - 保存/重置按钮
+  - 显示默认提示词参考
+
+**Step 2.14: 分支创建对话框**
+- **Action**: `Create src/components/snowflake/BranchCreateDialog.vue`
+- **Spec**:
+  - el-dialog 对话框
+  - 输入新分支名称
+  - 显示当前步骤和目标步骤
+  - 确认/取消按钮
 
 ---
 
@@ -946,6 +1191,25 @@ server {
 | snowflake | Step4Panel | 场景列表面板 |
 | snowflake | Step5Panel | 幕章结构面板 |
 | snowflake | Step6Panel | 锚点生成面板 |
+| snowflake | SnowflakeWizard | 向导容器组件 |
+| snowflake | WizardHeader | 向导头部（步骤指示器） |
+| snowflake | WizardContent | 向导内容区域 |
+| snowflake | WizardFooter | 向导底部（操作按钮） |
+| snowflake | Step1Content | Step1 内容（想法输入+logline） |
+| snowflake | Step2Content | Step2 内容（故事结构） |
+| snowflake | Step3Content | Step3 内容（角色列表） |
+| snowflake | Step4Content | Step4 内容（场景列表） |
+| snowflake | Step5Content | Step5 内容（幕章结构） |
+| snowflake | Step6Content | Step6 内容（锚点列表） |
+| snowflake | EditableLoglineCard | 可编辑 Logline 卡片 |
+| snowflake | EditableRootCard | 可编辑故事结构卡片 |
+| snowflake | EditableCharacterCard | 可编辑角色卡片 |
+| snowflake | EditableSceneCard | 可编辑场景卡片 |
+| snowflake | EditableActCard | 可编辑幕卡片 |
+| snowflake | EditableChapterCard | 可编辑章卡片 |
+| snowflake | EditableAnchorCard | 可编辑锚点卡片 |
+| snowflake | PromptEditor | 提示词编辑抽屉 |
+| snowflake | BranchCreateDialog | 分支创建对话框 |
 | snowflake | LoglineSelector | Logline 选择器 |
 | snowflake | CharacterCard | 角色卡片 |
 | snowflake | SceneCard | 场景卡片 |
@@ -982,6 +1246,41 @@ server {
 | `snowflakeApi.generateActs` | POST /api/v1/snowflake/step5a | 生成幕结构 |
 | `snowflakeApi.generateChapters` | POST /api/v1/snowflake/step5b | 生成章结构 |
 | `snowflakeApi.renderChapter` | POST /api/v1/chapters/{id}/render | 渲染章节内容 (返回 quality_scores) |
+
+### C.1.1 提示词管理 API (3 个)
+
+| 前端 API 函数 | 后端端点 | 功能 |
+|---------------|----------|------|
+| `snowflakeApi.getPrompts` | GET /api/v1/roots/{id}/snowflake/prompts | 获取提示词（含默认值回退） |
+| `snowflakeApi.savePrompts` | PUT /api/v1/roots/{id}/snowflake/prompts | 保存提示词 |
+| `snowflakeApi.resetPrompts` | POST /api/v1/roots/{id}/snowflake/prompts/reset | 重置为默认提示词 |
+
+### C.1.2 草稿管理 API (3 个)
+
+| 前端 API 函数 | 后端端点 | 功能 |
+|---------------|----------|------|
+| `snowflakeApi.getDraft` | GET /api/v1/roots/{id}/snowflake/draft | 获取草稿 |
+| `snowflakeApi.saveDraft` | PUT /api/v1/roots/{id}/snowflake/draft | 保存草稿（自动保存） |
+| `snowflakeApi.deleteDraft` | DELETE /api/v1/roots/{id}/snowflake/draft | 删除草稿 |
+
+### C.1.3 进度管理 API (3 个)
+
+| 前端 API 函数 | 后端端点 | 功能 |
+|---------------|----------|------|
+| `snowflakeApi.getProgress` | GET /api/v1/roots/{id}/snowflake/progress | 获取进度 |
+| `snowflakeApi.commitStep` | POST /api/v1/roots/{id}/snowflake/step/{step}/commit | 提交定稿某步骤 |
+| `snowflakeApi.rollbackToStep` | POST /api/v1/roots/{id}/snowflake/step/{step}/rollback | 回滚到某步骤（创建分支） |
+
+### C.1.4 内容更新 API (6 个)
+
+| 前端 API 函数 | 后端端点 | 功能 |
+|---------------|----------|------|
+| `snowflakeApi.updateLogline` | PUT /api/v1/roots/{id}/snowflake/logline | 更新 logline 列表 |
+| `snowflakeApi.updateRoot` | PUT /api/v1/roots/{id}/snowflake/root | 更新故事结构 |
+| `snowflakeApi.updateCharacter` | PUT /api/v1/roots/{id}/entities/{cid} | 更新角色 |
+| `snowflakeApi.updateAct` | PUT /api/v1/acts/{id} | 更新幕 |
+| `snowflakeApi.updateChapter` | PUT /api/v1/chapters/{id} | 更新章节 |
+| `snowflakeApi.updateScene` | PUT /api/v1/scenes/{id} | 更新场景 |
 
 ### C.2 锚点管理 API (4 个)
 
@@ -1110,4 +1409,475 @@ server {
 ---
 
 **文档结束**
+
+---
+
+## 附录 D: 雪花流程向导式交互规格
+
+### D.1 核心交互原则
+
+1. **向导式分步流程**：每次只显示当前步骤，用户专注于单一任务
+2. **所有生成内容可编辑**：角色、场景、幕、章、锚点都支持内联编辑
+3. **混合保存模式**：自动保存草稿（防抖 2 秒）+ 手动提交定稿
+4. **分支机制**：返回修改已完成步骤时创建新分支，保留原有进度
+
+### D.2 步骤流程规则
+
+| 规则 | 说明 |
+|------|------|
+| 不允许跳过步骤 | 必须按 1→2→3→4→5→6 顺序执行 |
+| 允许返回修改 | 返回已完成步骤时创建新分支 |
+| 每步可编辑 | 生成内容后可进入编辑模式修改 |
+| 提交定稿 | 用户确认后提交当前步骤，进入下一步 |
+
+### D.3 用户操作流程
+
+#### D.3.1 正常流程
+
+```
+1. 用户进入雪花流程页面
+2. 显示 Step 1（想法输入）
+3. 用户输入想法，点击"生成"
+4. 显示生成的 10 个 logline（可编辑）
+5. 用户可以：
+   - 点击"编辑"进入编辑模式，修改 logline
+   - 选择一个 logline
+   - 点击"提交定稿"确认并进入 Step 2
+6. Step 2-6 类似流程
+7. Step 6 完成后跳转到编辑器
+```
+
+#### D.3.2 返回修改流程
+
+```
+1. 用户在 Step 4，想返回修改 Step 2
+2. 点击步骤指示器的 Step 2 或"返回"按钮
+3. 弹出分支创建对话框：
+   "返回修改 Step 2 将创建新分支，当前进度将保留在原分支。
+    新分支名称：[输入框，默认 main-v2]
+    [取消] [确认创建]"
+4. 确认后：
+   - 创建新分支（复制 Step 1-2 数据）
+   - 切换到新分支
+   - 跳转到 Step 2
+5. 用户在新分支继续编辑
+```
+
+#### D.3.3 自动保存流程
+
+```
+1. 用户编辑任何内容
+2. 标记 draftDirty = true
+3. 防抖 2 秒后自动调用 saveDraft()
+4. 显示"草稿已保存"提示
+5. 页面刷新/关闭时，草稿数据不丢失
+```
+
+### D.4 步骤内容规格
+
+#### Step 1: 想法输入 + Logline 选择
+
+| 元素 | 说明 |
+|------|------|
+| 想法输入框 | el-input textarea，placeholder="请输入你的故事想法" |
+| 生成按钮 | 调用 generateLoglines API |
+| Logline 列表 | 10 个可编辑卡片，支持选择 |
+| 提示词编辑 | 抽屉式编辑器，可自定义 Step1 提示词 |
+
+#### Step 2: 故事结构
+
+| 元素 | 说明 |
+|------|------|
+| Logline | 可编辑文本 |
+| Theme | 可编辑文本 |
+| Ending | 可编辑文本 |
+| Three Disasters | 3 个可编辑文本项 |
+
+#### Step 3: 角色列表
+
+| 元素 | 说明 |
+|------|------|
+| 角色卡片 | 显示 name, ambition, conflict, epiphany, voice_dna |
+| 编辑模式 | 表单编辑各字段 |
+| 添加角色 | 可手动添加新角色 |
+| 删除角色 | 可删除角色（需确认） |
+
+#### Step 4: 场景列表
+
+| 元素 | 说明 |
+|------|------|
+| 场景卡片 | 显示 title, sequence_index, expected_outcome, conflict_type |
+| 编辑模式 | 表单编辑各字段 |
+| 拖拽排序 | 支持拖拽调整场景顺序 |
+
+#### Step 5: 幕章结构
+
+| 元素 | 说明 |
+|------|------|
+| 幕卡片 | 显示 title, purpose, tone |
+| 章卡片 | 显示 title, focus, pov_character_id |
+| 层级展示 | 幕下嵌套章 |
+| 编辑模式 | 分别编辑幕和章 |
+
+#### Step 6: 锚点列表
+
+| 元素 | 说明 |
+|------|------|
+| 锚点卡片 | 显示 anchor_type, description, constraint_type, required_conditions |
+| 编辑模式 | 表单编辑各字段 |
+| 达成状态 | 显示 achieved 状态 |
+
+### D.5 操作按钮状态
+
+| 按钮 | 显示条件 | 禁用条件 |
+|------|----------|----------|
+| 生成 | 当前步骤未生成内容 | loading 中 |
+| 编辑 | 当前步骤已生成内容 | 已在编辑模式 |
+| 保存草稿 | 编辑模式中 | 草稿未变更 |
+| 提交定稿 | 当前步骤已生成内容 | loading 中 |
+| 下一步 | 当前步骤已提交 | 最后一步 |
+| 返回修改 | currentStep > 1 | 第一步 |
+
+### D.6 提示词管理
+
+#### D.6.1 存储方案
+
+- 存储在数据库（Memgraph）中
+- 每个 root/branch 独立存储
+- 首次访问时使用默认提示词
+
+#### D.6.2 默认提示词
+
+| 步骤 | 默认提示词 |
+|------|-----------|
+| Step 1 | "你是一名故事策划。基于用户想法，给出 10 个一句话 logline 候选..." |
+| Step 2 | "你是资深小说架构师。使用雪花写作法扩展用户 logline..." |
+| Step 3 | "基于雪花根节点生成主要角色小传列表..." |
+| Step 4 | "生成 50-100 个场景节点..." |
+| Step 5 | "你是故事架构师。基于雪花根节点与角色列表生成幕/章结构..." |
+| Step 6 | "你是剧情锚点规划器。基于故事结构生成锚点列表..." |
+
+### D.7 分支命名规则
+
+- 自动命名格式：`{parent_branch}-v{n}`
+- 示例：`main-v2`, `main-v3`, `main-v2-v1`
+- 用户可在对话框中自定义名称
+
+---
+
+## 附录 E: 后端新增 API 端点规格
+
+### E.1 提示词管理 API
+
+#### GET /api/v1/roots/{root_id}/snowflake/prompts
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**响应**:
+```json
+{
+  "step1": "string",
+  "step2": "string",
+  "step3": "string",
+  "step4": "string",
+  "step5": "string",
+  "step6": "string"
+}
+```
+
+**说明**: 如果数据库中没有存储，返回默认提示词
+
+#### PUT /api/v1/roots/{root_id}/snowflake/prompts
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**请求体**:
+```json
+{
+  "step1": "string",
+  "step2": "string",
+  "step3": "string",
+  "step4": "string",
+  "step5": "string",
+  "step6": "string"
+}
+```
+
+**响应**: 200 OK
+
+#### POST /api/v1/roots/{root_id}/snowflake/prompts/reset
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**响应**: 返回默认提示词集合
+
+### E.2 草稿管理 API
+
+#### GET /api/v1/roots/{root_id}/snowflake/draft
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**响应**:
+```json
+{
+  "id": "string",
+  "root_id": "string",
+  "branch_id": "string",
+  "current_step": 1,
+  "step1_data": { "idea": "string", "loglines": ["string"], "selected_logline": "string" },
+  "step2_data": { "logline": "string", "theme": "string", "ending": "string", "three_disasters": ["string"] },
+  "step3_data": [{ "name": "string", "ambition": "string", ... }],
+  "step4_data": [{ "id": "string", "title": "string", ... }],
+  "step5_data": { "acts": [...], "chapters": [...] },
+  "step6_data": [{ "id": "string", "anchor_type": "string", ... }],
+  "created_at": "string",
+  "updated_at": "string"
+}
+```
+
+**说明**: 如果没有草稿，返回 null
+
+#### PUT /api/v1/roots/{root_id}/snowflake/draft
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**请求体**: 同上响应格式（部分字段可选）
+
+**响应**: 返回保存后的草稿
+
+#### DELETE /api/v1/roots/{root_id}/snowflake/draft
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**响应**: 204 No Content
+
+### E.3 进度管理 API
+
+#### GET /api/v1/roots/{root_id}/snowflake/progress
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+
+**响应**:
+```json
+{
+  "id": "string",
+  "root_id": "string",
+  "branch_id": "string",
+  "current_step": 1,
+  "completed_steps": [1, 2, 3],
+  "step_committed": { "1": true, "2": true, "3": false, "4": false, "5": false, "6": false },
+  "created_at": "string",
+  "updated_at": "string"
+}
+```
+
+#### POST /api/v1/roots/{root_id}/snowflake/step/{step}/commit
+
+**请求参数**:
+- `branch_id` (query, required): 分支 ID
+- `step` (path, required): 步骤号 (1-6)
+
+**请求体**:
+```json
+{
+  "data": { ... }  // 该步骤的数据
+}
+```
+
+**响应**: 返回更新后的进度
+
+#### POST /api/v1/roots/{root_id}/snowflake/step/{step}/rollback
+
+**请求参数**:
+- `branch_id` (query, required): 当前分支 ID
+- `step` (path, required): 目标步骤号 (1-6)
+
+**请求体**:
+```json
+{
+  "new_branch_id": "string"  // 新分支名称
+}
+```
+
+**响应**:
+```json
+{
+  "root_id": "string",
+  "branch_id": "string",  // 新分支 ID
+  "progress": { ... }     // 新分支的进度
+}
+```
+
+**说明**: 创建新分支，复制 step 1 到 target_step 的数据
+
+### E.4 内容更新 API
+
+#### PUT /api/v1/roots/{root_id}/snowflake/logline
+
+**请求体**:
+```json
+{
+  "loglines": ["string", "string", ...]
+}
+```
+
+#### PUT /api/v1/roots/{root_id}/snowflake/root
+
+**请求体**:
+```json
+{
+  "logline": "string",
+  "theme": "string",
+  "ending": "string",
+  "three_disasters": ["string", "string", "string"]
+}
+```
+
+#### PUT /api/v1/acts/{act_id}
+
+**请求体**:
+```json
+{
+  "title": "string",
+  "purpose": "string",
+  "tone": "string"
+}
+```
+
+#### PUT /api/v1/chapters/{chapter_id}
+
+**请求体**:
+```json
+{
+  "title": "string",
+  "focus": "string",
+  "pov_character_id": "string"
+}
+```
+
+#### PUT /api/v1/scenes/{scene_id}
+
+**请求体**:
+```json
+{
+  "title": "string",
+  "expected_outcome": "string",
+  "conflict_type": "string",
+  "sequence_index": 1
+}
+```
+
+---
+
+## 附录 F: 后端数据模型扩展
+
+### F.1 新增节点类型
+
+#### SnowflakePrompt（提示词存储）
+
+```python
+class SnowflakePrompt(Node):
+    __label__ = "SnowflakePrompt"
+    id: str                    # 格式: {root_id}:{branch_id}:prompt
+    root_id: str               # 所属根节点
+    branch_id: str             # 所属分支
+    step1_prompt: str          # Step1 提示词
+    step2_prompt: str          # Step2 提示词
+    step3_prompt: str          # Step3 提示词
+    step4_prompt: str          # Step4 提示词
+    step5_prompt: str          # Step5 提示词
+    step6_prompt: str          # Step6 提示词
+    created_at: datetime
+    updated_at: datetime
+```
+
+#### SnowflakeDraft（草稿存储）
+
+```python
+class SnowflakeDraft(Node):
+    __label__ = "SnowflakeDraft"
+    id: str                    # 格式: {root_id}:{branch_id}:draft
+    root_id: str               # 所属根节点
+    branch_id: str             # 所属分支
+    current_step: int          # 当前步骤 (1-6)
+    step1_data: str            # JSON: { idea, loglines, selected_logline }
+    step2_data: str            # JSON: SnowflakeRoot
+    step3_data: str            # JSON: CharacterSheet[]
+    step4_data: str            # JSON: SceneNode[]
+    step5_data: str            # JSON: { acts, chapters }
+    step6_data: str            # JSON: StoryAnchor[]
+    created_at: datetime
+    updated_at: datetime
+```
+
+#### SnowflakeProgress（进度追踪）
+
+```python
+class SnowflakeProgress(Node):
+    __label__ = "SnowflakeProgress"
+    id: str                    # 格式: {root_id}:{branch_id}:progress
+    root_id: str               # 所属根节点
+    branch_id: str             # 所属分支
+    current_step: int          # 当前步骤
+    completed_steps: str       # JSON: [1, 2, 3]
+    step1_committed: bool = False
+    step2_committed: bool = False
+    step3_committed: bool = False
+    step4_committed: bool = False
+    step5_committed: bool = False
+    step6_committed: bool = False
+    created_at: datetime
+    updated_at: datetime
+```
+
+### F.2 索引策略
+
+```cypher
+CREATE INDEX ON :SnowflakePrompt(id);
+CREATE INDEX ON :SnowflakePrompt(root_id, branch_id);
+CREATE INDEX ON :SnowflakeDraft(id);
+CREATE INDEX ON :SnowflakeDraft(root_id, branch_id);
+CREATE INDEX ON :SnowflakeProgress(id);
+CREATE INDEX ON :SnowflakeProgress(root_id, branch_id);
+```
+
+---
+
+## 附录 G: 实施优先级与依赖关系
+
+### G.1 实施阶段
+
+| 阶段 | 内容 | 依赖 |
+|------|------|------|
+| Phase 1 | 后端数据模型扩展 | 无 |
+| Phase 2 | 后端 API 端点实现 | Phase 1 |
+| Phase 3 | 前端 Store 重构 | Phase 2 |
+| Phase 4 | 前端向导组件开发 | Phase 3 |
+| Phase 5 | 前端可编辑卡片组件 | Phase 4 |
+| Phase 6 | 分支机制集成 | Phase 5 |
+| Phase 7 | 测试与优化 | Phase 6 |
+
+### G.2 关键依赖
+
+```
+后端数据模型 → 后端 API → 前端 Store → 前端组件
+                ↓
+           分支创建 API → 分支创建对话框
+```
+
+### G.3 风险点
+
+| 风险 | 影响 | 缓解措施 |
+|------|------|----------|
+| 数据一致性 | 分支创建时数据复制不完整 | 使用事务保证原子性 |
+| 并发冲突 | 多标签页编辑同一分支 | 乐观锁 + 冲突提示 |
+| 草稿丢失 | 浏览器崩溃 | 定时自动保存 + localStorage 备份 |
+| 性能问题 | 大量场景/角色渲染慢 | 虚拟滚动 + 分页加载 |
 

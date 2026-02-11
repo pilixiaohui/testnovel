@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..state import RunControl
+    from ..types import TokenInfo, CompactResult
 
 
 @dataclass
@@ -21,6 +22,8 @@ class CLIRunResult:
     session_id: str | None = None        # 会话ID（用于恢复）
     exit_code: int = 0                   # 退出码
     raw_output: str = ""                 # 原始输出（用于调试）
+    token_info: "TokenInfo | None" = None  # Token 信息（压缩后查询）
+    compact_result: "CompactResult | None" = None  # 压缩结果（仅 run_with_compact 时有值）
 
 
 @dataclass
@@ -31,9 +34,11 @@ class CLIConfig:
     work_dir: Path                       # 工作目录
     output_file: Path                    # 输出文件路径
     extra_args: list[str] = field(default_factory=list)  # 额外参数
+    system_prompt: str | None = None     # 系统提示词（追加到默认系统提示词）
 
 
 # 临时错误关键词（用于判断是否可重试）
+# 注意：使用完整短语匹配，避免误匹配 JSON 字段（如 "service_tier" 误匹配 "service"）
 TEMPORARY_ERROR_HINTS = (
     "timeout",
     "timed out",
@@ -45,7 +50,7 @@ TEMPORARY_ERROR_HINTS = (
     "504",
     "overloaded",
     "temporar",
-    "network",
+    "network error",
     "connection reset",
     "connection refused",
     "econnreset",
@@ -54,13 +59,43 @@ TEMPORARY_ERROR_HINTS = (
     "internal server error",
     "service unavailable",
     "封号",
+    "exceeded the",  # 捕获 "exceeded the N output token maximum"
+    "output token maximum",  # 捕获 output token 超限错误
+)
+
+# 排除误匹配的 JSON 字段模式
+TEMPORARY_ERROR_EXCLUDE_PATTERNS = (
+    '"service_tier"',
+    "'service_tier'",
 )
 
 
 def is_temporary_failure(output: str) -> bool:
-    """判断是否为临时性错误（可重试）"""
+    """判断是否为临时性错误（可重试）
+
+    使用关键词匹配，但排除 JSON 字段中的误匹配（如 "service_tier":"standard"）
+    """
     lowered = output.lower()
-    return any(hint in lowered for hint in TEMPORARY_ERROR_HINTS)
+
+    # 先检查是否包含排除模式（JSON 字段）
+    for exclude in TEMPORARY_ERROR_EXCLUDE_PATTERNS:
+        if exclude in lowered:
+            # 如果包含排除模式，需要更严格的匹配
+            # 只有当错误关键词不是来自 JSON 字段时才返回 True
+            pass
+
+    # 检查是否包含临时错误关键词
+    for hint in TEMPORARY_ERROR_HINTS:
+        if hint in lowered:
+            # 特殊处理 "service unavailable"：确保不是 "service_tier" 的误匹配
+            if hint == "service unavailable":
+                # 精确匹配完整短语
+                if "service unavailable" in lowered:
+                    return True
+            else:
+                return True
+
+    return False
 
 
 class CLIRunner(ABC):
@@ -153,6 +188,19 @@ class CLIRunner(ABC):
         # 默认实现：将 prompt 作为最后一个参数
         return cmd + [prompt]
 
+    def build_stdin_content(self, prompt: str, config: CLIConfig) -> str:
+        """构建 stdin 内容（子类可覆盖以支持系统提示词等）
+
+        Args:
+            prompt: 用户提示词
+            config: CLI 配置
+
+        Returns:
+            要写入 stdin 的内容
+        """
+        # 默认实现：直接返回 prompt
+        return prompt
+
     def run(
         self,
         prompt: str,
@@ -168,7 +216,7 @@ class CLIRunner(ABC):
         Args:
             prompt: 提示词
             config: CLI 配置
-            label: 日志标签（如 MAIN、DEV）
+            label: 日志标签（如 MAIN、IMPLEMENTER）
             log_file: 日志文件路径
             resume_session_id: 恢复会话ID
             control: 运行控制（用于中断）
@@ -204,6 +252,8 @@ class CLIRunner(ABC):
                 raise UserInterrupted(f"User interrupted before starting {self.name}")
 
             attempt_prompt = prompt if retries_left == max_empty_retries else f"{prompt}\n\n{retry_notice}"
+            # 构建 stdin 内容（子类可覆盖以支持系统提示词等）
+            stdin_content = self.build_stdin_content(attempt_prompt, config)
             cmd = self.build_command(config, active_resume_session_id)
 
             # 如果不使用 stdin，将 prompt 追加到命令行
@@ -233,7 +283,7 @@ class CLIRunner(ABC):
                 try:
                     if self.stdin_input():
                         assert proc.stdin is not None
-                        proc.stdin.write(attempt_prompt)
+                        proc.stdin.write(stdin_content)
                         proc.stdin.close()
 
                     combined_output: list[str] = []
@@ -260,14 +310,33 @@ class CLIRunner(ABC):
                 if return_code != 0:
                     if control is not None and control.cancel_event.is_set():
                         raise UserInterrupted(f"User interrupted during {label} run")
+
+                    # 关键修复：保留已解析的 session_id，供重试时 resume
+                    if session_id is not None and active_resume_session_id is None:
+                        active_resume_session_id = session_id
+
                     combined_text = "".join(combined_output)
-                    err_cls = TemporaryError if is_temporary_failure(combined_text) else PermanentError
-                    raise err_cls(
+                    is_temporary = is_temporary_failure(combined_text)
+                    error_msg = (
                         f"{self.name} failed\n"
                         f"cmd: {' '.join(cmd)}\n"
                         f"return_code: {return_code}\n"
                         f"combined_output:\n{combined_text}\n"
                     )
+                    # 记录错误到日志文件
+                    error_log = (
+                        f"orchestrator: {label} CLI FAILED - "
+                        f"cli={self.name}, return_code={return_code}, "
+                        f"is_temporary={is_temporary}, "
+                        f"session_id={active_resume_session_id or 'none'}\n"
+                    )
+                    _append_log_line(error_log)
+                    lf.write(f"\n----- {label} ERROR -----\n{error_msg}\n")
+                    lf.flush()
+                    if is_temporary:
+                        raise TemporaryError(error_msg, session_id=active_resume_session_id)
+                    else:
+                        raise PermanentError(error_msg)
 
             # 验证会话ID一致性
             if active_resume_session_id is not None and session_id is not None:
@@ -396,9 +465,23 @@ class CLIRunner(ABC):
             max_empty_retries: 空输出最大重试次数
 
         Returns:
-            执行结果（来自实际 prompt）
+            执行结果（来自实际 prompt），包含 token_info 和 compact_result
         """
         from ..file_ops import _append_log_line
+        from ..token_info import get_session_token_info, format_token_info
+
+        # ========== 压缩前记录 token 信息 ==========
+        token_before = get_session_token_info(resume_session_id, self.name)
+        if token_before:
+            _append_log_line(
+                f"orchestrator: {label} context BEFORE compact: "
+                f"{format_token_info(token_before)}\n"
+            )
+            print(
+                f"orchestrator: {label} context BEFORE compact: "
+                f"{format_token_info(token_before)}",
+                flush=True,
+            )
 
         # ========== 第一步：执行压缩 ==========
         if self.supports_compact:
@@ -421,15 +504,16 @@ class CLIRunner(ABC):
                     )
                 else:
                     # 使用 /compact 命令方式（如 Claude）
+                    # 注意：/compact 命令的预期行为是返回空结果或简短确认
+                    # 因此使用 _run_compact_command 而不是 self.run，避免空输出被当作错误
                     compact_prompt = f"/compact {compact_instructions}"
-                    self.run(
+                    self._run_compact_command(
                         prompt=compact_prompt,
                         config=config,
                         label=f"{label}_COMPACT",
                         log_file=log_file,
                         resume_session_id=resume_session_id,
                         control=control,
-                        max_empty_retries=0,
                     )
 
                 _append_log_line(f"orchestrator: {label} compact completed\n")
@@ -446,8 +530,8 @@ class CLIRunner(ABC):
                 f"orchestrator: {label} skipping compact ({self.name} does not support compact)\n"
             )
 
-        # ========== 第二步：执行实际 prompt（使用正常配置）==========
-        return self.run(
+        # ========== 第二步：执行实际 prompt ==========
+        result = self.run(
             prompt=prompt,
             config=config,
             label=label,
@@ -456,6 +540,53 @@ class CLIRunner(ABC):
             control=control,
             max_empty_retries=max_empty_retries,
         )
+
+        # ========== Main Step 执行后记录 token 信息（压缩效果此时才能体现）==========
+        token_after = get_session_token_info(resume_session_id, self.name)
+        compact_result: "CompactResult | None" = None
+        if token_after:
+            _append_log_line(
+                f"orchestrator: {label} context AFTER compact+main: "
+                f"{format_token_info(token_after)}\n"
+            )
+            print(
+                f"orchestrator: {label} context AFTER compact+main: "
+                f"{format_token_info(token_after)}",
+                flush=True,
+            )
+            if token_before:
+                before_tokens = token_before.get("current_context_tokens", 0)
+                after_tokens = token_after.get("current_context_tokens", 0)
+                reduction = before_tokens - after_tokens
+                reduction_pct = (reduction / before_tokens * 100) if before_tokens > 0 else 0
+                compact_result = {
+                    "before_tokens": before_tokens,
+                    "after_tokens": after_tokens,
+                    "reduction": reduction,
+                    "reduction_percentage": reduction_pct,
+                }
+                # 只有在确实减少了 token 时才报告压缩效果
+                if reduction > 0:
+                    effect_msg = (
+                        f"orchestrator: {label} compact effect: "
+                        f"reduced {reduction:,} tokens ({reduction_pct:.1f}%)\n"
+                    )
+                    _append_log_line(effect_msg)
+                    print(effect_msg, end="", flush=True)
+                else:
+                    # Main Step 增加的 token 可能超过压缩减少的量，这是正常的
+                    net_change = -reduction  # 净增加量
+                    note_msg = (
+                        f"orchestrator: {label} note: context increased by {net_change:,} tokens "
+                        f"(compact savings offset by main step output)\n"
+                    )
+                    _append_log_line(note_msg)
+                    print(note_msg, end="", flush=True)
+
+        # 附加 token 信息到结果
+        result.token_info = token_after
+        result.compact_result = compact_result
+        return result
 
     def _run_compact_with_custom_command(
         self,
@@ -525,3 +656,84 @@ class CLIRunner(ABC):
             finally:
                 if control is not None:
                     control.set_current_proc(None)
+
+    def _run_compact_command(
+        self,
+        prompt: str,
+        config: CLIConfig,
+        label: str,
+        log_file: Path,
+        resume_session_id: str,
+        control: "RunControl | None" = None,
+    ) -> None:
+        """执行 /compact 命令（内部方法）
+
+        /compact 命令的预期行为是返回空结果或简短确认（如 "Compacted"），
+        因此不检查输出是否为空，避免误报错误。
+
+        Args:
+            prompt: /compact 命令（包含压缩指令）
+            config: CLI 配置
+            label: 日志标签
+            log_file: 日志文件路径
+            resume_session_id: 会话ID
+            control: 运行控制
+        """
+        from ..state import UserInterrupted
+
+        if control is not None and control.cancel_event.is_set():
+            raise UserInterrupted(f"User interrupted before starting {self.name} compact")
+
+        cmd = self.build_command(config, resume_session_id)
+
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        with log_file.open("a", encoding="utf-8") as lf:
+            banner = f"\n----- {self.name} ({label}) -----\n"
+            print(banner, flush=True)
+            lf.write(banner)
+            lf.flush()
+
+            line_prefix = f"{label.lower()}: "
+            proc = subprocess.Popen(
+                cmd,
+                cwd=config.work_dir,
+                stdin=subprocess.PIPE if self.stdin_input() else None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            if control is not None:
+                control.set_current_proc(proc)
+
+            try:
+                if self.stdin_input():
+                    assert proc.stdin is not None
+                    proc.stdin.write(prompt)
+                    proc.stdin.close()
+
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    prefixed = f"{line_prefix}{line}"
+                    sys.stdout.write(prefixed)
+                    lf.write(prefixed)
+                    lf.flush()
+                    sys.stdout.flush()
+                    if control is not None and control.cancel_event.is_set() and proc.poll() is None:
+                        proc.terminate()
+
+                return_code = proc.wait()
+            finally:
+                if control is not None:
+                    control.set_current_proc(None)
+
+            # /compact 命令允许非零退出码（某些 CLI 可能返回非零但实际成功）
+            # 只在明显失败时抛出异常
+            if return_code != 0:
+                if control is not None and control.cancel_event.is_set():
+                    raise UserInterrupted(f"User interrupted during {label} run")
+                # 记录警告但不抛出异常，因为 /compact 的退出码不总是可靠的
+                from ..file_ops import _append_log_line
+                _append_log_line(
+                    f"orchestrator: {label} returned non-zero exit code {return_code} (ignored for compact)\n"
+                )

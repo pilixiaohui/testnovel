@@ -9,7 +9,7 @@ else:
     from typing_extensions import NotRequired, Required
 
 NextAgent = Literal["IMPLEMENTER", "VALIDATE", "FINISH", "USER"]  # 关键变量：调度目标枚举（Context-centric 架构）
-ResumePhase = Literal["after_main", "after_subagent", "awaiting_user"]  # 关键变量：续跑阶段枚举
+ResumePhase = Literal["after_main", "after_subagent", "after_main_validate", "awaiting_user"]  # 关键变量：续跑阶段枚举
 TaskType = Literal["feature", "bugfix", "refactor", "chore"]  # 关键变量：任务类型标记（dev_plan 可选字段）
 
 
@@ -17,7 +17,7 @@ class ResumeState(TypedDict):
     schema_version: int  # 关键变量：续跑状态版本
     iteration: int  # 关键变量：迭代号
     phase: ResumePhase  # 关键变量：续跑阶段
-    next_agent: Literal["IMPLEMENTER", "USER"]  # 关键变量：续跑目标（Context-centric 架构）
+    next_agent: Literal["IMPLEMENTER", "VALIDATE", "USER"]  # 关键变量：续跑目标（Context-centric 架构）
     main_session_id: str  # 关键变量：MAIN 会话 id
     subagent_session_id: str | None  # 关键变量：子代理会话 id
     blackboard_digest: str  # 关键变量：黑板摘要
@@ -63,19 +63,28 @@ MainDecision = MainDecisionDispatch | MainDecisionUser
 class ValidationResult(TypedDict):
     """单个验证器的输出结果"""
     validator: str  # 关键变量：验证器名称（TEST_RUNNER/REQUIREMENT_VALIDATOR/ANTI_CHEAT_DETECTOR/EDGE_CASE_TESTER）
+    iteration: int  # 关键变量：验证结果对应迭代号
     verdict: Literal["PASS", "FAIL", "BLOCKED"]  # 关键变量：验证结论
+    category: Literal["CODE_DEFECT", "INFRA", "NOISE", "EVIDENCE_GAP"]  # 关键变量：问题分类（用于路由）
     confidence: float  # 关键变量：置信度（0.0-1.0）
     findings: list[str]  # 关键变量：发现列表
     evidence: str  # 关键变量：证据摘要
     duration_ms: int  # 关键变量：执行耗时（毫秒）
+    scenarios_total: NotRequired[int]  # 关键变量：场景总数（TEST_RUNNER）
+    scenarios_passed: NotRequired[int]  # 关键变量：通过场景数（TEST_RUNNER）
+    scenarios_executed: NotRequired[int]  # 关键变量：实际执行场景数（TEST_RUNNER）
+    commands_total: NotRequired[int]  # 关键变量：执行命令/场景总数（TEST_RUNNER，兼容字段）
+    commands_executed: NotRequired[int]  # 关键变量：实际执行命令/场景数（TEST_RUNNER，兼容字段）
 
 
 class SynthesizerOutput(TypedDict):
     """SYNTHESIZER 汇总输出"""
-    overall_verdict: Literal["PASS", "FAIL", "REWORK"]  # 关键变量：总体结论
+    overall_verdict: Literal["PASS", "FAIL", "REWORK", "BLOCKED"]  # 关键变量：总体结论
+    decision_basis: list[str]  # 关键变量：决策依据摘要（结构化）
     results: list[ValidationResult]  # 关键变量：各验证器结果
     blockers: list[str]  # 关键变量：阻塞项列表
     recommendations: list[str]  # 关键变量：建议列表
+    session_id: NotRequired[str | None]  # 关键变量：SYNTHESIZER 会话 id（可选）
 
 
 class CodexRunResult(TypedDict):
@@ -86,7 +95,7 @@ class CodexRunResult(TypedDict):
 class MainOutput(TypedDict, total=False):
     decision: Required[MainDecision]  # 关键变量：决策对象
     history_append: Required[str]  # 关键变量：历史追加内容
-    task: str | None  # 关键变量：工单内容（可空）
+    task_body: str | None  # 关键变量：工单正文（可空，头部由编排器生成）
     dev_plan_next: str | None  # 关键变量：计划草案（可空）
     doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空，仅 USER 决策时）
 
@@ -159,7 +168,7 @@ class IterationSummary(TypedDict, total=False):
     progress: ProgressInfo | None  # 关键变量：进度信息（可选）
     verdict: str  # 关键变量：本轮结论 PASS/FAIL/BLOCKED（可选）
     key_findings: list[str]  # 关键变量：关键发现列表（可选）
-    changes: CodeChanges  # 关键变量：代码变更信息（可选，仅 DEV）
+    changes: CodeChanges  # 关键变量：代码变更信息（可选，仅 IMPLEMENTER）
     user_insight: dict  # 关键变量：用户洞察信息（可选）
 
 
@@ -225,3 +234,27 @@ class CompactResult(TypedDict, total=False):
     after_tokens: int           # 关键变量：压缩后 token 数
     reduction: int              # 关键变量：减少的 token 数
     reduction_percentage: float  # 关键变量：减少百分比
+
+
+# ============= 验证器配置类型 =============
+
+
+class ValidatorContextConfig(TypedDict, total=False):
+    """验证器上下文配置"""
+    validator: str                      # 关键变量：验证器名称
+    requires_implementer_report: bool   # 关键变量：是否需要 IMPLEMENTER 报告
+    requires_dev_plan: bool             # 关键变量：是否需要 dev_plan
+    requires_code_root: bool            # 关键变量：是否需要代码目录
+    requires_test_commands: bool        # 关键变量：是否需要测试命令
+    requires_api_signatures: bool       # 关键变量：是否需要 API 签名
+    requires_modified_files: bool       # 关键变量：是否需要修改文件列表
+    custom_context_keys: list[str]      # 关键变量：自定义上下文键
+
+
+class ExtractedValidationInfo(TypedDict, total=False):
+    """提取的验证信息"""
+    test_commands: list[str]            # 关键变量：测试命令列表
+    api_signatures: list[str]           # 关键变量：API 签名列表
+    modified_files: list[str]           # 关键变量：修改文件列表
+    raw_yaml: str                       # 关键变量：原始 YAML 内容
+    extraction_method: Literal["yaml", "json", "regex", "fallback"]  # 关键变量：提取方法

@@ -114,6 +114,61 @@ class RunControl:
                 proc.kill()
 
 
+class SSEManager:
+    """SSE 连接管理器，支持多客户端广播"""
+
+    def __init__(self, state_store: UiStateStore) -> None:
+        self._lock = RLock()
+        self._clients: dict[int, Queue[dict]] = {}
+        self._next_client_id = 0
+        self._log_offsets: dict[int, int] = {}
+        state_store.subscribe(self._on_state_change)
+
+    def register_client(self) -> tuple[int, Queue[dict]]:
+        with self._lock:
+            client_id = self._next_client_id
+            self._next_client_id += 1
+            queue: Queue[dict] = Queue()
+            self._clients[client_id] = queue
+            self._log_offsets[client_id] = 0
+            return client_id, queue
+
+    def unregister_client(self, client_id: int) -> None:
+        with self._lock:
+            self._clients.pop(client_id, None)
+            self._log_offsets.pop(client_id, None)
+
+    def _on_state_change(self, state: UiState) -> None:
+        event = {"type": "state", "data": state}
+        with self._lock:
+            for queue in self._clients.values():
+                try:
+                    queue.put_nowait(event)
+                except Exception:
+                    pass
+
+    def push_log_event(self, client_id: int, text: str, next_offset: int) -> None:
+        with self._lock:
+            if client_id in self._clients:
+                self._clients[client_id].put_nowait({
+                    "type": "log",
+                    "data": {"text": text, "next_offset": next_offset}
+                })
+                self._log_offsets[client_id] = next_offset
+
+    def get_log_offset(self, client_id: int) -> int:
+        with self._lock:
+            return self._log_offsets.get(client_id, 0)
+
+    def set_log_offset(self, client_id: int, offset: int) -> None:
+        with self._lock:
+            self._log_offsets[client_id] = offset
+
+    def get_client_ids(self) -> list[int]:
+        with self._lock:
+            return list(self._clients.keys())
+
+
 @dataclass(frozen=True)
 class UiRuntime:
     host: str

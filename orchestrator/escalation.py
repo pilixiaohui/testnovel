@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from .config import VERIFICATION_POLICY_FILE, REPORT_ITERATION_SUMMARY_HISTORY_FILE
+from .config import VERIFICATION_POLICY_FILE, REPORT_ITERATION_SUMMARY_HISTORY_FILE, ITERATION_METADATA_FILE
 from .file_ops import _read_text, _require_file, _append_log_line
 from .parsing import parse_report_rules, extract_report_verdict, extract_report_blockers
 
@@ -164,7 +164,30 @@ def _check_environment_blocker(
 
 
 def _load_recent_iteration_history(*, lookback: int = 5) -> list[dict]:
-    """加载最近的迭代历史"""
+    """加载最近的迭代历史（优先使用元数据文件）"""
+    # 优先从迭代元数据文件获取
+    if ITERATION_METADATA_FILE.exists():
+        raw = _read_text(ITERATION_METADATA_FILE).strip()
+        if raw:
+            history: list[dict] = []
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    if isinstance(entry, dict):
+                        # 转换元数据格式为摘要历史格式（兼容循环检测逻辑）
+                        history.append({
+                            "iteration": entry.get("iteration"),
+                            "subagent": {"agent": entry.get("agent")},
+                        })
+                except json.JSONDecodeError:
+                    continue
+            if history:
+                return history[-lookback:] if len(history) > lookback else history
+
+    # 回退到摘要历史文件（兼容旧数据）
     if not REPORT_ITERATION_SUMMARY_HISTORY_FILE.exists():
         return []
 
@@ -172,7 +195,7 @@ def _load_recent_iteration_history(*, lookback: int = 5) -> list[dict]:
     if not raw:
         return []
 
-    history: list[dict] = []
+    history = []
     for line in raw.splitlines():
         line = line.strip()
         if not line:
@@ -380,6 +403,6 @@ details: {json.dumps(escalation.details, ensure_ascii=False)}"""
         "options": options,
         "recommended_option_id": recommended,
         "history_append": history_append,
-        "task": None,
+        "task_body": None,
         "dev_plan_next": None,
     }

@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Orchestrator 工作流启动脚本
-# 用法: ./dev-start.sh
+# Orchestrator 工作流启动脚本（仓库内模式）
+# 用法:
+#   ./dev-start.sh
 
 set -e
 
@@ -13,6 +14,18 @@ LOG_FILE="$TMP_DIR/orchestrator.log"
 UI_HOST="127.0.0.1"
 UI_PORT="8766"
 ORCH_PID=""
+
+if [ $# -ne 0 ]; then
+    echo "❌ 不支持参数。"
+    echo "用法: ./dev-start.sh"
+    exit 1
+fi
+
+if [ -n "${AINOVEL_ORCHESTRATOR_HOME:-}" ] || [ -n "${AINOVEL_ORCHESTRATOR_SOURCE_ROOT:-}" ]; then
+    echo "❌ 检测到已废弃 runtime 环境变量：AINOVEL_ORCHESTRATOR_HOME / AINOVEL_ORCHESTRATOR_SOURCE_ROOT"
+    echo "请先执行: unset AINOVEL_ORCHESTRATOR_HOME AINOVEL_ORCHESTRATOR_SOURCE_ROOT"
+    exit 1
+fi
 
 cleanup() {
     echo ""
@@ -48,6 +61,7 @@ echo "✅ Python: $(python3 --version)"
 echo ""
 
 echo "将启动服务:"
+echo "  模式: 仓库内运行"
 echo "  UI: http://$UI_HOST:$UI_PORT"
 echo ""
 echo "停止: 按 Ctrl+C 或 ./dev-stop.sh"
@@ -61,10 +75,10 @@ if [ -f "$PID_FILE" ]; then
     exit 1
 fi
 
-# 启动 Orchestrator UI
 echo "📡 启动 Orchestrator UI..."
 cd "$PROJECT_ROOT"
-nohup python3 orchestrator.py --ui --ui-host "$UI_HOST" --ui-port "$UI_PORT" > "$LOG_FILE" 2>&1 &
+nohup env -u AINOVEL_ORCHESTRATOR_HOME -u AINOVEL_ORCHESTRATOR_SOURCE_ROOT \
+  python3 orchestrator.py --ui --ui-host "$UI_HOST" --ui-port "$UI_PORT" > "$LOG_FILE" 2>&1 &
 ORCH_PID=$!
 echo "$ORCH_PID" > "$PID_FILE"
 echo "   PID: $ORCH_PID"
@@ -104,3 +118,6 @@ echo "停止: ./dev-stop.sh 或 Ctrl+C"
 echo ""
 
 wait "$ORCH_PID"
+wait_status=$?
+rm -f "$PID_FILE"
+exit "$wait_status"

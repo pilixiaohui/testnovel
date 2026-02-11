@@ -1,0 +1,2 @@
+recursive-include orchestrator/memory/prompts *.md
+recursive-include orchestrator/ui/frontend/dist *

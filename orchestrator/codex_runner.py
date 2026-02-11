@@ -10,8 +10,12 @@ from .config import (
     CODEX_STATE_DIR,
     MAIN_ITERATION_FILE,
     MAIN_SESSION_ID_FILE,
+    MAIN_APPROVAL_POLICY,
+    MAIN_SANDBOX_MODE,
     ORCHESTRATOR_LOG_FILE,
+    PROJECT_ENV_FILE,
     PROJECT_ROOT,
+    CONFIG,
     RESUME_STATE_FILE,
     IMPLEMENTER_SESSION_ID_FILE,
     get_cli_for_agent,
@@ -21,6 +25,7 @@ from .errors import PermanentError, TemporaryError
 from .file_ops import _append_log_line, _atomic_write_text, _read_text, _require_file
 from .state import RunControl, UserInterrupted
 from .types import CodexRunResult
+from .runtime_context import load_runtime_context
 from .validation import _validate_session_id
 
 # 导入 CLI 抽象层
@@ -341,6 +346,24 @@ def _run_codex_exec(
 
 # ============= 统一 CLI 接口 =============
 
+
+def _resolve_agent_work_dir(agent: str) -> Path:
+    """为代理选择工作目录。
+
+    MAIN 只与编排器黑板交互；其他代理在业务项目根目录下执行。
+    """
+    if agent == "MAIN":
+        return CONFIG.orchestrator_dir
+    context = load_runtime_context(project_env_file=PROJECT_ENV_FILE)
+    return context.agent_root
+
+
+def _resolve_agent_permissions(*, agent: str, sandbox_mode: str, approval_policy: str) -> tuple[str, str]:
+    """为代理解析生效的权限配置。"""
+    if agent == "MAIN":
+        return MAIN_SANDBOX_MODE, MAIN_APPROVAL_POLICY
+    return sandbox_mode, approval_policy
+
 def _run_cli_exec(
     *,
     prompt: str,
@@ -352,12 +375,13 @@ def _run_cli_exec(
     control: RunControl | None = None,
     resume_session_id: str | None = None,
     max_empty_last_message_retries: int = 3,
+    system_prompt: str | None = None,
 ) -> CodexRunResult:
     """
     统一 CLI 执行接口，根据代理配置选择对应的 CLI 工具。
 
     Args:
-        prompt: 提示词
+        prompt: 用户提示词
         output_last_message: 输出文件路径
         sandbox_mode: 沙箱模式
         approval_policy: 审批策略
@@ -366,6 +390,7 @@ def _run_cli_exec(
         control: 运行控制
         resume_session_id: 恢复会话ID
         max_empty_last_message_retries: 空输出最大重试次数
+        system_prompt: 系统提示词（通过 --append-system-prompt 注入，仅 Claude CLI 支持）
 
     Returns:
         执行结果
@@ -373,17 +398,23 @@ def _run_cli_exec(
     # 获取代理配置的 CLI
     cli_name = get_cli_for_agent(agent)
     extra_args = get_cli_extra_args(agent)
+    effective_sandbox_mode, effective_approval_policy = _resolve_agent_permissions(
+        agent=agent,
+        sandbox_mode=sandbox_mode,
+        approval_policy=approval_policy,
+    )
 
     # 创建 CLI 运行器
     runner = create_cli_runner(cli_name, fallback="codex")
 
     # 构建配置
     config = CLIConfig(
-        sandbox_mode=sandbox_mode,
-        approval_policy=approval_policy,
-        work_dir=PROJECT_ROOT,
+        sandbox_mode=effective_sandbox_mode,
+        approval_policy=effective_approval_policy,
+        work_dir=_resolve_agent_work_dir(agent),
         output_file=output_last_message,
         extra_args=extra_args,
+        system_prompt=system_prompt,
     )
 
     # 执行
@@ -401,69 +432,6 @@ def _run_cli_exec(
     return {"last_message": result.last_message, "session_id": result.session_id}
 
 
-def _run_cli_exec_with_compact(
-    *,
-    prompt: str,
-    output_last_message: Path,
-    sandbox_mode: str,
-    approval_policy: str,
-    label: str,
-    agent: str = "MAIN",
-    control: RunControl | None = None,
-    resume_session_id: str,
-    compact_instructions: str,
-    max_empty_last_message_retries: int = 3,
-) -> CodexRunResult:
-    """
-    带上下文压缩的 CLI 执行接口（两步合一）。
-
-    流程：
-    1. 先发送 /compact 命令压缩上下文
-    2. 再 resume 会话发送实际 prompt
-
-    Args:
-        prompt: 实际提示词（不含 /compact）
-        output_last_message: 输出文件路径
-        sandbox_mode: 沙箱模式
-        approval_policy: 审批策略
-        label: 日志标签
-        agent: 代理名称（用于选择 CLI）
-        control: 运行控制
-        resume_session_id: 必须提供会话ID
-        compact_instructions: 压缩指令内容
-        max_empty_last_message_retries: 空输出最大重试次数
-
-    Returns:
-        执行结果（来自第二步的实际 prompt）
-    """
-    # 获取代理配置的 CLI
-    cli_name = get_cli_for_agent(agent)
-    extra_args = get_cli_extra_args(agent)
-
-    # 创建 CLI 运行器
-    runner = create_cli_runner(cli_name, fallback="codex")
-
-    # 构建配置
-    config = CLIConfig(
-        sandbox_mode=sandbox_mode,
-        approval_policy=approval_policy,
-        work_dir=PROJECT_ROOT,
-        output_file=output_last_message,
-        extra_args=extra_args,
-    )
-
-    # 执行带压缩的调用
-    result = runner.run_with_compact(
-        prompt=prompt,
-        config=config,
-        label=label,
-        log_file=ORCHESTRATOR_LOG_FILE,
-        resume_session_id=resume_session_id,
-        compact_instructions=compact_instructions,
-        control=control,
-        max_empty_retries=max_empty_last_message_retries,
-    )
-
-    # 转换为旧格式（保持兼容性）
-    return {"last_message": result.last_message, "session_id": result.session_id}
-
+# NOTE: _run_cli_exec_with_compact 已移除
+# codex CLI 内部自动 compact，不需要手动执行 /compact 命令
+# 直接使用 _run_cli_exec 的 resume 模式即可

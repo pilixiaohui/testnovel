@@ -20,6 +20,34 @@ def _inject_text(*, path: Path, content: str, note: str | None = None) -> str:
     return "\n".join([header, content, footer])
 
 
+def _inject_project_history_head(
+    *,
+    max_lines: int = 100,
+    label_suffix: str = "",
+) -> str:
+    """
+    注入 project_history.md 的前 N 行（包含 Task Goal 等用户原始需求）。
+    用于 SUMMARY 代理对比当前进度与用户需求。
+    """
+    if max_lines < 1:
+        raise ValueError("max_lines must be >= 1")
+
+    _require_file(PROJECT_HISTORY_FILE)
+    full_text = _read_text(PROJECT_HISTORY_FILE)
+    lines = full_text.splitlines()
+
+    # 截取前 max_lines 行
+    truncated_lines = lines[:max_lines]
+    content = "\n".join(truncated_lines)
+
+    # 如果被截断，添加提示
+    if len(lines) > max_lines:
+        content += f"\n\n... (共 {len(lines)} 行，仅展示前 {max_lines} 行)"
+
+    note = label_suffix.strip() or f"前 {max_lines} 行"
+    return _inject_text(path=PROJECT_HISTORY_FILE, content=content.rstrip(), note=note)
+
+
 def _inject_file(
     path: Path,
     *,
@@ -29,8 +57,8 @@ def _inject_file(
     label_suffix: str = "",
 ) -> str:
     """
-    将文件内容“注入”到提示词中（黑板模式的可观测快照）。
-    - 按用户要求：所有代理注入 global_context；MAIN 额外注入 project_history/dev_plan；REVIEW 注入 dev_plan
+    将文件内容"注入"到提示词中（黑板模式的可观测快照）。
+    - Context-centric 架构：所有代理注入 global_context；MAIN 额外注入 project_history/dev_plan
     - 不做截断/兜底：缺失即报错（快速失败）
     """
     if use_summary:
@@ -239,8 +267,11 @@ def _load_system_prompt(agent_name: str) -> str:
 
 
 def _task_file_for_agent(agent: NextAgent) -> Path:
-    if agent in {"TEST", "DEV", "REVIEW"}:  # 关键分支：子代理工单
+    # Context-centric 架构：IMPLEMENTER 合并 TEST+DEV，VALIDATE 触发并行验证
+    if agent == "IMPLEMENTER":  # 关键分支：IMPLEMENTER 工单
         return CONFIG.get_task_file(agent)
+    if agent == "VALIDATE":  # 关键分支：VALIDATE 无工单（验证器工单由编排器自动生成）
+        raise ValueError("VALIDATE triggers parallel validators, no single task file")
     if agent == "USER":  # 关键分支：USER 无工单
         raise ValueError("USER is not a sub-agent and has no task file")
     if agent == "FINISH":  # 关键分支：FINISH 无工单
@@ -308,3 +339,47 @@ def _extract_finish_review_verdict(finish_review_text: str) -> str:
     if not result_parts:
         return "(无法解析 FINISH_REVIEW 结论)"
     return "\n".join(result_parts)
+
+
+# ============= 运行时信息行（借鉴 OpenClaw）=============
+
+
+def _build_runtime_line(
+    *,
+    iteration: int,
+    agent: str,
+    cli_name: str,
+    session_id: str | None = None,
+    context_tokens: int | None = None,
+    model: str | None = None,
+) -> str:
+    """构建运行时信息行（借鉴 OpenClaw 设计）
+
+    在提示词末尾添加结构化的运行时信息，便于代理理解当前环境。
+    格式: Runtime: iteration=N | agent=XXX | cli=xxx | ...
+
+    Args:
+        iteration: 当前迭代号
+        agent: 代理名称 (MAIN/IMPLEMENTER/FINISH_REVIEW)
+        cli_name: CLI 工具名称 (codex/claude/opencode)
+        session_id: 会话 ID（可选，仅显示前 8 位）
+        context_tokens: 当前上下文 token 数（可选）
+        model: 模型名称（可选）
+
+    Returns:
+        格式化的运行时信息行
+    """
+    parts = [
+        f"iteration={iteration}",
+        f"agent={agent}",
+        f"cli={cli_name}",
+    ]
+
+    if model:
+        parts.append(f"model={model}")
+    if session_id:
+        parts.append(f"session={session_id[:8]}")
+    if context_tokens is not None and context_tokens > 0:
+        parts.append(f"ctx={context_tokens:,}")
+
+    return f"Runtime: {' | '.join(parts)}"

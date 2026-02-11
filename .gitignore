@@ -31,3 +31,5 @@ Git 代码上传问题解决手册.md
 .env
 backend/.env
 orchestrator/ui/frontend/node_modules/
+project/.orchestrator_ctx/
+.orchestrator_ctx/

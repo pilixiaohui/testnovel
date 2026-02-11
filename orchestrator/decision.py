@@ -48,11 +48,13 @@ def _extract_option_description(opt: dict) -> str | None:
     return None
 
 
-def _load_json_object(raw_json: str) -> dict:
+def _load_json_object(raw_json: str, *, strict: bool = False) -> dict:
     trimmed = raw_json.strip()
     try:  # 关键分支：尝试解析 JSON
         payload = json.loads(trimmed)  # 关键变量：解析 JSON
-    except json.JSONDecodeError as exc:  # 关键分支：容忍包裹文本，尝试提取 JSON 对象
+    except json.JSONDecodeError as exc:  # 关键分支：严格模式直接失败，非严格模式容忍包裹文本
+        if strict:
+            raise ValueError(f"MAIN output must be pure JSON, got: {raw_json!r}") from exc
         extracted = _extract_json_object(raw_json)
         if extracted is None:
             raise ValueError(f"MAIN output must be pure JSON, got: {raw_json!r}") from exc
@@ -68,9 +70,7 @@ def _load_json_object(raw_json: str) -> dict:
 def _parse_main_decision_payload(decision: dict) -> MainDecision:
     """
     MAIN decision payload must be a JSON object containing:
-    {"next_agent":"DEV","reason":"..."}
-    or for parallel review:
-    {"next_agent":"PARALLEL_REVIEW","reason":"...","parallel_reviews":[...]}
+    {"next_agent":"IMPLEMENTER","reason":"..."}
     """
 
     next_agent = decision.get("next_agent")  # 关键变量：目标代理
@@ -82,9 +82,6 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
         raise ValueError(f"Invalid next_agent: {next_agent!r}, allowed: {sorted(allowed)}")
     if not isinstance(reason, str) or not reason.strip():  # 关键分支：理由缺失
         raise ValueError("Invalid reason: must be a non-empty string")
-
-    # 处理并行审阅决策 - Context-centric 架构已移除 PARALLEL_REVIEW
-    # 保留代码以兼容旧数据，但不再支持新的 PARALLEL_REVIEW 决策
 
     if next_agent != "USER":  # 关键分支：非 USER 直接返回最小决策
         return {"next_agent": next_agent, "reason": reason.strip()}  # type: ignore[return-value]
@@ -141,17 +138,17 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
     }
 
 
-def _parse_main_decision(raw_json: str) -> MainDecision:
+def _parse_main_decision(raw_json: str, *, strict: bool = False) -> MainDecision:
     """
     MAIN 的最后一条消息必须是纯 JSON（无额外文本），形如：
-    {"next_agent":"DEV","reason":"..."}
+    {"next_agent":"IMPLEMENTER","reason":"..."}
     """
-    payload = _load_json_object(raw_json)  # 关键变量：JSON 负载
+    payload = _load_json_object(raw_json, strict=strict)  # 关键变量：JSON 负载
     return _parse_main_decision_payload(payload)
 
 
-def _parse_main_output(raw_json: str) -> MainOutput:
-    payload = _load_json_object(raw_json)  # 关键变量：JSON 负载
+def _parse_main_output(raw_json: str, *, strict: bool = False) -> MainOutput:
+    payload = _load_json_object(raw_json, strict=strict)  # 关键变量：JSON 负载
     decision = _parse_main_decision_payload(payload)  # 关键变量：解析决策
 
     history_append = payload.get("history_append")  # 关键变量：历史追加内容
@@ -163,23 +160,24 @@ def _parse_main_output(raw_json: str) -> MainOutput:
         if not isinstance(dev_plan_next, str) or not dev_plan_next.strip():  # 关键分支：草案为空
             raise ValueError("Invalid dev_plan_next: must be a non-empty string or null")
 
-    task = payload.get("task")  # 关键变量：工单内容（可为空）
+    task_body = payload.get("task_body")  # 关键变量：工单正文（可为空）
+    legacy_task = payload.get("task")  # 关键变量：废弃字段 task（仅用于快速失败）
     next_agent = decision["next_agent"]  # 关键变量：目标代理
 
-    # Context-centric 架构：IMPLEMENTER 需要工单
+    if legacy_task is not None and isinstance(legacy_task, str) and legacy_task.strip():
+        raise ValueError("Invalid task: legacy field 'task' is deprecated, use 'task_body' instead")
+
+    if task_body is not None and not isinstance(task_body, str):
+        raise ValueError("Invalid task_body: must be a string or null")
+
+    # Context-centric 架构：IMPLEMENTER 需要 task_body
     if next_agent == "IMPLEMENTER":
-        if not isinstance(task, str) or not task.strip():
-            raise ValueError(f"Invalid task: must be a non-empty string when next_agent={next_agent}")
-    elif next_agent in {"VALIDATE", "FINISH"}:
-        # VALIDATE 和 FINISH 不需要 task
-        if task is not None and isinstance(task, str) and task.strip():
-            raise ValueError(f"Invalid task: must be null when next_agent={next_agent}")
-    elif next_agent == "USER":
-        # USER 决策不需要 task
-        pass
+        if not isinstance(task_body, str) or not task_body.strip():
+            raise ValueError(f"Invalid task_body: must be a non-empty string when next_agent={next_agent}")
     else:
-        # 其他情况：task 可选
-        pass
+        # VALIDATE/FINISH/USER 不需要 task_body
+        if task_body is not None:
+            raise ValueError(f"Invalid task_body: must be null when next_agent={next_agent}")
 
     # 解析文档修正建议（仅 USER 决策时）
     doc_patches = None
@@ -216,7 +214,7 @@ def _parse_main_output(raw_json: str) -> MainOutput:
     return {
         "decision": decision,
         "history_append": history_append,
-        "task": task if isinstance(task, str) else None,
+        "task_body": task_body if isinstance(task_body, str) else None,
         "dev_plan_next": dev_plan_next if isinstance(dev_plan_next, str) else None,
         "doc_patches": doc_patches,
     }

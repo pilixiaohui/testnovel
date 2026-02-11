@@ -71,6 +71,10 @@
           <input type="checkbox" v-model="resetProjectHistory" />
           <span>重置 project_history.md（项目历史）</span>
         </label>
+        <label class="resetOption">
+          <input type="checkbox" v-model="clearIterationArchives" />
+          <span>清除历史迭代报告（iterations 归档）</span>
+        </label>
       </div>
       <div style="height: 10px"></div>
       <div class="row">
@@ -553,6 +557,7 @@ const showTaskModal = ref(false);
 const taskGoalInput = ref('');
 const resetDevPlan = ref(false);
 const resetProjectHistory = ref(false);
+const clearIterationArchives = ref(false);
 const messageInput = ref('');
 const activeTab = ref<'decision' | 'progress' | 'summary' | 'documents' | 'message' | 'files' | 'state'>('decision');
 
@@ -1173,6 +1178,7 @@ function openTaskModal() {
   taskGoalInput.value = '';
   resetDevPlan.value = false;
   resetProjectHistory.value = false;
+  clearIterationArchives.value = false;
   showTaskModal.value = true;
   nextTick(() => taskGoalInputRef.value?.focus());
 }
@@ -1204,7 +1210,8 @@ async function submitNewTask() {
     body: JSON.stringify({
       task_goal: goal,
       reset_dev_plan: resetDevPlan.value,
-      reset_project_history: resetProjectHistory.value
+      reset_project_history: resetProjectHistory.value,
+      clear_iteration_archives: clearIterationArchives.value
     })
   });
   if (!resp.ok) {
@@ -1414,36 +1421,67 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
-let stateTimer: number | undefined;
-let logTimer: number | undefined;
+// SSE 连接状态
+const sseConnected = ref(false);
+let eventSource: EventSource | null = null;
+
+function connectSSE() {
+  if (eventSource) eventSource.close();
+
+  eventSource = new EventSource('/api/events');
+
+  eventSource.addEventListener('state', (e: MessageEvent) => {
+    const s = JSON.parse(e.data);
+    state.value = s;
+    updateDecisionIfChanged(s.awaiting_user_decision ?? null);
+  });
+
+  eventSource.addEventListener('log', (e: MessageEvent) => {
+    const data = JSON.parse(e.data);
+    if (data.text) {
+      logText.value += data.text;
+      appendLogSummaryBuffer(data.text);
+      const lines = logText.value.split('\n');
+      if (lines.length > 100) logText.value = lines.slice(-100).join('\n');
+      if (autoScroll.value && logRef.value) {
+        nextTick(() => { logRef.value!.scrollTop = logRef.value!.scrollHeight; });
+      }
+    }
+    if (typeof data.next_offset === 'number') logOffset.value = data.next_offset;
+  });
+
+  eventSource.addEventListener('heartbeat', () => {});
+
+  eventSource.onopen = () => { sseConnected.value = true; };
+
+  eventSource.onerror = () => {
+    sseConnected.value = false;
+    eventSource?.close();
+    setTimeout(connectSSE, 2000);  // 2秒后重连
+  };
+}
+
+function disconnectSSE() {
+  eventSource?.close();
+  eventSource = null;
+  sseConnected.value = false;
+}
+
 let progressTimer: number | undefined;
 
 onMounted(() => {
-  fetchState();
+  connectSSE();  // 替代 fetchState 和 initLog
   refreshFiles();
   fetchProgress();
   fetchUploadedDocs();
   loadLogSummaryConfig();
-  stateTimer = window.setInterval(fetchState, 800);
-  progressTimer = window.setInterval(fetchProgress, 5000);
-  initLog().finally(() => {
-    if (!logTimer) {
-      logTimer = window.setInterval(fetchLog, 400);
-    }
-  });
+  progressTimer = window.setInterval(fetchProgress, 5000);  // 保留进度轮询
   window.addEventListener('keydown', handleGlobalKeydown);
 });
 
 onUnmounted(() => {
-  if (stateTimer) {
-    window.clearInterval(stateTimer);
-  }
-  if (logTimer) {
-    window.clearInterval(logTimer);
-  }
-  if (progressTimer) {
-    window.clearInterval(progressTimer);
-  }
+  disconnectSSE();
+  if (progressTimer) window.clearInterval(progressTimer);
   window.removeEventListener('keydown', handleGlobalKeydown);
 });
 </script>

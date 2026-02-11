@@ -1,13 +1,20 @@
 #!/bin/bash
 
-# 停止 Orchestrator 工作流脚本
-# 用法: ./dev-stop.sh
+# 停止 Orchestrator 工作流脚本（仓库内模式）
+# 用法:
+#   ./dev-stop.sh
 
 set -e
 
 TMP_DIR="/tmp/orchestrator-dev"
 PID_FILE="$TMP_DIR/orchestrator.pid"
 ORCH_PID=""
+
+if [ $# -ne 0 ]; then
+    echo "❌ 不支持参数。"
+    echo "用法: ./dev-stop.sh"
+    exit 1
+fi
 
 echo "🛑 正在停止 Orchestrator..."
 echo ""

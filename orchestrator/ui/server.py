@@ -8,12 +8,13 @@ from threading import Thread
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..codex_runner import _clear_saved_main_state
+from ..backup import _clear_iteration_archives
 from ..config import ORCHESTRATOR_LOG_FILE, PROJECT_ROOT, RESUME_STATE_FILE, _list_editable_md_files, _resolve_editable_md_path
 from ..documents import add_doc_to_finish_review_config, delete_uploaded_doc, get_finish_review_docs, list_uploaded_docs, remove_doc_from_finish_review_config, store_uploaded_doc
 from ..log_summary import load_log_summary_config, save_log_summary_config, summarize_logs
 from ..progress import get_progress_info
 from ..file_ops import _append_log_line, _append_new_task_goal_to_history, _append_user_message_to_history, _reset_dev_plan_file, _reset_project_history_file
-from ..state import RunControl, UiRuntime, UiStateStore
+from ..state import RunControl, SSEManager, UiRuntime, UiStateStore
 from ..types import UserDecisionResponse
 from ..workflow import _reset_workflow_state
 
@@ -83,6 +84,30 @@ def _start_ui_server(
     if not UI_INDEX_FILE.exists():  # 关键分支：UI 构建产物缺失直接失败
         raise FileNotFoundError(f"UI dist missing: {UI_INDEX_FILE}")
 
+    # 创建 SSE 管理器
+    sse_manager = SSEManager(state)
+
+    # 日志推送线程
+    import time
+
+    def _log_push_loop() -> None:
+        while True:
+            time.sleep(0.5)
+            for client_id in sse_manager.get_client_ids():
+                offset = sse_manager.get_log_offset(client_id)
+                try:
+                    with ORCHESTRATOR_LOG_FILE.open("rb") as f:
+                        f.seek(offset)
+                        chunk = f.read(65536)
+                        next_offset = f.tell()
+                    if chunk:
+                        sse_manager.push_log_event(client_id, chunk.decode("utf-8", errors="replace"), next_offset)
+                except Exception:
+                    pass
+
+    log_push_thread = Thread(target=_log_push_loop, daemon=True)
+    log_push_thread.start()
+
     def read_json_body(handler: BaseHTTPRequestHandler) -> dict:
         length_str = handler.headers.get("Content-Length")  # 关键变量：请求体长度
         if length_str is None:  # 关键分支：缺长度头直接失败
@@ -139,6 +164,8 @@ def _start_ui_server(
                 if not asset_path.exists() or not asset_path.is_file():
                     return send_text(self, "not found", status=404)
                 return _send_static_file(self, asset_path)
+            if parsed.path == "/api/events":  # 关键分支：SSE 事件流
+                return self._handle_sse()
             if parsed.path == "/api/state":  # 关键分支：状态查询
                 payload = state.get()  # 关键变量：当前状态快照
                 payload["run_locked"] = control.is_busy()  # 关键变量：运行锁
@@ -261,6 +288,7 @@ def _start_ui_server(
                 goal = task_goal.strip()  # 关键变量：清洗后的目标
                 reset_dev_plan = bool(payload.get("reset_dev_plan", False))  # 关键变量：是否重置 dev_plan
                 reset_project_history = bool(payload.get("reset_project_history", False))  # 关键变量：是否重置 project_history
+                clear_iteration_archives = bool(payload.get("clear_iteration_archives", False))  # 关键变量：是否清除迭代归档
 
                 def before_enqueue() -> None:
                     if reset_project_history:  # 关键分支：重置 project_history
@@ -269,6 +297,8 @@ def _start_ui_server(
                     _clear_saved_main_state()  # 关键变量：清理会话状态
                     if reset_dev_plan:  # 关键分支：重置 dev_plan
                         _reset_dev_plan_file()
+                    if clear_iteration_archives:  # 关键分支：清除迭代归档
+                        _clear_iteration_archives()
 
                 try:  # 关键分支：启动前回调与排队
                     ok = control.request_start_with_options(new_task=True, task_goal=goal, before_enqueue=before_enqueue)  # 关键变量：发起新任务
@@ -283,6 +313,8 @@ def _start_ui_server(
                     _append_log_line("orchestrator: dev_plan reset by user\n")
                 if reset_project_history:
                     _append_log_line("orchestrator: project_history reset by user\n")
+                if clear_iteration_archives:
+                    _append_log_line("orchestrator: iteration archives cleared by user\n")
                 return send_json(self, {"ok": True})
             if parsed.path == "/api/control/interrupt":  # 关键分支：中断运行
                 control.interrupt()  # 关键变量：发出中断信号
@@ -433,6 +465,45 @@ def _start_ui_server(
                     return send_json(self, {"error": str(exc)}, status=500)
                 return send_json(self, {"success": True})
             return send_text(self, "not found", status=404)
+
+        def _handle_sse(self) -> None:
+            from queue import Empty
+            client_id, queue = sse_manager.register_client()
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "keep-alive")
+                self.send_header("X-Accel-Buffering", "no")
+                self.end_headers()
+
+                # 初始状态
+                initial = state.get()
+                initial["run_locked"] = control.is_busy()  # type: ignore[literal-required]
+                initial["resume_available"] = RESUME_STATE_FILE.exists()  # type: ignore[literal-required]
+                self._send_sse_event("state", initial)
+
+                # 初始日志
+                text, offset = _read_tail_text(path=ORCHESTRATOR_LOG_FILE, tail_lines=100)
+                sse_manager.set_log_offset(client_id, offset)
+                self._send_sse_event("log", {"text": text, "next_offset": offset})
+
+                # 事件循环
+                while True:
+                    try:
+                        event = queue.get(timeout=30)
+                        self._send_sse_event(event["type"], event["data"])
+                    except Empty:
+                        self._send_sse_event("heartbeat", {})
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                sse_manager.unregister_client(client_id)
+
+        def _send_sse_event(self, event_type: str, data: object) -> None:
+            payload = json.dumps(data, ensure_ascii=False)
+            self.wfile.write(f"event: {event_type}\ndata: {payload}\n\n".encode("utf-8"))
+            self.wfile.flush()
 
     server = ThreadingHTTPServer((host, port), Handler)  # 关键变量：HTTP 服务实例
     thread = Thread(target=server.serve_forever, daemon=True)  # 关键变量：后台线程

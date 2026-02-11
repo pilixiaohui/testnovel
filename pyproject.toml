@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ainovel-orchestrator"
+version = "0.1.0"
+description = "Isolated multi-agent workflow orchestrator"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "typing_extensions>=4.7; python_version < \"3.11\"",
+]
+
+[project.scripts]
+ainovel-orchestrator = "orchestrator.main:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["orchestrator*"]
+
+[tool.setuptools.package-data]
+orchestrator = [
+  "memory/prompts/*.md",
+  "ui/frontend/dist/*",
+  "ui/frontend/dist/assets/*",
+]

@@ -95,7 +95,7 @@ uvicorn app.main:app --reload --port 8000
 
 ```bash
 # 启动 Web UI（推荐）
-python orchestrator.py --ui
+./dev-start.sh
 # 访问 http://127.0.0.1:8766
 
 # 或命令行模式
@@ -103,6 +103,15 @@ python orchestrator.py --max-iterations 10 --task "实现新功能"
 
 # 或新任务模式
 python orchestrator.py --new-task --task "修复 bug XYZ"
+```
+
+### 2.1 运行隔离策略
+
+```bash
+# MAIN 在仓库 orchestrator/ 目录执行
+# 子代理在 project_env.json 中 code_root/frontend_root 的共同父目录执行（agent_root）
+# 编排黑板 markdown 会在派发前同步到：<agent_root>/.orchestrator_ctx/
+# 该目录是只读镜像，手工修改会在下一次派发被覆盖
 ```
 
 ### 3. 运行测试
@@ -201,9 +210,9 @@ workspace/*/current_task.md ←┘
 
 ### 自定义项目配置
 
-1. 修改 `project/config.py` 中的配置
-2. 修改 `project/templates.py` 中的模板
-3. orchestrator.py 无需修改
+1. 编辑 `orchestrator/memory/project_env.json`
+2. 修改 `orchestrator/memory/prompts/*.md`
+3. 使用 `./dev-start.sh` 启动（仓库内模式）
 
 ### 迁移到新项目
 

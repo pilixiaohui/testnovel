@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+import json
 from pathlib import Path
 
 from .config import (
@@ -12,7 +13,9 @@ from .config import (
     DEV_PLAN_MAX_TASKS,
     PROJECT_HISTORY_FILE,
     REQUIRE_ALL_VERIFIED_FOR_FINISH,
+    VALIDATION_RESULTS_FILE,
 )
+from .errors import TemporaryError
 from .file_ops import _read_text, _require_file, _atomic_write_text
 from .prompt_builder import _task_file_for_agent
 from .types import NextAgent
@@ -230,9 +233,13 @@ def _validate_history_append(*, iteration: int, entry: str) -> str:
 
 
 def _validate_task_content(*, iteration: int, expected_agent: str, task: str) -> str:
+    """校验工单内容格式和一致性。
+
+    校验失败时抛出 TemporaryError，允许 MAIN 重试修正。
+    """
     expected_header = f"# Current Task (Iteration {iteration})"  # 关键变量：工单头部
     if not task.startswith(expected_header):  # 关键分支：工单头部不匹配
-        raise RuntimeError(f"task must start with {expected_header!r}")
+        raise TemporaryError(f"task must start with {expected_header!r}")
 
     assigned_agent = None  # 关键变量：解析出的 assigned_agent
     for line in task.splitlines():  # 关键分支：逐行解析工单
@@ -241,9 +248,12 @@ def _validate_task_content(*, iteration: int, expected_agent: str, task: str) ->
             break
 
     if assigned_agent is None:  # 关键分支：工单缺 assigned_agent
-        raise RuntimeError("task missing required 'assigned_agent:' line")
+        raise TemporaryError("task missing required 'assigned_agent:' line")
     if assigned_agent != expected_agent:  # 关键分支：工单代理不一致
-        raise RuntimeError(f"task assigned_agent mismatch: expected {expected_agent!r}, got {assigned_agent!r}")
+        raise TemporaryError(
+            f"task assigned_agent mismatch: next_agent={expected_agent!r} 但 task 中 assigned_agent={assigned_agent!r}。"
+            f"请确保 next_agent 与 task 中的 assigned_agent 一致。"
+        )
 
     return task.rstrip()
 
@@ -324,6 +334,23 @@ def _check_finish_readiness() -> tuple[bool, str, list[str]]:
         non_verified_count = len(blocked_tasks) + len(doing_tasks) + len(done_tasks)
         if non_verified_count > 0:
             blockers.append(f"存在 {non_verified_count} 个非 VERIFIED 任务（DONE/DOING/BLOCKED）")
+
+    _require_file(VALIDATION_RESULTS_FILE)
+    payload = json.loads(_read_text(VALIDATION_RESULTS_FILE))
+    if not isinstance(payload, dict):
+        raise RuntimeError("validation_results.json 必须是对象")
+
+    req_result = payload.get("REQUIREMENT_VALIDATOR")
+    edge_result = payload.get("EDGE_CASE_TESTER")
+    if not isinstance(req_result, dict) or not isinstance(edge_result, dict):
+        blockers.append("缺少 REQUIREMENT_VALIDATOR 或 EDGE_CASE_TESTER 结果")
+    else:
+        req_verdict = req_result.get("verdict")
+        edge_verdict = edge_result.get("verdict")
+        if req_verdict != "PASS":
+            blockers.append(f"REQUIREMENT_VALIDATOR 未通过（{req_verdict}）")
+        if edge_verdict != "PASS":
+            blockers.append(f"EDGE_CASE_TESTER 未通过（{edge_verdict}）")
 
     is_ready = not blockers
     reason = "; ".join(blockers) if blockers else "所有条件满足"
@@ -477,9 +504,10 @@ def _assert_main_side_effects(*, iteration: int, expected_next_agent: NextAgent)
             end_idx = idx  # 关键变量：下一轮开始即本轮结束
             break
     section = "\n".join(lines[start_idx:end_idx])  # 关键变量：本轮历史片段
-    # dev_plan: 行改为可选（有时没有 dev_plan 变更，如派发 REVIEW 进行分析）
+    # dev_plan: 行改为可选（有时没有 dev_plan 变更，如派发 VALIDATE 进行验证）
 
-    if expected_next_agent in {"FINISH", "USER", "PARALLEL_REVIEW"}:  # 关键分支：结束/用户交互/并行审阅仅校验 dev_plan
+    # Context-centric 架构：VALIDATE 触发并行验证器，无单一工单文件
+    if expected_next_agent in {"FINISH", "USER", "VALIDATE"}:  # 关键分支：结束/用户交互/并行验证仅校验 dev_plan
         _validate_dev_plan()
         return
 
@@ -643,24 +671,15 @@ def _load_workflow_rules() -> dict[str, object]:
         return default_rules
 
 
-def _load_project_env() -> dict[str, object]:
-    """
-    从 project_env.json 加载项目环境配置。
-    """
+def _load_project_env() -> "RuntimeContext":
+    """统一加载运行时环境配置。"""
     from .config import PROJECT_ENV_FILE
-    from .file_ops import _read_text
-    import json
+    from .runtime_context import RuntimeContext, load_runtime_context
 
-    if not PROJECT_ENV_FILE.exists():
-        return {}
-
-    try:
-        env = json.loads(_read_text(PROJECT_ENV_FILE))
-        if not isinstance(env, dict):
-            return {}
-        return env
-    except json.JSONDecodeError:
-        return {}
+    context = load_runtime_context(project_env_file=PROJECT_ENV_FILE)
+    if not isinstance(context, RuntimeContext):
+        raise RuntimeError("load_runtime_context returned invalid type")
+    return context
 
 
 def _build_execution_environment_section() -> str:
@@ -671,73 +690,18 @@ def _build_execution_environment_section() -> str:
     工作目录优先使用 project.root（项目根目录），确保 orchestrator/ 相关路径可访问。
     同时提供 code_root 供需要时切换到代码目录。
     """
-    env = _load_project_env()
+    from .runtime_context import build_execution_environment_section
 
-    project = env.get("project", {})
-    python_config = env.get("python", {})
-    environment = env.get("environment", {})
-    test_execution = env.get("test_execution", {})
-
-    # 优先使用 root 作为工作目录，确保 orchestrator/ 路径可访问
-    project_root = project.get("root", "") if isinstance(project, dict) else ""
-    code_root = project.get("code_root", "") if isinstance(project, dict) else ""
-    frontend_root = project.get("frontend_root", "") if isinstance(project, dict) else ""
-    python_bin = python_config.get("python_bin", "") if isinstance(python_config, dict) else ""
-
-    lines = ["## 执行环境"]
-    # 工作目录使用项目根目录
-    if project_root:
-        lines.append(f"- 工作目录: {project_root}")
-    elif code_root:
-        # 兼容旧配置：若无 root 则回退到 code_root
-        lines.append(f"- 工作目录: {code_root}")
-    # 提供代码目录供需要时使用
-    if code_root and code_root != project_root:
-        lines.append(f"- 代码目录: {code_root}")
-    # 提供前端目录
-    if frontend_root:
-        lines.append(f"- 前端目录: {frontend_root}")
-    if python_bin:
-        lines.append(f"- Python: {python_bin}")
-
-    if isinstance(environment, dict) and environment:
-        lines.append("- 环境变量:")
-        for key, value in environment.items():
-            lines.append(f"  - {key}={value}")
-
-    # 测试执行配置
-    if isinstance(test_execution, dict) and test_execution:
-        lines.append("- 测试执行配置:")
-        frontend_port = test_execution.get("frontend_dev_port")
-        if isinstance(frontend_port, int):
-            lines.append(f"  - 前端开发端口: {frontend_port}")
-        startup_wait = test_execution.get("service_startup_wait_seconds")
-        if isinstance(startup_wait, (int, float)):
-            lines.append(f"  - 服务启动等待: {startup_wait}秒")
-        timeouts = test_execution.get("test_timeout_seconds", {})
-        if isinstance(timeouts, dict):
-            for test_type, timeout in timeouts.items():
-                lines.append(f"  - {test_type}测试超时: {timeout}秒")
-
-    return "\n".join(lines)
+    context = _load_project_env()
+    return build_execution_environment_section(context)
 
 
-# 工单必填字段定义
+# Context-centric 架构：IMPLEMENTER 工单必填字段定义
 _TASK_REQUIRED_FIELDS: dict[str, dict[str, str]] = {
-    "TEST": {
-        "field": "work_mode",
-        "default": "design",
-        "allowed": "design|execute",
-    },
-    "DEV": {
+    "IMPLEMENTER": {
         "field": "self_test",
         "default": "enabled",
         "allowed": "enabled|disabled",
-    },
-    "REVIEW": {
-        "field": "review_mode",
-        "default": "single",
-        "allowed": "milestone|single",
     },
 }
 
@@ -748,7 +712,7 @@ def _validate_and_complete_task_fields(*, task: str, agent: str) -> tuple[str, l
 
     Args:
         task: 原始工单内容
-        agent: 目标代理 (TEST/DEV/REVIEW)
+        agent: 目标代理 (IMPLEMENTER)
 
     Returns:
         (completed_task, warnings)

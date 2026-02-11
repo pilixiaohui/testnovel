@@ -50,13 +50,13 @@ find_symbol(name="render_chapter", max_answer_chars=-1)
 
 # 搜索模式
 search_for_pattern(
-    pattern="def test_.*chapter",
+    pattern="def test_.*",
     paths_include_glob="**/tests/**/*.py",
     max_answer_chars=-1
 )
 
-# 读取文件
-read_file(relative_path="project/backend/api/chapters.py", max_answer_chars=-1)
+# 读取文件（路径相对于工作目录）
+read_file(relative_path="src/api/example.py", max_answer_chars=-1)
 ```
 
 ## 2. Context7（官方文档查询）
@@ -101,47 +101,9 @@ read_file(relative_path="project/backend/api/chapters.py", max_answer_chars=-1)
 1. **代码分析/编辑** → Serena（首选）
 2. **文档查询** → Context7
 3. **复杂规划** → Sequential Thinking
-4. **测试执行/长时间命令** → **原生 Bash 工具**
 
-## 测试执行规范（重要）
-
-测试命令必须使用**原生 Bash 工具**执行，禁止使用任何 MCP 工具执行测试。
-
-### 必须使用原生 Bash 工具
-
-- ✅ `pytest` 测试执行
-- ✅ `npm run test` / `npm run test:unit` / `npm run test:coverage`
-- ✅ `npx playwright test`（E2E 测试）
-- ✅ 需要启动服务的验收测试
-- ✅ 任何可能超过 30 秒的命令
-
-### 测试执行配置
-
-测试执行的端口号、超时时间等配置从工单的"执行环境"小节获取，禁止硬编码。
-
-### E2E 测试执行模式
-
-```bash
-cd {frontend_root}
-
-# 1. 后台启动前端服务（端口从执行环境获取）
-npm run dev -- --port {frontend_dev_port} &
-VITE_PID=$!
-
-# 2. 等待服务就绪（时间从执行环境获取）
-sleep {service_startup_wait_seconds}
-
-# 3. 执行 Playwright 测试
-npx playwright test --reporter=list
-
-# 4. 关闭服务
-kill $VITE_PID 2>/dev/null
-```
-
-## 禁止行为
+## 禁止行为（代码操作）
 
 - ❌ 使用 `cat`/`head`/`tail` 读取代码文件（应使用 Serena `read_file`）
 - ❌ 使用 `grep`/`rg` 搜索代码（应使用 Serena `search_for_pattern`）
 - ❌ 使用 `sed`/`awk` 编辑代码（应使用 Serena 符号操作或 `replace_regex`）
-- ❌ 使用任何 MCP 工具执行测试命令
-- ❌ 硬编码端口号或超时时间

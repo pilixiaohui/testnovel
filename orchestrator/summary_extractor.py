@@ -29,9 +29,7 @@ _BULLET_PREFIX_RE = re.compile(r"^[-*+]\s+")
 _ORDERED_LIST_PREFIX_RE = re.compile(r"^\d+[.)]\s+")
 
 _EVIDENCE_HEADINGS: dict[str, tuple[str, ...]] = {
-    "TEST": ("结果", "失败摘要", "执行命令", "研判"),
-    "DEV": ("如何自测", "自测", "结果"),
-    "REVIEW": ("证据", "进度核实"),
+    "IMPLEMENTER": ("结果", "自测", "执行命令", "研判"),
     "FINISH_REVIEW": ("问题清单", "差距清单", "证据"),
 }
 
@@ -226,7 +224,7 @@ def extract_report_summary(
     key_changes = _extract_key_changes(lines)
     evidence = _extract_evidence(lines, agent=agent)
 
-    if agent in {"REVIEW", "FINISH_REVIEW"} and not evidence:
+    if agent == "FINISH_REVIEW" and not evidence:
         _append_log_line(
             "orchestrator: WARN - "
             f"report missing evidence section for agent {agent} "

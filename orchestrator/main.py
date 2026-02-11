@@ -7,12 +7,16 @@ from queue import Queue
 from .codex_runner import _load_saved_main_iteration, _load_saved_main_session_id
 from .errors import PermanentError, TemporaryError
 from .file_ops import _append_log_line, _append_new_task_goal_to_history, _rel_path
-from .config import REPORT_ITERATION_SUMMARY_FILE, REPORT_ITERATION_SUMMARY_HISTORY_FILE, MAX_ITERATIONS
+from .config import (
+    REPORT_ITERATION_SUMMARY_FILE,
+    REPORT_ITERATION_SUMMARY_HISTORY_FILE,
+    MAX_ITERATIONS,
+)
 from .summary import _load_iteration_summary_history
 from .state import RunControl, UiStateStore, UserInterrupted
 from .types import UserDecisionResponse
 from .ui.server import _start_ui_server
-from .workflow import _preflight, workflow_loop
+from .workflow import _preflight, workflow_loop, _shutdown_supervisor
 
 
 def main() -> int:
@@ -148,6 +152,7 @@ def main() -> int:
     except KeyboardInterrupt:  # 关键分支：UI 模式手动退出
         _append_log_line("orchestrator: ui_shutdown\n")
     finally:
+        _shutdown_supervisor()  # 关键变量：等待后台监督任务完成
         ui_runtime.server.shutdown()  # 关键变量：关闭 UI 服务
         ui_runtime.server.server_close()  # 关键变量：释放端口
     return 0

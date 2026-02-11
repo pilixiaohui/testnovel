@@ -1,23 +1,26 @@
-# Dev Plan
+# Dev Plan (Snapshot)
 
-## Milestone M3: 超时配置统一 - VERIFIED
+> 本文件由 MAIN 维护（可覆盖编辑）。
 
-### M3-T1: 调查超时问题根因
-- status: VERIFIED
-- acceptance: 输出调查报告，明确前后端超时配置差异和E2E测试mock使用情况
-- evidence: REVIEW报告确认：前端30s硬编码、后端默认30s实际120s、E2E全mock
+## 约束（强制）
+- 任务总数必须保持在几十条以内
+- 每个任务块必须包含：status / acceptance / evidence
+- status 只允许：TODO / DOING / BLOCKED / DONE / VERIFIED
+- 只有 REVIEW 的证据才能把 DONE -> VERIFIED
 
-### M3-T2: 统一超时配置为10分钟
-- status: VERIFIED
-- acceptance: 前后端超时配置统一为600000ms(10分钟)
-- evidence: REVIEW验收PASS - 前端600000ms、后端600s、.env=600
+---
 
-### M3-T3: E2E测试真实接口覆盖
-- status: VERIFIED
-- acceptance: 关键E2E测试支持真实接口测试模式
-- evidence: REVIEW验收PASS - 健康检查+跳过策略+真实请求超时配置
+## Milestone M1: 前端全面修复
 
-## 已完成里程碑
-
-## Milestone M1: E2E测试补全 - VERIFIED
-## Milestone M2: 前端实现补齐 - VERIFIED
+### M1-T1: 调研并修复前端所有已知问题
+- status: DOING
+- acceptance:
+  - 用户报告的7个问题均已验证并修复
+  - 项目可正常创建、保存、加载
+  - 雪花流程各步骤完整展示生成内容
+  - 设置页面显示真实LLM配置
+  - 标签页切换正常无JS错误
+  - 推演功能前端可正常触发并展示结果
+  - 前端单元测试通过
+  - 10章短篇小说端到端验收通过
+- evidence:

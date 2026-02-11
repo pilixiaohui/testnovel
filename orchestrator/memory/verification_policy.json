@@ -1,11 +1,124 @@
 {
-  "version": 1,
+  "version": 3,
   "test_requirements": {
     "min_coverage": 80,
     "must_pass_before_review": true
   },
+  "real_browser_testing": {
+    "enabled": true,
+    "required_for_pass": true,
+    "validators": ["TEST_RUNNER", "EDGE_CASE_TESTER", "FINISH_REVIEW"],
+    "tools": [
+      "browser_navigate",
+      "browser_click",
+      "browser_type",
+      "browser_fill_form",
+      "browser_snapshot",
+      "browser_console_messages",
+      "browser_network_requests",
+      "browser_wait_for",
+      "browser_close"
+    ],
+    "prerequisites": {
+      "frontend_url": "从执行环境获取",
+      "backend_url": "从执行环境获取（如需要）"
+    },
+    "pass_criteria": {
+      "no_console_errors": true,
+      "no_page_crash": true,
+      "all_scenarios_pass": true
+    }
+  },
+  "anti_cheat_rules": {
+    "zero_tolerance": [
+      "hardcoded_id",
+      "hardcoded_url",
+      "empty_assertion",
+      "cheat_test",
+      "self_validation",
+      "todo_fixme"
+    ],
+    "warning": [
+      "excessive_mock",
+      "fragile_test",
+      "coverage_cheat",
+      "commented_code"
+    ],
+    "detection_patterns": {
+      "hardcoded_id": ["'scene-1'", "'root-1'", "'test-id'", "'mock-id'"],
+      "hardcoded_url": ["localhost", "127.0.0.1", "0.0.0.0"],
+      "todo_markers": ["TODO", "FIXME", "XXX", "HACK"]
+    }
+  },
+  "early_victory_prevention": {
+    "test_runner": {
+      "require_all_scenarios_executed": true,
+      "fail_if_scenarios_skipped": true,
+      "require_real_browser_test": true
+    },
+    "edge_case_tester": {
+      "require_real_browser_test": true,
+      "fail_on_console_error": true
+    },
+    "synthesizer": {
+      "check_completeness_before_pass": true,
+      "require_all_validators_complete": true
+    },
+    "finish_review": {
+      "require_all_requirements_checked": true,
+      "require_full_test_suite_run": true,
+      "require_real_browser_verification": true
+    }
+  },
+  "blocked_classification": {
+    "infrastructure_patterns": [
+      "提示词文件不存在",
+      "JSON解析失败",
+      "超时",
+      "执行失败",
+      "timeout"
+    ],
+    "code_bug_patterns": [
+      "pageerror",
+      "Cannot read",
+      "TypeError",
+      "ReferenceError",
+      "失败",
+      "exception",
+      "crash",
+      "崩溃"
+    ],
+    "environment_patterns": [
+      "permission denied",
+      "not found",
+      "connection refused",
+      "not installed"
+    ],
+    "info_missing_patterns": [
+      "缺少需求点",
+      "无法确定",
+      "工单未提供",
+      "缺失"
+    ]
+  },
+  "confidence_thresholds": {
+    "requirement_validator": 0.95,
+    "edge_case_tester": 0.85,
+    "test_runner": 1.0,
+    "anti_cheat_detector": 1.0
+  },
+  "escalation_rules": {
+    "implementer_consecutive_fail": 2,
+    "validate_consecutive_blocked": 2,
+    "finish_review_consecutive_fail": 3
+  },
+  "status_definitions": {
+    "allowed": ["TODO", "DOING", "VERIFIED", "BLOCKED"],
+    "terminal": ["VERIFIED"],
+    "requires_user": ["BLOCKED"]
+  },
   "report_rules": {
-    "apply_to": ["REVIEW", "TEST", "FINISH_REVIEW"],
+    "apply_to": ["REVIEW", "TEST", "FINISH_REVIEW", "IMPLEMENTER", "SYNTHESIZER"],
     "require_verdict": true,
     "verdict_prefix": "结论：",
     "verdict_allowed": ["PASS", "FAIL", "BLOCKED"],

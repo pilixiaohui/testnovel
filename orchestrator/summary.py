@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import json
 
+from datetime import datetime
 from pathlib import Path
 
+from .config import (
+    USER_INSIGHT_REPORT_FILE,
+    USER_INSIGHT_HISTORY_FILE,
+    ENABLE_BEHAVIOR_AUDIT,
+)
 from .decision import _load_json_object, _parse_main_decision_payload
-from .file_ops import _rel_path
+from .file_ops import _rel_path, _append_log_line, _atomic_write_text
 from .types import IterationSummary, ProgressInfo, SubagentSummary, SummaryStep
 
-_ALLOWED_ACTORS = {"MAIN", "ORCHESTRATOR", "TEST", "DEV", "REVIEW"}
+# Context-centric 架构：IMPLEMENTER 合并原 TEST+DEV，FINISH_REVIEW 为最终审阅
+_ALLOWED_ACTORS = {"MAIN", "ORCHESTRATOR", "IMPLEMENTER", "FINISH_REVIEW"}
 
 
 def _parse_progress(payload: object) -> ProgressInfo | None:
@@ -233,7 +240,7 @@ def _parse_iteration_summary(
                 if isinstance(item, str) and item.strip()
             ][:4]  # 最多 4 条
 
-    # 解析可选字段：changes（仅 DEV 时有意义）
+    # 解析可选字段：changes（仅 IMPLEMENTER 时有意义）
     changes = payload.get("changes")
     if changes is not None:
         if not isinstance(changes, dict):
@@ -273,6 +280,11 @@ def _parse_iteration_summary(
     if changes:
         result["changes"] = changes
 
+    # 解析并保留 user_insight 字段（可选）
+    user_insight = _parse_user_insight(payload)
+    if user_insight:
+        result["user_insight"] = user_insight
+
     return result
 
 
@@ -309,12 +321,373 @@ def _append_iteration_summary_history(
     summary: IterationSummary,
 ) -> list[IterationSummary]:
     history = _load_iteration_summary_history(history_file)  # 关键变量：现有历史
-    if history:  # 关键分支：避免重复迭代写入
-        last_iteration = history[-1]["iteration"]
-        if last_iteration == summary["iteration"]:
-            raise ValueError(f"摘要历史已包含 iteration {summary['iteration']}")
     history_file.parent.mkdir(parents=True, exist_ok=True)
+
+    if history and history[-1]["iteration"] == summary["iteration"]:
+        # 同一迭代重试时覆盖最后一条，避免异步重试导致 history 断裂
+        history[-1] = summary
+        payload = "\n".join(json.dumps(item, ensure_ascii=False) for item in history) + "\n"
+        _atomic_write_text(history_file, payload)
+        return history
+
     with history_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(summary, ensure_ascii=False) + "\n")
     history.append(summary)
     return history
+
+
+# ============= 用户洞察报告生成 =============
+
+
+def _generate_user_insight_report(
+    *,
+    iteration: int,
+    summary: IterationSummary,
+    user_insight: dict,
+) -> None:
+    """
+    生成面向用户的洞察报告（Markdown 格式）。
+
+    触发时机：SUMMARY 阶段成功完成后
+    """
+    if not ENABLE_BEHAVIOR_AUDIT:
+        return
+
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    behavior = user_insight.get("behavior_check", {})
+    recommendations = user_insight.get("recommendations", [])
+
+    # 获取代理名称
+    subagent_info = summary.get("subagent")
+    agent_name = subagent_info.get("agent", "N/A") if isinstance(subagent_info, dict) else "N/A"
+
+    lines = [
+        "# 用户洞察报告",
+        "",
+        f"> 生成时间: {timestamp}",
+        f"> 当前迭代: {iteration}",
+        f"> 代理: {agent_name}",
+        "",
+        "## 本轮摘要",
+        "",
+        str(summary.get("summary", "")),
+        "",
+        "## 行为合理性检查",
+        "",
+    ]
+
+    # 任务对齐度
+    alignment = behavior.get("task_alignment", {})
+    if isinstance(alignment, dict):
+        score = alignment.get("score", 0)
+        status = alignment.get("status", "unknown")
+        detail = alignment.get("detail", "无详情")
+        status_icon = "✅" if status == "good" else "⚠️" if status == "attention" else "❌"
+        lines.extend([
+            f"### 任务对齐度: {status_icon} {status} ({score}%)",
+            "",
+            f"- {detail}",
+            "",
+        ])
+
+    # 决策质量
+    decision_check = behavior.get("decision_quality", {})
+    if isinstance(decision_check, dict):
+        status = decision_check.get("status", "unknown")
+        status_icon = "✅" if status == "compliant" else "⚠️"
+        lines.extend([
+            f"### 决策质量: {status_icon} {status}",
+            "",
+        ])
+        issues = decision_check.get("issues", [])
+        if issues and isinstance(issues, list):
+            for issue in issues:
+                lines.append(f"- ⚠️ {issue}")
+        else:
+            lines.append("- 无问题")
+        lines.append("")
+
+    # 范围控制
+    scope = behavior.get("scope_control", {})
+    if isinstance(scope, dict):
+        status = scope.get("status", "unknown")
+        detail = scope.get("detail", "无详情")
+        status_icon = "✅" if status == "normal" else "⚠️"
+        lines.extend([
+            f"### 范围控制: {status_icon} {status}",
+            "",
+            f"- {detail}",
+            "",
+        ])
+
+    # 效率评估
+    efficiency = behavior.get("efficiency", {})
+    if isinstance(efficiency, dict):
+        status = efficiency.get("status", "unknown")
+        repeated_failures = efficiency.get("repeated_failures", 0)
+        same_agent_streak = efficiency.get("same_agent_streak", 0)
+        status_icon = "✅" if status == "normal" else "⚠️"
+        lines.extend([
+            f"### 效率评估: {status_icon} {status}",
+            "",
+            f"- 重复失败: {repeated_failures} 次",
+            f"- 连续相同代理: {same_agent_streak} 轮",
+            "",
+        ])
+
+    # 建议
+    if recommendations and isinstance(recommendations, list):
+        lines.extend(["## 建议", ""])
+        for idx, rec in enumerate(recommendations, 1):
+            lines.append(f"{idx}. {rec}")
+        lines.append("")
+
+    # 新增：需求对比分析
+    requirement_analysis = user_insight.get("requirement_analysis")
+    if requirement_analysis and isinstance(requirement_analysis, dict):
+        lines.extend(["## 需求对比分析", ""])
+
+        task_goal = requirement_analysis.get("task_goal_summary", "")
+        if task_goal:
+            lines.extend([f"**用户原始需求**: {task_goal}", ""])
+
+        coverage = requirement_analysis.get("coverage", {})
+        if isinstance(coverage, dict):
+            completed = coverage.get("completed", [])
+            in_progress = coverage.get("in_progress", [])
+            not_started = coverage.get("not_started", [])
+
+            if completed:
+                lines.append("**已完成**:")
+                for item in completed[:5]:
+                    lines.append(f"- ✅ {item}")
+                lines.append("")
+
+            if in_progress:
+                lines.append("**进行中**:")
+                for item in in_progress[:3]:
+                    lines.append(f"- 🔄 {item}")
+                lines.append("")
+
+            if not_started:
+                lines.append("**未开始**:")
+                for item in not_started[:3]:
+                    lines.append(f"- ⏳ {item}")
+                lines.append("")
+
+        alignment_score = requirement_analysis.get("alignment_score")
+        alignment_status = requirement_analysis.get("alignment_status")
+        if alignment_score is not None and alignment_status:
+            status_icon = "✅" if alignment_status == "good" else "⚠️" if alignment_status == "attention" else "❌"
+            lines.extend([f"**需求对齐度**: {status_icon} {alignment_score}% ({alignment_status})", ""])
+
+        deviation_warning = requirement_analysis.get("deviation_warning")
+        if deviation_warning:
+            lines.extend([f"**偏离警告**: ⚠️ {deviation_warning}", ""])
+
+    # 新增：决策习惯分析
+    decision_habits = user_insight.get("decision_habits")
+    if decision_habits and isinstance(decision_habits, dict):
+        total_decisions = decision_habits.get("total_decisions", 0)
+        if total_decisions >= 2:
+            lines.extend(["## 决策习惯分析", ""])
+
+            adoption_rate = decision_habits.get("recommendation_adoption_rate")
+            adoption_tendency = decision_habits.get("adoption_tendency")
+            decision_style = decision_habits.get("decision_style")
+            common_concerns = decision_habits.get("common_concerns", [])
+
+            lines.append(f"**总决策次数**: {total_decisions}")
+
+            if adoption_rate is not None:
+                lines.append(f"**推荐采纳率**: {adoption_rate * 100:.0f}%")
+
+            if adoption_tendency:
+                tendency_map = {"high": "高采纳", "medium": "中等", "low": "低采纳"}
+                lines.append(f"**采纳倾向**: {tendency_map.get(adoption_tendency, adoption_tendency)}")
+
+            if decision_style:
+                style_map = {"conservative": "保守型", "progressive": "激进型", "balanced": "平衡型"}
+                lines.append(f"**决策风格**: {style_map.get(decision_style, decision_style)}")
+
+            if common_concerns:
+                lines.append(f"**常见关注点**: {', '.join(common_concerns)}")
+
+            lines.append("")
+
+    # 进度概览
+    progress = summary.get("progress")
+    if progress and isinstance(progress, dict):
+        milestones = progress.get("milestones", [])
+        if milestones and isinstance(milestones, list):
+            lines.extend(["## 进度概览", "", "| 里程碑 | 完成度 |", "|--------|--------|"])
+            for ms in milestones:
+                if isinstance(ms, dict):
+                    ms_id = ms.get("milestone_id", "")
+                    ms_name = ms.get("milestone_name", "")
+                    percentage = ms.get("percentage", 0)
+                    lines.append(f"| {ms_id}: {ms_name} | {percentage:.0f}% |")
+            lines.append("")
+
+    lines.extend([
+        "---",
+        "*此报告由总结代理自动生成，仅供参考*",
+    ])
+
+    USER_INSIGHT_REPORT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    USER_INSIGHT_REPORT_FILE.write_text("\n".join(lines), encoding="utf-8")
+    _append_log_line(f"user_insight_report: written to {_rel_path(USER_INSIGHT_REPORT_FILE)}\n")
+
+
+def _append_user_insight_history(
+    *,
+    iteration: int,
+    user_insight: dict,
+) -> None:
+    """追加用户洞察到历史文件（JSONL 格式）"""
+    record = {
+        "iteration": iteration,
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        **user_insight,
+    }
+
+    USER_INSIGHT_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with USER_INSIGHT_HISTORY_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _parse_user_insight(payload: dict | object) -> dict | None:
+    """
+    从摘要 JSON 中解析 user_insight 字段（可选）。
+
+    返回 None 表示未提供或格式无效。
+    """
+    if not isinstance(payload, dict):
+        return None
+    user_insight = payload.get("user_insight")
+    if user_insight is None:
+        return None
+    if not isinstance(user_insight, dict):
+        return None
+
+    # 基本结构校验
+    behavior_check = user_insight.get("behavior_check")
+    if behavior_check is not None and not isinstance(behavior_check, dict):
+        return None
+
+    recommendations = user_insight.get("recommendations")
+    if recommendations is not None and not isinstance(recommendations, list):
+        return None
+
+    # 解析新增字段：requirement_analysis
+    requirement_analysis = _parse_requirement_analysis(user_insight)
+    if requirement_analysis:
+        user_insight["requirement_analysis"] = requirement_analysis
+
+    # 解析新增字段：decision_habits
+    decision_habits = _parse_decision_habits(user_insight)
+    if decision_habits:
+        user_insight["decision_habits"] = decision_habits
+
+    return user_insight
+
+
+def _parse_requirement_analysis(user_insight: dict) -> dict | None:
+    """
+    解析需求对比分析字段（requirement_analysis）。
+
+    返回 None 表示未提供或格式无效。
+    """
+    req_analysis = user_insight.get("requirement_analysis")
+    if req_analysis is None:
+        return None
+    if not isinstance(req_analysis, dict):
+        return None
+
+    # 校验必填字段
+    task_goal_summary = req_analysis.get("task_goal_summary")
+    if not isinstance(task_goal_summary, str) or not task_goal_summary.strip():
+        return None
+
+    coverage = req_analysis.get("coverage")
+    if not isinstance(coverage, dict):
+        return None
+
+    # 校验 coverage 子字段（允许为空列表）
+    for key in ("completed", "in_progress", "not_started"):
+        items = coverage.get(key)
+        if items is not None and not isinstance(items, list):
+            return None
+
+    # 校验评分字段
+    alignment_score = req_analysis.get("alignment_score")
+    if not isinstance(alignment_score, (int, float)) or not (0 <= alignment_score <= 100):
+        alignment_score = None
+
+    alignment_status = req_analysis.get("alignment_status")
+    if alignment_status not in ("good", "attention", "warning"):
+        alignment_status = None
+
+    deviation_warning = req_analysis.get("deviation_warning")
+    if deviation_warning is not None and not isinstance(deviation_warning, str):
+        deviation_warning = None
+
+    return {
+        "task_goal_summary": task_goal_summary.strip(),
+        "coverage": {
+            "completed": [str(x).strip() for x in coverage.get("completed", []) if x],
+            "in_progress": [str(x).strip() for x in coverage.get("in_progress", []) if x],
+            "not_started": [str(x).strip() for x in coverage.get("not_started", []) if x],
+        },
+        "alignment_score": alignment_score,
+        "alignment_status": alignment_status,
+        "deviation_warning": deviation_warning.strip() if deviation_warning else None,
+    }
+
+
+def _parse_decision_habits(user_insight: dict) -> dict | None:
+    """
+    解析用户决策习惯分析字段（decision_habits）。
+
+    返回 None 表示未提供或格式无效。
+    """
+    habits = user_insight.get("decision_habits")
+    if habits is None:
+        return None
+    if not isinstance(habits, dict):
+        return None
+
+    # 校验必填字段
+    total_decisions = habits.get("total_decisions")
+    if not isinstance(total_decisions, int) or total_decisions < 0:
+        return None
+
+    # 如果决策次数不足 2 次，不输出习惯分析
+    if total_decisions < 2:
+        return None
+
+    adoption_rate = habits.get("recommendation_adoption_rate")
+    if not isinstance(adoption_rate, (int, float)) or not (0 <= adoption_rate <= 1):
+        adoption_rate = None
+
+    adoption_tendency = habits.get("adoption_tendency")
+    if adoption_tendency not in ("high", "medium", "low"):
+        adoption_tendency = None
+
+    decision_style = habits.get("decision_style")
+    if decision_style not in ("conservative", "progressive", "balanced"):
+        decision_style = None
+
+    common_concerns = habits.get("common_concerns")
+    if not isinstance(common_concerns, list):
+        common_concerns = []
+    else:
+        common_concerns = [str(x).strip() for x in common_concerns if x][:3]
+
+    return {
+        "total_decisions": total_decisions,
+        "recommendation_adoption_rate": adoption_rate,
+        "adoption_tendency": adoption_tendency,
+        "decision_style": decision_style,
+        "common_concerns": common_concerns,
+    }
