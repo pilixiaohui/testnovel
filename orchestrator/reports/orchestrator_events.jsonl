@@ -2031,3 +2031,5 @@
 {"ts": "2026-02-11T07:09:57.213974+00:00", "event": "iteration_start", "trace_id": "df0236af-2de3-4f3a-bb73-868f59c5a29d", "iteration": 2}
 {"ts": "2026-02-11T07:09:57.233929+00:00", "event": "main_prompt_size", "trace_id": "df0236af-2de3-4f3a-bb73-868f59c5a29d", "iteration": 2, "prompt_len": 109871}
 {"ts": "2026-02-11T07:10:57.633875+00:00", "event": "stage_complete", "trace_id": "df0236af-2de3-4f3a-bb73-868f59c5a29d", "iteration": 2, "stage": "MAIN", "duration_ms": 60399}
+{"ts": "2026-02-11T15:46:24.612848+00:00", "event": "run_start", "trace_id": "e75331e2-bd69-4117-b039-a3a6da1beccd", "new_task": true, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 376}
+{"ts": "2026-02-11T17:01:12.994887+00:00", "event": "run_start", "trace_id": "1b963f99-8d3c-438b-b14c-857cd6e03e0c", "new_task": true, "max_iterations": 100, "sandbox_mode": "workspace-write", "approval_policy": "on-request", "user_task_len": 376}

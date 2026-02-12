@@ -18,6 +18,7 @@ from .config import (
     CONFIG,
     RESUME_STATE_FILE,
     IMPLEMENTER_SESSION_ID_FILE,
+    SPEC_ANALYZER_SESSION_ID_FILE,
     get_cli_for_agent,
     get_cli_extra_args,
 )
@@ -90,6 +91,7 @@ def _save_main_iteration(iteration: int) -> None:
 
 _SUBAGENT_SESSION_FILES: dict[str, Path] = {
     "IMPLEMENTER": IMPLEMENTER_SESSION_ID_FILE,
+    "SPEC_ANALYZER": SPEC_ANALYZER_SESSION_ID_FILE,
 }
 
 

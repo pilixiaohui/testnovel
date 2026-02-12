@@ -13,7 +13,7 @@
 1. MAIN 代理工作目录固定为 `<repo>/orchestrator`。
 2. IMPLEMENTER/VALIDATE/FINISH_REVIEW 工作目录为 `agent_root`（由 `project_env.json` 中 `code_root/frontend_root` 的共同父目录推导）。
 3. orchestrator 黑板仍以 `<repo>/orchestrator/{memory,workspace,reports}` 为唯一真值。
-4. 每次派发前，黑板 markdown 单向同步到 `<agent_root>/.orchestrator_ctx/`。
+4. 每次派发前，黑板（md/json）单向同步到 `<agent_root>/.orchestrator_ctx/`。
 5. `.orchestrator_ctx` 为只读镜像，子代理可读但禁止写入。
 
 ## 启动

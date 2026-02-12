@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import time
@@ -8,7 +9,7 @@ from datetime import datetime
 
 from collections.abc import Callable
 from pathlib import Path
-from .backup import _backup_iteration_artifacts, _backup_subagent_artifacts, _clear_dev_plan_stage_file, _commit_staged_dev_plan_if_present
+from .backup import _backup_iteration_artifacts, _backup_subagent_artifacts, _clear_dev_plan_stage_file
 from .codex_runner import (
     _clear_saved_main_state,
     _load_saved_main_iteration,
@@ -26,6 +27,12 @@ from .config import (
     RESUME_STATE_FILE,
     CONFIG,
     DEV_PLAN_FILE,
+    SPECS_DIR,
+    SPECS_CONSTITUTION_FILE,
+    SPECS_BASELINE_DIR,
+    SPECS_CHANGES_DIR,
+    SPECS_ARCHIVE_DIR,
+    SPECS_STATE_FILE,
     DEV_PLAN_STAGED_FILE,
     FINISH_REVIEW_CONFIG_FILE,
     VERIFICATION_POLICY_FILE,
@@ -60,7 +67,9 @@ from .config import (
     get_cli_for_agent,
     # Context-centric 架构新增
     IMPLEMENTER_TASK_FILE,
+    SPEC_ANALYZER_TASK_FILE,
     REPORT_IMPLEMENTER_FILE,
+    REPORT_SPEC_ANALYZER_FILE,
     VALIDATOR_WORKSPACE_DIR,
     VALIDATOR_REPORTS_DIR,
     SYNTHESIZER_REPORT_FILE,
@@ -96,6 +105,8 @@ from .file_ops import (
     _write_text_if_missing,
 )
 from .prompt_builder import (
+    _build_blackboard_access_rules,
+    _build_dispatch_path_contract,
     _extract_doc_references,
     _inject_file,
     _inject_doc_references,
@@ -125,7 +136,7 @@ from .validation import (
     _build_execution_environment_section,
 )
 from .runtime_context import RuntimeContext, load_runtime_context
-from .blackboard_mirror import assert_project_mirror_unchanged, sync_project_markdown_mirror
+from .blackboard_mirror import assert_project_mirror_unchanged, sync_project_blackboard_mirror
 from .health_gate import run_pre_validation_health_check
 from .issue_classifier import ensure_result_category
 from .decision_router import route_validation_results
@@ -142,8 +153,16 @@ def _ensure_initial_md_files() -> None:
     PROMPTS_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：提示词目录
     for category in UPLOADED_DOCS_CATEGORIES:  # 关键变量：上传文档目录
         (UPLOADED_DOCS_DIR / category).mkdir(parents=True, exist_ok=True)
+
+    # Spec-Driven V2 工件目录
+    SPECS_DIR.mkdir(parents=True, exist_ok=True)
+    SPECS_BASELINE_DIR.mkdir(parents=True, exist_ok=True)
+    SPECS_CHANGES_DIR.mkdir(parents=True, exist_ok=True)
+    SPECS_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)  # 关键变量：报告目录
     (WORKSPACE_DIR / "implementer").mkdir(parents=True, exist_ok=True)  # 关键变量：IMPLEMENTER 工单目录
+    (WORKSPACE_DIR / "spec_analyzer").mkdir(parents=True, exist_ok=True)  # 关键变量：SPEC_ANALYZER 工单目录
     (WORKSPACE_DIR / "validators").mkdir(parents=True, exist_ok=True)  # 关键变量：验证器工单目录
     (WORKSPACE_DIR / "main").mkdir(parents=True, exist_ok=True)  # 关键变量：MAIN 工作区目录
     ORCHESTRATOR_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)  # 关键变量：日志目录
@@ -153,6 +172,16 @@ def _ensure_initial_md_files() -> None:
     _write_text_if_missing(GLOBAL_CONTEXT_FILE, ProjectTemplates.global_context())  # 关键变量：全局上下文模板
     _write_text_if_missing(PROJECT_HISTORY_FILE, ProjectTemplates.project_history())  # 关键变量：历史模板
     _write_text_if_missing(DEV_PLAN_FILE, ProjectTemplates.dev_plan())  # 关键变量：计划模板
+
+    # Spec-Driven V2 核心工件
+    _write_text_if_missing(SPECS_CONSTITUTION_FILE, ProjectTemplates.specs_constitution())
+    _write_text_if_missing(SPECS_STATE_FILE, ProjectTemplates.specs_state())
+    _write_text_if_missing(
+        SPECS_BASELINE_DIR / "README.md",
+        "# Baseline Specs\n\n> 放置长期稳定规格（不可在实现阶段随意变更）。\n",
+    )
+
+
     _write_text_if_missing(FINISH_REVIEW_CONFIG_FILE, ProjectTemplates.finish_review_config())  # 关键变量：最终审阅配置模板
     _write_text_if_missing(VERIFICATION_POLICY_FILE, ProjectTemplates.verification_policy())  # 关键变量：验证策略配置模板
     _write_text_if_missing(ACCEPTANCE_SCOPE_FILE, ProjectTemplates.acceptance_scope())  # 关键变量：验收范围定义模板
@@ -161,11 +190,13 @@ def _ensure_initial_md_files() -> None:
 
     # Context-centric 架构：IMPLEMENTER 工单模板
     _write_text_if_missing(IMPLEMENTER_TASK_FILE, ProjectTemplates.task_file("IMPLEMENTER", 0))  # 关键变量：IMPLEMENTER 工单模板
+    _write_text_if_missing(SPEC_ANALYZER_TASK_FILE, ProjectTemplates.task_file("SPEC_ANALYZER", 0))  # 关键变量：SPEC_ANALYZER 工单模板
     _write_text_if_missing(REPORT_IMPLEMENTER_FILE, ProjectTemplates.report_file("IMPLEMENTER"))  # 关键变量：IMPLEMENTER 报告模板
+    _write_text_if_missing(REPORT_SPEC_ANALYZER_FILE, ProjectTemplates.report_file("SPEC_ANALYZER"))  # 关键变量：SPEC_ANALYZER 报告模板
     _write_text_if_missing(REPORT_FINISH_REVIEW_FILE, ProjectTemplates.report_file("FINISH_REVIEW"))  # 关键变量：FINISH_REVIEW 报告模板
 
     # NOTE: prompts are NOT initialized here.
-    # `orchestrator/memory/prompts/subagent_prompt_{main,test,dev,review,summary,finish_review}.md` are the single source of truth and must exist.
+    # `orchestrator/memory/prompts/subagent_prompt_{main,implementer,spec_analyzer,...}.md` are the single source of truth and must exist.
 
 
 def _reset_workspace_task_files(*, iteration: int = 0) -> None:
@@ -379,13 +410,17 @@ def _guarded_blackboard_paths() -> list[Path]:
         GLOBAL_CONTEXT_FILE,  # 关键变量：全局上下文
         PROJECT_HISTORY_FILE,  # 关键变量：历史记录
         DEV_PLAN_FILE,  # 关键变量：开发计划
+        SPECS_CONSTITUTION_FILE,  # 关键变量：规格宪章
+        SPECS_STATE_FILE,  # 关键变量：规格工作流状态
         ACCEPTANCE_SCOPE_FILE,  # 关键变量：验收范围（范围锁定）
         OUT_OF_SCOPE_ISSUES_FILE,  # 关键变量：范围外问题记录
         DEV_PLAN_ARCHIVED_FILE,  # 关键变量：已归档任务
         FINISH_REVIEW_CONFIG_FILE,  # 关键变量：最终审阅配置
         DEV_PLAN_STAGED_FILE,  # 关键变量：dev_plan 暂存
         IMPLEMENTER_TASK_FILE,  # 关键变量：IMPLEMENTER 工单
+        SPEC_ANALYZER_TASK_FILE,  # 关键变量：SPEC_ANALYZER 工单
         REPORT_IMPLEMENTER_FILE,  # 关键变量：IMPLEMENTER 报告
+        REPORT_SPEC_ANALYZER_FILE,  # 关键变量：SPEC_ANALYZER 报告
         REPORT_FINISH_REVIEW_FILE,  # 关键变量：FINISH_REVIEW 报告
         REPORT_MAIN_DECISION_FILE,  # 关键变量：MAIN 决策输出
         REPORT_ITERATION_SUMMARY_FILE,  # 关键变量：每轮摘要输出
@@ -396,15 +431,49 @@ def _guarded_blackboard_paths() -> list[Path]:
     ]
 
 
+_GUARDED_SPECS_SUFFIXES = frozenset({".md", ".json"})
+
+
+def _snapshot_specs_tree_digest() -> str:
+    """对子树 orchestrator/memory/specs 的 md/json 文件做摘要，用于越权写保护。"""
+    digest = hashlib.sha256()
+    files_count = 0
+
+    if not SPECS_DIR.exists():
+        return digest.hexdigest()
+
+    for path in sorted(SPECS_DIR.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in _GUARDED_SPECS_SUFFIXES:
+            continue
+        rel_path = path.relative_to(PROJECT_ROOT).as_posix()
+        payload = path.read_bytes()
+        files_count += 1
+        digest.update(rel_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(payload)
+        digest.update(b"\0")
+
+    digest.update(f"count={files_count}".encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _assert_specs_tree_unchanged(*, before_digest: str, label: str) -> None:
+    current_digest = _snapshot_specs_tree_digest()
+    if current_digest != before_digest:
+        raise RuntimeError(
+            f"{label} modified forbidden specs tree: {_rel_path(SPECS_DIR)}"
+        )
+
+
 _RESUME_SCHEMA_VERSION = 1  # 关键变量：续跑状态版本
 
 
 def _resume_blackboard_paths(*, phase: str, next_agent: str) -> tuple[list[Path], list[Path]]:
     required = [PROJECT_HISTORY_FILE, DEV_PLAN_FILE, REPORT_MAIN_DECISION_FILE]
-    if next_agent == "IMPLEMENTER":
-        required.append(IMPLEMENTER_TASK_FILE)
+    if next_agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:
+        required.append(_task_file_for_agent(next_agent))
         if phase == "after_subagent":
-            required.append(REPORT_IMPLEMENTER_FILE)
+            required.append(_resolve_report_path(next_agent))
     elif next_agent == "VALIDATE" and phase != "after_main_validate":
         raise ValueError(f"续跑 phase/next_agent 组合无效：phase={phase!r}, next_agent={next_agent!r}")
     optional = [DEV_PLAN_STAGED_FILE]
@@ -424,7 +493,7 @@ def _resume_blackboard_digest(*, phase: str, next_agent: str) -> str:
 
 
 _RESUME_PHASES = {"after_main", "after_subagent", "after_main_validate", "awaiting_user"}  # 关键变量：可恢复阶段
-_RESUME_AGENTS = {"IMPLEMENTER", "VALIDATE", "USER"}  # 关键变量：可恢复代理（Context-centric 架构）
+_RESUME_AGENTS = {"IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE", "USER"}  # 关键变量：可恢复代理（Context-centric 架构）
 
 from .config import MAX_STAGE_RETRIES as _MAX_STAGE_RETRIES  # 关键变量：从 config 读取重试次数
 from .config import BACKOFF_BASE_SECONDS as _BACKOFF_BASE_SECONDS  # 关键变量：从 config 读取退避基数
@@ -467,8 +536,8 @@ def _write_resume_state(
     _validate_session_id(main_session_id)
     if phase == "awaiting_user" and next_agent != "USER":  # 关键分支：阶段与代理不一致
         raise ValueError("续跑 awaiting_user 必须搭配 next_agent=USER")
-    if phase in {"after_main", "after_subagent"} and next_agent != "IMPLEMENTER":  # 关键分支：阶段与代理不一致
-        raise ValueError("续跑 after_main/after_subagent 必须搭配 next_agent=IMPLEMENTER")
+    if phase in {"after_main", "after_subagent"} and next_agent not in {"IMPLEMENTER", "SPEC_ANALYZER"}:  # 关键分支：阶段与代理不一致
+        raise ValueError("续跑 after_main/after_subagent 必须搭配 next_agent=IMPLEMENTER|SPEC_ANALYZER")
     if phase == "after_main_validate" and next_agent != "VALIDATE":  # 关键分支：阶段与代理不一致
         raise ValueError("续跑 after_main_validate 必须搭配 next_agent=VALIDATE")
     if phase == "after_subagent":  # 关键分支：子代理阶段必须有会话 id
@@ -521,6 +590,7 @@ def _write_main_checkpoint(
         "history_entry": history_entry,
         "task_content": task_content,
         "dev_plan_next": dev_plan_next,
+        "change_applied": True,
     }
     MAIN_CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
     _atomic_write_text(MAIN_CHECKPOINT_FILE, json.dumps(payload, ensure_ascii=False) + "\n")
@@ -587,8 +657,8 @@ def _load_resume_state() -> ResumeState | None:
 
     if phase == "awaiting_user" and next_agent != "USER":
         raise ValueError("续跑 awaiting_user 必须搭配 next_agent=USER")
-    if phase in {"after_main", "after_subagent"} and next_agent != "IMPLEMENTER":
-        raise ValueError("续跑 after_main/after_subagent 必须搭配 next_agent=IMPLEMENTER")
+    if phase in {"after_main", "after_subagent"} and next_agent not in {"IMPLEMENTER", "SPEC_ANALYZER"}:
+        raise ValueError("续跑 after_main/after_subagent 必须搭配 next_agent=IMPLEMENTER|SPEC_ANALYZER")
     if phase == "after_main_validate" and next_agent != "VALIDATE":
         raise ValueError("续跑 after_main_validate 必须搭配 next_agent=VALIDATE")
 
@@ -628,6 +698,547 @@ def _history_has_user_decision(*, iteration: int) -> bool:
     _require_file(PROJECT_HISTORY_FILE)  # 关键分支：历史必须存在
     needle = f"## User Decision (Iteration {iteration}):"  # 关键变量：用户决策标识
     return needle in _read_text(PROJECT_HISTORY_FILE)
+
+
+_SPEC_STATE_SCHEMA_VERSION = 2  # 关键变量：规格工作流状态版本
+_SPEC_STATE_PHASES = {
+    "DISCOVERY",
+    "USER_CONFIRM",
+    "TASK_READY",
+    "IMPLEMENTING",
+    "VALIDATING",
+    "ARCHIVED",
+}  # 关键变量：规格工作流阶段
+_CHANGE_ID_RE = re.compile(r"^CHG-\d{4,}$")
+_TASK_ID_RE = re.compile(r"\bTASK-\d{3,}\b", re.IGNORECASE)
+_ALLOWED_CHANGE_ARTIFACT_FILES = frozenset({
+    "proposal.md",
+    "design.md",
+    "delta_spec.md",
+    "tasks.md",
+    "validation.md",
+    "questions.md",
+    "proofs.md",
+    "meta.json",
+})
+
+
+def _normalize_change_id(raw_change_id: str) -> str:
+    change_id = raw_change_id.strip().upper()
+    if not _CHANGE_ID_RE.match(change_id):
+        raise ValueError(f"Invalid change_id: {raw_change_id!r}")
+    return change_id
+
+
+def _default_spec_state() -> dict:
+    return {
+        "schema_version": _SPEC_STATE_SCHEMA_VERSION,
+        "active_change_id": None,
+        "phase": "DISCOVERY",
+        "user_confirmed": False,
+        "last_updated_iteration": 0,
+        "notes": "bootstrap",
+    }
+
+
+def _load_spec_workflow_state() -> dict:
+    _require_file(SPECS_STATE_FILE)
+    raw = _read_text(SPECS_STATE_FILE).strip()
+    if not raw:
+        raise RuntimeError(f"规格工作流状态文件为空：{_rel_path(SPECS_STATE_FILE)}")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"规格工作流状态 JSON 解析失败：{exc}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("规格工作流状态必须是 JSON 对象")
+
+    if payload.get("schema_version") != _SPEC_STATE_SCHEMA_VERSION:
+        raise RuntimeError(f"规格工作流状态版本无效：{payload.get('schema_version')!r}")
+
+    active_change_id = payload.get("active_change_id")
+    if active_change_id is not None:
+        if not isinstance(active_change_id, str) or not active_change_id.strip():
+            raise RuntimeError("规格工作流 active_change_id 必须为非空字符串或 null")
+        active_change_id = _normalize_change_id(active_change_id)
+
+    phase = payload.get("phase")
+    if phase not in _SPEC_STATE_PHASES:
+        raise RuntimeError(f"规格工作流 phase 非法：{phase!r}")
+
+    user_confirmed = payload.get("user_confirmed")
+    if not isinstance(user_confirmed, bool):
+        raise RuntimeError("规格工作流 user_confirmed 必须为布尔值")
+
+    last_updated_iteration = payload.get("last_updated_iteration")
+    if not isinstance(last_updated_iteration, int) or last_updated_iteration < 0:
+        raise RuntimeError(
+            f"规格工作流 last_updated_iteration 非法：{last_updated_iteration!r}"
+        )
+
+    notes = payload.get("notes")
+    if not isinstance(notes, str) or not notes.strip():
+        raise RuntimeError("规格工作流 notes 必须为非空字符串")
+
+    return {
+        "schema_version": _SPEC_STATE_SCHEMA_VERSION,
+        "active_change_id": active_change_id,
+        "phase": phase,
+        "user_confirmed": user_confirmed,
+        "last_updated_iteration": last_updated_iteration,
+        "notes": notes.strip(),
+    }
+
+
+def _write_spec_workflow_state(
+    *,
+    active_change_id: str | None,
+    phase: str,
+    user_confirmed: bool,
+    last_updated_iteration: int,
+    notes: str,
+) -> None:
+    if phase not in _SPEC_STATE_PHASES:
+        raise ValueError(f"规格工作流 phase 非法：{phase!r}")
+    if last_updated_iteration < 0:
+        raise ValueError(
+            f"规格工作流 last_updated_iteration 非法：{last_updated_iteration}"
+        )
+    if not notes.strip():
+        raise ValueError("规格工作流 notes 必须为非空字符串")
+
+    normalized_change_id = None
+    if active_change_id is not None:
+        normalized_change_id = _normalize_change_id(active_change_id)
+
+    payload = {
+        "schema_version": _SPEC_STATE_SCHEMA_VERSION,
+        "active_change_id": normalized_change_id,
+        "phase": phase,
+        "user_confirmed": user_confirmed,
+        "last_updated_iteration": last_updated_iteration,
+        "notes": notes.strip(),
+    }
+    SPECS_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(SPECS_STATE_FILE, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+
+
+def _next_change_id() -> str:
+    max_index = 0
+    for base_dir in (SPECS_CHANGES_DIR, SPECS_ARCHIVE_DIR):
+        if not base_dir.exists():
+            continue
+        for child in base_dir.iterdir():
+            if not child.is_dir():
+                continue
+            name = child.name.upper()
+            if not _CHANGE_ID_RE.match(name):
+                continue
+            try:
+                current = int(name.split("-")[1])
+            except (IndexError, ValueError):
+                continue
+            max_index = max(max_index, current)
+    return f"CHG-{max_index + 1:04d}"
+
+
+def _change_dir(change_id: str) -> Path:
+    return SPECS_CHANGES_DIR / _normalize_change_id(change_id)
+
+
+def _change_file(change_id: str, filename: str) -> Path:
+    return _change_dir(change_id) / filename
+
+
+def _ensure_change_scaffold(change_id: str) -> None:
+    normalized_change_id = _normalize_change_id(change_id)
+    change_dir = _change_dir(normalized_change_id)
+    change_dir.mkdir(parents=True, exist_ok=True)
+
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "proposal.md"),
+        ProjectTemplates.change_proposal(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "design.md"),
+        ProjectTemplates.change_design(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "tasks.md"),
+        ProjectTemplates.change_tasks(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "delta_spec.md"),
+        ProjectTemplates.change_delta_spec(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "validation.md"),
+        ProjectTemplates.change_validation(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "proofs.md"),
+        ProjectTemplates.change_proofs(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "questions.md"),
+        ProjectTemplates.change_questions(change_id=normalized_change_id),
+    )
+    _write_text_if_missing(
+        _change_file(normalized_change_id, "meta.json"),
+        ProjectTemplates.change_meta(change_id=normalized_change_id),
+    )
+
+
+def _extract_task_ids(text: str) -> list[str]:
+    task_ids: list[str] = []
+    seen: set[str] = set()
+    for raw_task_id in _TASK_ID_RE.findall(text):
+        task_id = raw_task_id.upper()
+        if task_id in seen:
+            continue
+        seen.add(task_id)
+        task_ids.append(task_id)
+    return task_ids
+
+
+def _load_change_task_ids(change_id: str) -> list[str]:
+    tasks_file = _change_file(change_id, "tasks.md")
+    _require_file(tasks_file)
+    task_ids = _extract_task_ids(_read_text(tasks_file))
+    if not task_ids:
+        raise RuntimeError(
+            f"变更 {change_id} 的 tasks.md 未定义 TASK IDs: {_rel_path(tasks_file)}"
+        )
+    return task_ids
+
+
+def _resolve_spec_artifact_path(relative_path: str) -> Path:
+    normalized = relative_path.strip().replace("\\", "/")
+    if not normalized:
+        raise ValueError("artifact update file path cannot be empty")
+    if normalized.startswith("/") or ".." in normalized.split("/"):
+        raise ValueError(f"artifact update file path is unsafe: {relative_path!r}")
+
+    target = (SPECS_DIR / normalized).resolve()
+    specs_root = SPECS_DIR.resolve()
+    if specs_root not in target.parents and target != specs_root:
+        raise ValueError(f"artifact update target is outside specs root: {relative_path!r}")
+    return target
+
+
+def _validate_artifact_update_file_for_change(*, relative_path: str, active_change_id: str) -> None:
+    normalized = relative_path.strip().replace("\\", "/")
+    expected_change_id = _normalize_change_id(active_change_id)
+    prefix = f"changes/{expected_change_id}/"
+    if not normalized.startswith(prefix):
+        raise ValueError(
+            f"artifact update file must target active change {expected_change_id!r}: {relative_path!r}"
+        )
+
+    artifact_name = normalized.split("/")[-1]
+    if artifact_name not in _ALLOWED_CHANGE_ARTIFACT_FILES:
+        allowed = ", ".join(sorted(_ALLOWED_CHANGE_ARTIFACT_FILES))
+        raise ValueError(
+            f"artifact update file is not a supported change artifact: {relative_path!r}, allowed: {allowed}"
+        )
+
+
+def _apply_artifact_updates(*, updates: list[dict]) -> None:
+    for patch in updates:
+        target_path = _resolve_spec_artifact_path(str(patch["file"]))
+        _require_file(target_path)
+        current = _read_text(target_path)
+        action = patch["action"]
+        content = patch["content"]
+
+        if action == "append":
+            new_text = current.rstrip() + "\n" + str(content).rstrip() + "\n"
+        elif action == "replace":
+            old_content = patch.get("old_content")
+            if not isinstance(old_content, str) or old_content not in current:
+                raise RuntimeError(
+                    f"artifact replace old_content not found: {_rel_path(target_path)}"
+                )
+            new_text = current.replace(old_content, str(content), 1)
+            if not new_text.endswith("\n"):
+                new_text += "\n"
+        elif action == "insert":
+            after_marker = patch.get("after_marker")
+            if not isinstance(after_marker, str) or after_marker not in current:
+                raise RuntimeError(
+                    f"artifact insert marker not found: {_rel_path(target_path)}"
+                )
+            new_text = current.replace(
+                after_marker,
+                after_marker + "\n" + str(content).rstrip(),
+                1,
+            )
+            if not new_text.endswith("\n"):
+                new_text += "\n"
+        else:
+            raise RuntimeError(f"Unsupported artifact action: {action!r}")
+
+        _atomic_write_text(target_path, new_text)
+        _append_log_line(
+            f"orchestrator: artifact_update action={action} file={_rel_path(target_path)}\n"
+        )
+
+
+def _apply_change_action(*, iteration: int, output: MainOutput) -> None:
+    change_action = output.get("change_action") or "none"
+    active_change_id = output.get("active_change_id")
+    updates = output.get("artifact_updates")
+    next_agent = output["decision"]["next_agent"]
+
+    if change_action in {"create", "update", "archive"} and not isinstance(active_change_id, str):
+        raise RuntimeError("change_action requires active_change_id")
+
+    if change_action == "create":
+        assert isinstance(active_change_id, str)
+        _ensure_change_scaffold(active_change_id)
+        _write_spec_workflow_state(
+            active_change_id=active_change_id,
+            phase="DISCOVERY",
+            user_confirmed=False,
+            last_updated_iteration=iteration,
+            notes="change_created",
+        )
+    elif change_action == "update":
+        assert isinstance(active_change_id, str)
+        _ensure_change_scaffold(active_change_id)
+
+    if updates is not None:
+        if not isinstance(active_change_id, str):
+            raise RuntimeError("artifact_updates requires active_change_id")
+        for idx, patch in enumerate(updates, start=1):
+            file_path = patch.get("file")
+            if not isinstance(file_path, str) or not file_path.strip():
+                raise RuntimeError(f"artifact_updates[{idx}].file missing")
+            _validate_artifact_update_file_for_change(
+                relative_path=file_path,
+                active_change_id=active_change_id,
+            )
+        _apply_artifact_updates(updates=updates)
+
+    if change_action == "archive":
+        assert isinstance(active_change_id, str)
+        src = _change_dir(active_change_id)
+        _require_file(src / "tasks.md")
+        archived_dir = SPECS_ARCHIVE_DIR / _normalize_change_id(active_change_id)
+        archived_dir.parent.mkdir(parents=True, exist_ok=True)
+        if archived_dir.exists():
+            raise RuntimeError(
+                f"archive target already exists: {_rel_path(archived_dir)}"
+            )
+        import shutil
+
+        shutil.move(str(src), str(archived_dir))
+        _write_spec_workflow_state(
+            active_change_id=None,
+            phase="ARCHIVED",
+            user_confirmed=True,
+            last_updated_iteration=iteration,
+            notes=f"change_archived:{active_change_id}",
+        )
+        return
+
+    # 根据调度目标推进规格工作流阶段
+    current = _load_spec_workflow_state()
+    effective_change_id = active_change_id if isinstance(active_change_id, str) else current.get("active_change_id")
+    if next_agent == "IMPLEMENTER":
+        if not isinstance(effective_change_id, str):
+            raise RuntimeError("IMPLEMENTER dispatch requires an active_change_id in spec state")
+        _write_spec_workflow_state(
+            active_change_id=effective_change_id,
+            phase="IMPLEMENTING",
+            user_confirmed=True,
+            last_updated_iteration=iteration,
+            notes="dispatch_implementer",
+        )
+    elif next_agent == "VALIDATE":
+        _write_spec_workflow_state(
+            active_change_id=effective_change_id if isinstance(effective_change_id, str) else None,
+            phase="VALIDATING",
+            user_confirmed=current["user_confirmed"],
+            last_updated_iteration=iteration,
+            notes="dispatch_validate",
+        )
+
+
+def _is_spec_confirmation_pending() -> bool:
+    state = _load_spec_workflow_state()
+    return state["phase"] == "USER_CONFIRM" and not state["user_confirmed"]
+
+
+def _validate_spec_confirmation_user_decision(*, decision: MainDecisionUser) -> None:
+    option_ids = {opt["option_id"] for opt in decision["options"]}
+    required_option_ids = {"accept_spec", "refine_spec"}
+    if not required_option_ids.issubset(option_ids):
+        raise ValueError(
+            "Spec confirmation pending: USER options must include accept_spec/refine_spec"
+        )
+    recommended = decision.get("recommended_option_id")
+    if recommended is not None and recommended not in required_option_ids:
+        raise ValueError(
+            "Spec confirmation pending: recommended_option_id must be accept_spec or refine_spec"
+        )
+
+
+def _mark_spec_confirmation_pending(*, iteration: int, reason: str) -> None:
+    state = _load_spec_workflow_state()
+    _write_spec_workflow_state(
+        active_change_id=state.get("active_change_id"),
+        phase="USER_CONFIRM",
+        user_confirmed=False,
+        last_updated_iteration=iteration,
+        notes=reason,
+    )
+
+
+def _apply_spec_user_choice(
+    *,
+    user_choice: str,
+    iteration: int,
+    accept_reason: str,
+    refine_reason: str,
+) -> None:
+    state = _load_spec_workflow_state()
+    if user_choice == "accept_spec":
+        _write_spec_workflow_state(
+            active_change_id=state.get("active_change_id"),
+            phase="TASK_READY",
+            user_confirmed=True,
+            last_updated_iteration=iteration,
+            notes=accept_reason,
+        )
+        return
+    if user_choice == "refine_spec":
+        _write_spec_workflow_state(
+            active_change_id=state.get("active_change_id"),
+            phase="USER_CONFIRM",
+            user_confirmed=False,
+            last_updated_iteration=iteration,
+            notes=refine_reason,
+        )
+        return
+    raise RuntimeError("Spec confirmation pending: user_choice must be accept_spec or refine_spec")
+
+
+def _build_spec_discovery_task_body(*, task_goal: str, change_id: str) -> str:
+    doc_refs = _extract_doc_references(task_goal)
+    if doc_refs:
+        doc_ref_lines = "\n".join(f"- {ref}" for ref in doc_refs)
+    else:
+        doc_ref_lines = "- （无显式 @doc: 引用）"
+
+    change_prefix = f"orchestrator/memory/specs/changes/{change_id}"
+    return f"""## 任务目标
+为变更单 {change_id} 产出可执行规格草案与任务拆解，作为后续实现唯一锚点。
+
+## 用户原始需求
+{task_goal.strip()}
+
+## 文档线索
+{doc_ref_lines}
+
+## 工件目标（仅用于 MAIN 落盘，SPEC_ANALYZER 禁止直接写文件）
+- 主黑板目标路径（展示用）：
+  - proposal: {change_prefix}/proposal.md
+  - design: {change_prefix}/design.md
+  - delta_spec: {change_prefix}/delta_spec.md
+  - tasks: {change_prefix}/tasks.md
+  - validation: {change_prefix}/validation.md
+  - questions: {change_prefix}/questions.md
+  - proofs: {change_prefix}/proofs.md
+  - meta: {change_prefix}/meta.json
+- artifact_updates.file（提交给 MAIN 时必须使用 specs 根目录相对路径）：
+  - proposal: changes/{change_id}/proposal.md
+  - design: changes/{change_id}/design.md
+  - delta_spec: changes/{change_id}/delta_spec.md
+  - tasks: changes/{change_id}/tasks.md
+  - validation: changes/{change_id}/validation.md
+  - questions: changes/{change_id}/questions.md
+  - proofs: changes/{change_id}/proofs.md
+  - meta: changes/{change_id}/meta.json
+
+## 工作要求
+1. 先调研真实代码与接口契约，再写规格，不允许凭空假设
+2. 任务拆解必须生成 TASK-xxx，可直接作为 implementation_scope
+3. 每个任务必须可验证，并在 validation.md 给出证据类型
+4. 列出需用户确认的问题（accept_spec/refine_spec 决策）
+5. 只能输出结构化工件更新建议，禁止直接修改 orchestrator 黑板文件
+
+## 输出要求
+- 报告中必须给出本轮主要改动点与证据
+- 报告中必须提供可供 MAIN 转换为 artifact_updates 的建议（file/action/content/reason）
+- `file` 应使用 specs 根目录相对路径（如 `changes/CHG-0001/tasks.md`）
+- 不要返回旧协议字段（spec_anchor_next/target_reqs）"""
+
+def _run_new_task_spec_discovery(
+    *,
+    iteration: int,
+    user_task: str,
+    sandbox_mode: str,
+    approval_policy: str,
+    ui: UiRuntime | None,
+    control: RunControl | None,
+) -> None:
+    effective_task = user_task.strip() if user_task else ""
+    if not effective_task:
+        effective_task = _extract_latest_task_goal()
+    if not effective_task:
+        raise RuntimeError("新任务缺少 Task Goal，无法执行规格发现阶段")
+
+    change_id = _next_change_id()
+    _ensure_change_scaffold(change_id)
+    _write_spec_workflow_state(
+        active_change_id=change_id,
+        phase="DISCOVERY",
+        user_confirmed=False,
+        last_updated_iteration=iteration,
+        notes="new_task_spec_discovery_started",
+    )
+
+    task_body = _build_spec_discovery_task_body(task_goal=effective_task, change_id=change_id)
+    task_content = _assemble_task_content(
+        iteration=iteration,
+        next_agent="SPEC_ANALYZER",
+        task_body=task_body,
+    )
+    task_content = _validate_task_content(
+        iteration=iteration,
+        expected_agent="SPEC_ANALYZER",
+        task=task_content,
+    )
+
+    task_file = _task_file_for_agent("SPEC_ANALYZER")
+    task_file.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(task_file, task_content + "\n")
+    _append_log_line(
+        f"orchestrator: new_task spec_discovery dispatch iter={iteration} change_id={change_id} task={_rel_path(task_file)}\n"
+    )
+
+    sub_session_id, _, report_path = _run_subagent_stage(
+        iteration=iteration,
+        next_agent="SPEC_ANALYZER",
+        sandbox_mode=sandbox_mode,
+        approval_policy=approval_policy,
+        ui=ui,
+        control=control,
+    )
+    _append_iteration_metadata(
+        iteration=iteration,
+        agent="SPEC_ANALYZER",
+        session_id=sub_session_id,
+        report_file=report_path,
+    )
+    _write_spec_workflow_state(
+        active_change_id=change_id,
+        phase="USER_CONFIRM",
+        user_confirmed=False,
+        last_updated_iteration=iteration,
+        notes="new_task_spec_discovery_completed",
+    )
 
 
 # ============= 迭代元数据管理（用于监督代理并行化） =============
@@ -690,7 +1301,7 @@ def _get_last_subagent_from_metadata(iteration: int) -> str | None:
     for record in reversed(metadata):
         if record.get("iteration") == iteration:
             agent = record.get("agent")
-            if isinstance(agent, str) and agent in {"IMPLEMENTER", "VALIDATE"}:
+            if isinstance(agent, str) and agent in {"IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE"}:
                 return agent
             break
 
@@ -709,7 +1320,7 @@ def _get_last_subagent_from_history(iteration: int) -> str | None:
             subagent = summary.get("subagent")
             if isinstance(subagent, dict):
                 agent = subagent.get("agent")
-                if isinstance(agent, str) and agent in {"IMPLEMENTER", "VALIDATE"}:
+                if isinstance(agent, str) and agent in {"IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE"}:
                     return agent
             break
     return None
@@ -849,6 +1460,16 @@ def _run_subagent_stage(
     if extra_prompt_parts:
         prompt_parts.extend(extra_prompt_parts)
 
+    spec_state = _load_spec_workflow_state()
+    active_change_hint = spec_state.get("active_change_id")
+    if not isinstance(active_change_hint, str):
+        active_change_hint = None
+    dispatch_path_contract = _build_dispatch_path_contract(
+        agent_cwd=_resolve_target_agent_root(),
+        active_change_id=active_change_hint,
+    )
+    blackboard_access_rules = _build_blackboard_access_rules(forbid_reports_write=True)
+
     # 获取 CLI 配置用于运行时信息行
     from .config import get_cli_for_agent
     cli_name = get_cli_for_agent(next_agent)
@@ -865,8 +1486,8 @@ def _run_subagent_stage(
     prompt_parts.extend([
         injected_task,
         "重要：所有需要的上下文（工单、需求、历史）已注入到提示词中，禁止读取 `orchestrator/` 目录下的文件。",
-        "重要：如需读取黑板文档，只允许读取 `./.orchestrator_ctx/` 下的 markdown 镜像，禁止修改该目录。",
-        "重要：禁止直接写入 `orchestrator/reports/`（不要使用任何工具/命令写 `orchestrator/reports/report_*.md`）。",
+        *blackboard_access_rules,
+        dispatch_path_contract,
         f"请把\"完整报告\"作为你最后的输出；编排器会自动保存你的最后一条消息到：`{_rel_path(report_path)}`。",
         runtime_line,  # 运行时信息行
     ])
@@ -886,7 +1507,7 @@ def _run_subagent_stage(
     while True:  # 关键分支：临时错误允许重试
         try:
             runtime_context = _load_runtime_context()
-            mirror_root, mirror_hash = _sync_project_markdown_mirror(
+            mirror_root, mirror_hash = _sync_project_blackboard_mirror(
                 context=runtime_context,
                 iteration=iteration,
                 stage=f"dispatch:{next_agent}:attempt{attempt + 1}",
@@ -1141,6 +1762,15 @@ def _run_finish_review_stage(
         doc_summaries.append(summary)
 
     code_root_label = _to_agent_visible_path(context=runtime_context, source_path=code_root_path)  # 关键变量：代码根目录展示
+    spec_state = _load_spec_workflow_state()
+    active_change_hint = spec_state.get("active_change_id")
+    if not isinstance(active_change_hint, str):
+        active_change_hint = None
+    finish_path_contract = _build_dispatch_path_contract(
+        agent_cwd=runtime_context.agent_root,
+        active_change_id=active_change_hint,
+    )
+    finish_blackboard_rules = _build_blackboard_access_rules(forbid_reports_write=True)
 
     finish_review_prompt_parts = [
         _load_system_prompt("finish_review"),
@@ -1151,7 +1781,8 @@ def _run_finish_review_stage(
         *doc_summaries,
         f"[code_root]: {code_root_label}",
         f"[iteration]: {iteration}",
-        "如需读取黑板文档，只允许读取 `./.orchestrator_ctx/` 下的 markdown 镜像，禁止修改该目录。",
+        *finish_blackboard_rules,
+        finish_path_contract,
     ])
 
     finish_review_prompt_parts.append(
@@ -1167,7 +1798,7 @@ def _run_finish_review_stage(
     attempt = 0
     while True:  # 关键分支：临时错误允许重试
         try:
-            mirror_root, mirror_hash = _sync_project_markdown_mirror(
+            mirror_root, mirror_hash = _sync_project_blackboard_mirror(
                 context=runtime_context,
                 iteration=iteration,
                 stage=f"dispatch:FINISH_REVIEW:attempt{attempt + 1}",
@@ -1227,6 +1858,15 @@ def _run_summary_stage(
         ui.state.update(phase="running_summary", current_agent="SUMMARY")
 
     summary_file = REPORT_ITERATION_SUMMARY_FILE  # 关键变量：摘要输出路径
+    spec_state = _load_spec_workflow_state()
+    active_change_hint = spec_state.get("active_change_id")
+    if not isinstance(active_change_hint, str):
+        active_change_hint = None
+    summary_path_contract = _build_dispatch_path_contract(
+        agent_cwd=_resolve_target_agent_root(),
+        active_change_id=active_change_hint,
+    )
+    summary_blackboard_rules = _build_blackboard_access_rules(forbid_reports_write=True)
 
     # 构建 SUMMARY 提示词注入列表
     summary_injections = [
@@ -1235,7 +1875,9 @@ def _run_summary_stage(
         _inject_file(DEV_PLAN_FILE),
         _inject_file(task_file),
         _inject_file(report_path),
-        "重要：优先使用已注入内容完成摘要；如需读取黑板文档，只允许读取 `./.orchestrator_ctx/` 下 markdown 镜像，禁止修改该目录。",
+        "重要：优先使用已注入内容完成摘要。",
+        *summary_blackboard_rules,
+        summary_path_contract,
     ]
 
     # 新增：注入用户原始需求（project_history 前 100 行，包含 Task Goal）
@@ -1272,7 +1914,7 @@ def _run_summary_stage(
         attempt_prompt = summary_prompt if attempt == 0 else f"{summary_prompt}\n\n{retry_notice}"
         try:
             runtime_context = _load_runtime_context()
-            mirror_root, mirror_hash = _sync_project_markdown_mirror(
+            mirror_root, mirror_hash = _sync_project_blackboard_mirror(
                 context=runtime_context,
                 iteration=iteration,
                 stage=f"dispatch:SUMMARY:attempt{attempt + 1}",
@@ -1478,9 +2120,9 @@ def _load_runtime_context() -> RuntimeContext:
     return load_runtime_context(project_env_file=PROJECT_ENV_FILE)
 
 
-def _sync_project_markdown_mirror(*, context: RuntimeContext, iteration: int, stage: str) -> tuple[Path, str]:
-    """将 orchestrator 黑板 markdown 单向镜像到 agent_root/.orchestrator_ctx。"""
-    result = sync_project_markdown_mirror(
+def _sync_project_blackboard_mirror(*, context: RuntimeContext, iteration: int, stage: str) -> tuple[Path, str]:
+    """将 orchestrator 黑板（md/json）单向镜像到 agent_root/.orchestrator_ctx。"""
+    result = sync_project_blackboard_mirror(
         context=context,
         iteration=iteration,
         triggered_by=stage,
@@ -1853,11 +2495,23 @@ def _run_single_validator(
             return result
 
         # 构建验证器提示词
+        spec_state = _load_spec_workflow_state()
+        active_change_hint = spec_state.get("active_change_id")
+        if not isinstance(active_change_hint, str):
+            active_change_hint = None
+        validator_path_contract = _build_dispatch_path_contract(
+            agent_cwd=_resolve_target_agent_root(),
+            active_change_id=active_change_hint,
+        )
+        validator_blackboard_rules = _build_blackboard_access_rules(forbid_reports_write=True)
+
         prompt_parts = [
             _load_system_prompt(validator_prompt_name),
             _inject_file(task_file),
             f"[iteration]: {iteration}",
-            "如需读取黑板文档，只允许读取 `./.orchestrator_ctx/` 下的 markdown 镜像，禁止修改该目录。",
+            "重要：所有需要的上下文已注入到提示词中，禁止读取 `orchestrator/` 目录下的源黑板文件。",
+            *validator_blackboard_rules,
+            validator_path_contract,
             "请执行验证并输出 JSON 结果。",
         ]
         prompt = "\n\n".join(prompt_parts)
@@ -2001,7 +2655,7 @@ def _run_validate_pipeline(
     mirror_hash: str | None = None
     try:
         context = _load_runtime_context()
-        mirror_root, mirror_hash = _sync_project_markdown_mirror(
+        mirror_root, mirror_hash = _sync_project_blackboard_mirror(
             context=context,
             iteration=iteration,
             stage="dispatch:VALIDATE",
@@ -2583,7 +3237,10 @@ def _parse_main_output_for_resume(*, raw_output: str, iteration: int) -> MainOut
             next_agent="IMPLEMENTER",
         )
         payload["task_body"] = migrated_task_body
-        payload["task"] = None
+        payload.pop("task", None)
+        payload.pop("dev_plan_next", None)
+        payload.pop("spec_anchor_next", None)
+        payload.pop("target_reqs", None)
         _append_log_line("orchestrator: resume migrated legacy task -> task_body\n")
         return _parse_main_output(json.dumps(payload, ensure_ascii=False), strict=True)
 
@@ -2660,6 +3317,14 @@ def _resume_pending_iteration(
         user_choice, user_comment = _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
         _clear_resume_state()
 
+        if _is_spec_confirmation_pending():
+            _apply_spec_user_choice(
+                user_choice=user_choice,
+                iteration=iteration,
+                accept_reason="user_accept_spec_resume",
+                refine_reason="user_refine_spec_resume",
+            )
+
         # 【新增】续跑时 USER 决策后也更新决策模式文档
         try:
             _update_user_decision_patterns(
@@ -2684,6 +3349,11 @@ def _resume_pending_iteration(
             ui=ui,
             control=control,
         )
+        if next_agent == "SPEC_ANALYZER":
+            _mark_spec_confirmation_pending(
+                iteration=iteration,
+                reason="spec_analyzer_rerun_resume",
+            )
         _write_resume_state(
             iteration=iteration,
             phase="after_subagent",
@@ -2780,7 +3450,7 @@ def _assemble_task_content(*, iteration: int, next_agent: str, task_body: str) -
     """组装标准工单：头部由编排器生成，正文由 MAIN 提供。"""
     normalized_body = task_body.strip()  # 关键变量：清洗后的工单正文
     if not normalized_body:
-        raise TemporaryError("task_body must be non-empty for next_agent=IMPLEMENTER")
+        raise TemporaryError(f"task_body must be non-empty for next_agent={next_agent}")
 
     if normalized_body.startswith("# Current Task ("):
         raise TemporaryError("task_body must not include task header")
@@ -2797,50 +3467,108 @@ def _assemble_task_content(*, iteration: int, next_agent: str, task_body: str) -
 
 
 def _validate_main_output_fields(*, iteration: int, output: MainOutput) -> None:
-    """纯校验：检查 MAIN 输出字段的合法性，不做任何转换。
-
-    用作 post_validate 回调，在内层重试循环中捕获校验错误。
-    校验失败时抛出 ValueError/RuntimeError，由 _run_main_decision_stage 转为 TemporaryError 重试。
-    """
+    """纯校验：检查 MAIN 输出字段合法性（Spec-Driven V2）。"""
     _validate_history_append(iteration=iteration, entry=output["history_append"])
-    dev_plan_next = output.get("dev_plan_next")
-    if dev_plan_next is not None:
-        _validate_dev_plan_text(text=dev_plan_next, source=DEV_PLAN_STAGED_FILE)
+
+    # 硬切旧协议：运行时禁止 legacy 字段
+    for legacy_field in ("dev_plan_next", "spec_anchor_next", "target_reqs"):
+        if legacy_field in output:
+            raise ValueError(f"Legacy field is not allowed: {legacy_field}")
+
     decision = output["decision"]
-    if decision["next_agent"] == "IMPLEMENTER":
-        task_body = output.get("task_body")
+    next_agent = decision["next_agent"]
+    spec_state = _load_spec_workflow_state()
+
+    # 在用户确认前，不允许直接派发 IMPLEMENTER
+    if _is_spec_confirmation_pending():
+        if next_agent == "USER":
+            _validate_spec_confirmation_user_decision(decision=decision)  # type: ignore[arg-type]
+        elif next_agent != "SPEC_ANALYZER":
+            raise ValueError(
+                "Spec confirmation pending: next_agent must be USER or SPEC_ANALYZER"
+            )
+
+    task_body = output.get("task_body")
+    if next_agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:
         if not isinstance(task_body, str):
-            raise ValueError(f"Missing task_body for next_agent={decision['next_agent']}")
-        _assemble_task_content(iteration=iteration, next_agent=decision["next_agent"], task_body=task_body)
+            raise ValueError(f"Missing task_body for next_agent={next_agent}")
+        _assemble_task_content(iteration=iteration, next_agent=next_agent, task_body=task_body)
+    elif task_body is not None:
+        raise ValueError(f"Invalid task_body: must be null when next_agent={next_agent}")
+
+    active_change_id = output.get("active_change_id")
+    if next_agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:
+        if not isinstance(active_change_id, str) or not active_change_id.strip():
+            raise ValueError(
+                f"Missing active_change_id for next_agent={next_agent}"
+            )
+        normalized_change_id = _normalize_change_id(active_change_id)
+        state_change_id = spec_state.get("active_change_id")
+        change_action = output.get("change_action")
+        if change_action != "create" and state_change_id is not None and normalized_change_id != state_change_id:
+            raise ValueError(
+                f"active_change_id mismatch: state={state_change_id}, output={normalized_change_id}"
+            )
+
+    implementation_scope = output.get("implementation_scope")
+    if next_agent == "IMPLEMENTER":
+        if not isinstance(active_change_id, str):
+            raise ValueError("IMPLEMENTER dispatch requires active_change_id")
+        if not isinstance(implementation_scope, list) or not implementation_scope:
+            raise ValueError(
+                "Missing implementation_scope for next_agent=IMPLEMENTER"
+            )
+        available_tasks = set(_load_change_task_ids(active_change_id))
+        unknown_task_ids = [
+            task_id for task_id in implementation_scope
+            if not isinstance(task_id, str) or task_id.strip().upper() not in available_tasks
+        ]
+        if unknown_task_ids:
+            raise ValueError(
+                "Invalid implementation_scope: ids not declared in tasks.md: "
+                + ", ".join(map(str, unknown_task_ids))
+            )
+    elif implementation_scope is not None:
+        raise ValueError(
+            f"Invalid implementation_scope: must be null when next_agent={next_agent}"
+        )
+
+    change_action = output.get("change_action")
+    if change_action is not None and change_action not in {"create", "update", "archive", "none"}:
+        raise ValueError("Invalid change_action")
+
+    artifact_updates = output.get("artifact_updates")
+    if artifact_updates is not None:
+        if change_action in {None, "none"}:
+            raise ValueError(
+                "artifact_updates requires change_action=create/update/archive"
+            )
+        if not isinstance(artifact_updates, list):
+            raise ValueError("artifact_updates must be a list or null")
+        for idx, patch in enumerate(artifact_updates, start=1):
+            if not isinstance(patch, dict):
+                raise ValueError(f"artifact_updates[{idx}] must be an object")
+            file_path = patch.get("file")
+            if not isinstance(file_path, str) or not file_path.strip():
+                raise ValueError(f"artifact_updates[{idx}].file must be a non-empty string")
+            _resolve_spec_artifact_path(file_path)
+            if not isinstance(active_change_id, str):
+                raise ValueError("artifact_updates requires active_change_id")
+            _validate_artifact_update_file_for_change(
+                relative_path=file_path,
+                active_change_id=active_change_id,
+            )
 
 
-def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, str | None, str | None]:
-    """准备 MAIN 输出内容：转换为最终格式。
-
-    前置条件：_validate_main_output_fields 已通过（相同输入不会再抛异常）。
-    """
+def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, str | None, None]:
+    """准备 MAIN 输出内容：转换为最终格式。"""
     decision = output["decision"]  # 关键变量：MAIN 决策对象
     history_entry = _validate_history_append(iteration=iteration, entry=output["history_append"])  # 关键变量：历史追加内容
-    dev_plan_next = output.get("dev_plan_next")  # 关键变量：计划草案（可为空）
-    if dev_plan_next is not None:  # 关键分支：存在草案则先校验
-        # 状态转换校验：记录违规但不阻断流程（MAIN 经常需要重新规划 dev_plan）
-        if DEV_PLAN_FILE.exists():
-            from .dev_plan import validate_status_transitions
-            violations = validate_status_transitions(
-                before_text=_read_text(DEV_PLAN_FILE),
-                after_text=dev_plan_next,
-            )
-            if violations:
-                _append_log_line(
-                    f"orchestrator: WARNING dev_plan status transition issues "
-                    f"(non-blocking): {'; '.join(violations)}\n"
-                )
 
     task_content = None  # 关键变量：工单内容（可为空）
     next_agent = decision["next_agent"]  # 关键变量：下一步代理
-    # Context-centric 架构：IMPLEMENTER 需要工单正文
-    if next_agent == "IMPLEMENTER":
-        task_body = output.get("task_body")  # 关键变量：RAW 工单正文
+    if next_agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:
+        task_body = output.get("task_body")
         assert isinstance(task_body, str), "post_validate already checked task_body"
 
         task_content = _assemble_task_content(
@@ -2848,7 +3576,7 @@ def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, st
             next_agent=next_agent,
             task_body=task_body,
         )
-        task_content = _validate_task_content(iteration=iteration, expected_agent=next_agent, task=task_content)  # 关键变量：校验后的工单
+        task_content = _validate_task_content(iteration=iteration, expected_agent=next_agent, task=task_content)
 
         # P0: 工单字段校验与自动补全
         task_content, field_warnings = _validate_and_complete_task_fields(
@@ -2860,7 +3588,8 @@ def _prepare_main_output(*, iteration: int, output: MainOutput) -> tuple[str, st
         # P0: 自动注入执行环境（MAIN 无需手动填写）
         task_content = _inject_execution_environment(task_content)
 
-    return history_entry, task_content, dev_plan_next
+    # Spec-Driven V2 不再通过 dev_plan_next 传播更新
+    return history_entry, task_content, None
 
 
 def _validate_main_finish_decision(*, output: MainOutput, iteration: int) -> None:
@@ -3052,6 +3781,26 @@ def _build_main_prompt(
     # 始终注入 dev_plan
     user_parts.append(_inject_file(DEV_PLAN_FILE, label_suffix="开发计划"))
 
+    spec_state = _load_spec_workflow_state()
+    active_change_id = spec_state.get("active_change_id")
+    phase = spec_state.get("phase")
+    user_confirmed = spec_state.get("user_confirmed")
+    user_parts.append(
+        f"[spec_workflow_state]: phase={phase}, active_change_id={active_change_id}, user_confirmed={user_confirmed}"
+    )
+
+    if isinstance(active_change_id, str):
+        change_dir = _change_dir(active_change_id)
+        for filename in ("proposal.md", "design.md", "delta_spec.md", "tasks.md", "validation.md", "questions.md", "proofs.md"):
+            artifact = change_dir / filename
+            if artifact.exists():
+                user_parts.append(_inject_file(artifact, label_suffix=f"{active_change_id}:{filename}"))
+        try:
+            task_ids = _load_change_task_ids(active_change_id)
+            user_parts.append(f"[当前可选 TASK IDs]: {', '.join(task_ids)}")
+        except Exception as exc:
+            user_parts.append(f"[当前可选 TASK IDs]: 读取失败 ({exc})")
+
     # 注入 global_context（首轮或压缩后）
     if iteration == 1 or did_compact:
         user_parts.append(_inject_file(GLOBAL_CONTEXT_FILE, label_suffix="全局上下文"))
@@ -3061,7 +3810,12 @@ def _build_main_prompt(
     # 每轮注入业务项目目录结构（来自 project_env 的 agent_root）
     project_dir = _resolve_target_agent_root()
     project_tree = _build_project_tree(project_dir)
-    user_parts.append(f"[项目目录结构]:\n```\n{project_tree}\n```")
+    user_parts.append(
+        f"""[项目目录结构]:
+```
+{project_tree}
+```"""
+    )
 
     # ========== 注入用户决策历史 ==========
     recent_decisions = _extract_recent_user_decisions(lookback=5)
@@ -3069,16 +3823,22 @@ def _build_main_prompt(
         decisions_lines = []
         for d in recent_decisions:
             line = f"- Iteration {d['iteration']}: {d['decision_title']} → 用户选择 {d['user_choice']}"
-            if d.get('user_comment'):
+            if d.get("user_comment"):
                 line += f"，说明：{d['user_comment']}"
             decisions_lines.append(line)
-        decisions_text = "\n".join(decisions_lines)
-        user_parts.append(f"[历史用户决策（防重复询问）]:\n{decisions_text}")
+        decisions_text = chr(10).join(decisions_lines)
+        user_parts.append(
+            f"""[历史用户决策（防重复询问）]:
+{decisions_text}"""
+        )
 
     if last_user_decision_iteration is not None:
         user_decision = _extract_latest_user_decision(iteration=last_user_decision_iteration)
         if user_decision:
-            user_parts.append(f"[上一轮用户决策结果]:\n{user_decision}")
+            user_parts.append(
+                f"""[上一轮用户决策结果]:
+{user_decision}"""
+            )
             user_parts.append(
                 "重要：用户已在上一轮做出决策，请根据用户的选择（user_choice）和补充说明（user_comment）继续推进任务。"
                 "不要再次询问相同的问题。"
@@ -3087,28 +3847,47 @@ def _build_main_prompt(
     # ========== 注入上一轮子代理报告 ==========
     if last_subagent == "IMPLEMENTER" and REPORT_IMPLEMENTER_FILE.exists():
         user_parts.append(
-            f"[上一轮 IMPLEMENTER 报告（强制注入，请基于此做决策）]:\n"
-            f"{_inject_file(REPORT_IMPLEMENTER_FILE, label_suffix='上一轮 IMPLEMENTER 报告')}"
+            f"""[上一轮 IMPLEMENTER 报告（强制注入，请基于此做决策）]:
+{_inject_file(REPORT_IMPLEMENTER_FILE, label_suffix='上一轮 IMPLEMENTER 报告')}"""
+        )
+    elif last_subagent == "SPEC_ANALYZER" and REPORT_SPEC_ANALYZER_FILE.exists():
+        user_parts.append(
+            f"""[上一轮 SPEC_ANALYZER 报告（强制注入，请基于此做决策）]:
+{_inject_file(REPORT_SPEC_ANALYZER_FILE, label_suffix='上一轮 SPEC_ANALYZER 报告')}"""
         )
     elif last_subagent == "VALIDATE" and SYNTHESIZER_REPORT_FILE.exists():
         user_parts.append(
-            f"[上一轮验证结果（强制注入，请基于此做决策）]:\n"
-            f"{_inject_file(SYNTHESIZER_REPORT_FILE, label_suffix='上一轮验证结果')}"
+            f"""[上一轮验证结果（强制注入，请基于此做决策）]:
+{_inject_file(SYNTHESIZER_REPORT_FILE, label_suffix='上一轮验证结果')}"""
+        )
+
+    if _is_spec_confirmation_pending() and REPORT_SPEC_ANALYZER_FILE.exists() and last_subagent != "SPEC_ANALYZER":
+        user_parts.append(
+            f"""[规格确认状态：PENDING（必须先用户确认规格）]:
+{_inject_file(REPORT_SPEC_ANALYZER_FILE, label_suffix='当前规格草案报告')}"""
         )
 
     # ========== 额外指令和输出要求 ==========
     if extra_instructions:
         user_parts.extend(extra_instructions)
     user_parts.append(
-        '[强制输出要求]\n'
-        '禁止调用任何工具（Read/Write/Edit/Bash/Glob 等）；MAIN 只做决策，不做执行。\n'
-        '你的最终输出必须且只能是 1 行纯 JSON（无 Markdown 代码块、无额外文本）。\n'
-        "格式：{\"next_agent\":\"IMPLEMENTER|VALIDATE|USER|FINISH\",\"reason\":\"...\",\"history_append\":\"...\",\"task_body\":\"...\",\"dev_plan_next\":null}\\n"
-        "（当 next_agent=IMPLEMENTER 时仅输出 task_body 正文，禁止输出 # Current Task 与 assigned_agent 行）\\n"
-        '禁止无限探索文件而不输出 JSON。立即完成分析并输出决策。'
+        chr(10).join(
+            [
+                "[强制输出要求]",
+                "禁止调用任何工具（Read/Write/Edit/Bash/Glob 等）；MAIN 只做决策，不做执行。",
+                "你的最终输出必须且只能是 1 行纯 JSON（无 Markdown 代码块、无额外文本）。",
+                '格式：{"next_agent":"IMPLEMENTER|SPEC_ANALYZER|VALIDATE|USER|FINISH","reason":"...","history_append":"...","task_body":null,"active_change_id":null,"implementation_scope":null,"artifact_updates":null,"change_action":"none"}',
+                "（当 next_agent=IMPLEMENTER 时：task_body 必须为非空正文，active_change_id 必须非空，implementation_scope 必须是非空 TASK ID 数组；禁止输出 # Current Task 与 assigned_agent 行）",
+                "（当 next_agent=SPEC_ANALYZER 时：task_body 必须为非空正文，active_change_id 必须非空，implementation_scope 必须为 null）",
+                "（当 next_agent 不在 IMPLEMENTER/SPEC_ANALYZER 时：task_body 与 implementation_scope 必须为 null）",
+                "（artifact_updates 仅允许更新 specs 工件；file 必须是 specs 根目录相对路径，且落在 active_change_id 下，如 changes/CHG-0001/tasks.md；有更新时 change_action 必须是 create/update/archive）",
+                "（禁止输出 legacy 字段：dev_plan_next/spec_anchor_next/target_reqs/task）",
+                "禁止无限探索文件而不输出 JSON。立即完成分析并输出决策。",
+            ]
+        )
     )
 
-    user_prompt = "\n\n".join(user_parts)
+    user_prompt = (chr(10) * 2).join(user_parts)
     return system_prompt, user_prompt, did_compact
 
 
@@ -3158,15 +3937,23 @@ def _build_finish_check_prompt(
 
 ## 输出格式（必须严格遵守）
 输出 **1 行 JSON**（无其它文本）：
-- 采纳 FAIL 派发 IMPLEMENTER：`{{"next_agent":"IMPLEMENTER","reason":"...","history_append":"## Iteration {iteration + 1}:\n...","task_body":"## 任务目标\n...","dev_plan_next":null}}`
-- 忽略 FAIL 直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:\n...\nfinish_review_override: ignore\n理由：...","task_body":null,"dev_plan_next":null}}`
-- 全部通过直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:\n...","task_body":null,"dev_plan_next":null}}`
-- 需要用户决策：`{{"next_agent":"USER","reason":"...","decision_title":"简短标题","question":"详细问题描述","options":[{{"option_id":"opt1","description":"选项1说明"}},{{"option_id":"opt2","description":"选项2说明"}}],"recommended_option_id":"opt1","history_append":"## Iteration {iteration + 1}:\n...","task_body":null,"dev_plan_next":null}}`
+- 采纳 FAIL 派发 IMPLEMENTER：`{{"next_agent":"IMPLEMENTER","reason":"...","history_append":"## Iteration {iteration + 1}:
+...","task_body":"## 任务目标
+...","active_change_id":"CHG-0001","implementation_scope":["TASK-001"],"artifact_updates":null,"change_action":"none"}}`
+- 忽略 FAIL 直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:
+...
+finish_review_override: ignore
+理由：...","task_body":null,"active_change_id":null,"implementation_scope":null,"artifact_updates":null,"change_action":"none"}}`
+- 全部通过直接完成：`{{"next_agent":"FINISH","reason":"...","history_append":"## Iteration {iteration}:
+...","task_body":null,"active_change_id":null,"implementation_scope":null,"artifact_updates":null,"change_action":"none"}}`
+- 需要用户决策：`{{"next_agent":"USER","reason":"...","decision_title":"简短标题","question":"详细问题描述","options":[{{"option_id":"opt1","description":"选项1说明"}},{{"option_id":"opt2","description":"选项2说明"}}],"recommended_option_id":"opt1","history_append":"## Iteration {iteration + 1}:
+...","task_body":null,"active_change_id":null,"implementation_scope":null,"artifact_updates":null,"change_action":"none"}}`
 
 **重要**：
 1. 必须输出完整 JSON，禁止空输出
 2. USER 决策时字段名必须是 `options`（不是 `decision_options`），且至少包含 2 个选项
-3. 非 FINISH 决策的 history_append 必须使用迭代号 {iteration + 1}"""
+3. 非 FINISH 决策的 history_append 必须使用迭代号 {iteration + 1}
+4. 当 next_agent=IMPLEMENTER 时，`active_change_id` 与 `implementation_scope` 必须有效；否则两者必须为 null"""
 
     # 构建上下文部分
     context_parts = [
@@ -3320,16 +4107,20 @@ def _preflight() -> None:
     _require_file(GLOBAL_CONTEXT_FILE)  # 关键变量：全局上下文必须存在
     _require_file(PROJECT_HISTORY_FILE)  # 关键变量：历史必须存在
     _require_file(DEV_PLAN_FILE)  # 关键变量：计划必须存在
+    _require_file(SPECS_CONSTITUTION_FILE)  # 关键变量：规格宪章必须存在
+    _require_file(SPECS_STATE_FILE)  # 关键变量：规格状态必须存在
     _require_file(DEV_PLAN_ARCHIVED_FILE)  # 关键变量：归档计划必须存在
     _require_file(FINISH_REVIEW_CONFIG_FILE)  # 关键变量：最终审阅配置必须存在
     _require_file(VERIFICATION_POLICY_FILE)  # 关键变量：验证策略配置必须存在
     _require_file(OUT_OF_SCOPE_ISSUES_FILE)  # 关键变量：范围外问题记录必须存在
     _require_file(IMPLEMENTER_TASK_FILE)  # 关键变量：IMPLEMENTER 工单必须存在
+    _require_file(SPEC_ANALYZER_TASK_FILE)  # 关键变量：SPEC_ANALYZER 工单必须存在
     _require_file(REPORT_IMPLEMENTER_FILE)  # 关键变量：IMPLEMENTER 报告必须存在
+    _require_file(REPORT_SPEC_ANALYZER_FILE)  # 关键变量：SPEC_ANALYZER 报告必须存在
     _require_file(REPORT_FINISH_REVIEW_FILE)  # 关键变量：FINISH_REVIEW 报告必须存在
 
     # Context-centric 架构：检查新提示词文件
-    for agent in ("main", "implementer", "test_runner", "requirement_validator", "anti_cheat_detector", "edge_case_tester", "synthesizer", "summary", "finish_review"):
+    for agent in ("main", "implementer", "spec_analyzer", "test_runner", "requirement_validator", "anti_cheat_detector", "edge_case_tester", "synthesizer", "summary", "finish_review"):
         _require_file(PROMPTS_DIR / f"subagent_prompt_{agent}.md")  # 关键变量：提示词必须存在
 
     _validate_dev_plan()  # 关键变量：计划结构校验
@@ -3363,6 +4154,13 @@ def workflow_loop(
         _reset_workspace_task_files(iteration=0)  # 关键变量：重置工单
         _reset_report_files()  # 关键变量：重置报告
         _reset_acceptance_scope(user_task or "")  # 关键变量：重置验收范围
+        _write_spec_workflow_state(
+            active_change_id=None,
+            phase="DISCOVERY",
+            user_confirmed=False,
+            last_updated_iteration=0,
+            notes="new_task_reset",
+        )  # 关键变量：重置规格工作流状态
 
     main_session_id = None if new_task else _load_saved_main_session_id()  # 关键变量：MAIN 会话 id
     if main_session_id is not None:  # 关键分支：恢复旧会话
@@ -3398,6 +4196,18 @@ def workflow_loop(
     start_iteration = last_iteration + 1  # 关键变量：本轮起始迭代
     end_iteration = start_iteration + max_iterations - 1  # 关键变量：本轮结束迭代
 
+    bootstrap_last_subagent: str | None = None
+    if new_task:  # 关键分支：新任务强制先执行代码感知规格发现
+        _run_new_task_spec_discovery(
+            iteration=start_iteration,
+            user_task=user_task,
+            sandbox_mode=sandbox_mode,
+            approval_policy=approval_policy,
+            ui=ui,
+            control=control,
+        )
+        bootstrap_last_subagent = "SPEC_ANALYZER"
+
     finish_attempts = 0  # 关键变量：FINISH 尝试计数（用于强制收敛）
     max_finish_attempts = MAX_FINISH_ATTEMPTS  # 关键变量：最大 FINISH 尝试次数
     last_compact_iteration = 0  # 关键变量：上次压缩上下文的迭代号
@@ -3413,12 +4223,15 @@ def workflow_loop(
         last_user_decision_iteration = last_iteration
         print(f"Restored user decision from iteration {last_iteration}")
     # 关键变量：上一轮运行的子代理（用于注入报告到 MAIN 提示词）
-    last_subagent: str | None = None
+    last_subagent: str | None = bootstrap_last_subagent
     if last_iteration > 0:
         # 从元数据或摘要历史恢复上一轮子代理信息
-        last_subagent = _get_last_subagent_from_metadata(last_iteration)
-        if last_subagent:
+        restored_subagent = _get_last_subagent_from_metadata(last_iteration)
+        if restored_subagent:
+            last_subagent = restored_subagent
             print(f"Restored last subagent: {last_subagent}")
+    elif bootstrap_last_subagent is not None:
+        print(f"Bootstrap last subagent: {bootstrap_last_subagent}")
 
     for iteration in range(start_iteration, end_iteration + 1):  # 关键分支：迭代循环
         if control is not None and control.cancel_event.is_set():  # 关键分支：用户中断优先
@@ -3441,6 +4254,8 @@ def workflow_loop(
             task_content = main_checkpoint["task_content"]
             dev_plan_next = main_checkpoint["dev_plan_next"]
             effective_iteration = iteration
+            if not bool(main_checkpoint.get("change_applied")):
+                _apply_change_action(iteration=effective_iteration, output=main_output)
             dev_plan_text = _read_text(DEV_PLAN_FILE)
             dev_plan_before_hash = _sha256_text(dev_plan_text)
             # FINISH 分支需要 main_guard_paths
@@ -3490,7 +4305,7 @@ def workflow_loop(
                         dev_plan_size=dev_plan_size,
                     )
 
-            # 1) MAIN：输出包含 history/task_body/dev_plan_next 的调度 JSON
+            # 1) MAIN：输出包含 history/task_body/spec 字段的调度 JSON
             _clear_dev_plan_stage_file()  # 关键变量：清理上轮 dev_plan 草案
             dev_plan_text = _read_text(DEV_PLAN_FILE)
             dev_plan_before_hash = _sha256_text(dev_plan_text)  # 关键变量：dev_plan 运行前哈希
@@ -3582,6 +4397,9 @@ def workflow_loop(
             )
             effective_iteration = iteration
 
+            # 先应用规格工件更新，再落 checkpoint，保证恢复时不会重复应用
+            _apply_change_action(iteration=effective_iteration, output=main_output)
+
             log_event(
                 "stage_complete",
                 trace_id=trace_id,
@@ -3613,19 +4431,6 @@ def workflow_loop(
                 finish_attempts=finish_attempts,
                 max_finish_attempts=max_finish_attempts,
             )
-
-            # 提前提交 dev_plan_next，确保 FINISH 检查读取最新状态
-            early_dev_plan_next = main_output.get("dev_plan_next")
-            if early_dev_plan_next is not None:
-                _validate_dev_plan_text(text=early_dev_plan_next, source=DEV_PLAN_STAGED_FILE)
-                DEV_PLAN_STAGED_FILE.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_write_text(DEV_PLAN_STAGED_FILE, early_dev_plan_next.rstrip() + "\n")
-                _commit_staged_dev_plan_if_present(
-                    iteration=iteration,
-                    main_session_id=main_session_id,
-                    dev_plan_before_hash=dev_plan_before_hash,
-                )
-                dev_plan_before_hash = _sha256_text(_read_text(DEV_PLAN_FILE))  # 更新哈希
 
             is_ready, check_msg, blockers = _check_finish_readiness()
             baseline_ok, baseline_msg = _is_baseline_failure_acceptable()
@@ -3761,7 +4566,10 @@ def workflow_loop(
                             "decision": decision,
                             "history_append": f"## Iteration {iteration}:\nnext_agent: FINISH\nreason: FINISH_CHECK 重试耗尽，降级完成\nfinish_review_override: retry_exhausted",
                             "task_body": None,
-                            "dev_plan_next": None,
+                            "active_change_id": None,
+                            "implementation_scope": None,
+                            "artifact_updates": None,
+                            "change_action": "none",
                         }
                         history_entry, task_content, dev_plan_next = _prepare_main_output(
                             iteration=iteration,
@@ -3791,10 +4599,6 @@ def workflow_loop(
             milestone_labels.append("用户决策")
         if finish_attempted:
             milestone_labels.append(f"FINISH 尝试 #{finish_attempts}")
-        if dev_plan_next is not None:
-            changed = _count_dev_plan_status_changes(before=dev_plan_text, after=dev_plan_next)
-            if changed > 5:
-                milestone_labels.append(f"dev_plan 重大更新({changed})")
         # 提取 IMPLEMENTER 报告的 verdict 用于里程碑标记
         last_implementer_verdict: str | None = None
         if REPORT_IMPLEMENTER_FILE.exists():
@@ -3813,17 +4617,7 @@ def workflow_loop(
             entry=history_entry,
             labels=milestone_labels,
         )
-        if dev_plan_next is not None:  # 关键分支：有计划草案才落盘
-            DEV_PLAN_STAGED_FILE.parent.mkdir(parents=True, exist_ok=True)
-            _atomic_write_text(
-                DEV_PLAN_STAGED_FILE,
-                dev_plan_next.rstrip() + "\n",
-            )  # 关键变量：暂存 dev_plan
-        _commit_staged_dev_plan_if_present(
-            iteration=iteration,
-            main_session_id=main_session_id,
-            dev_plan_before_hash=dev_plan_before_hash,
-        )
+        # Spec-Driven V2：规格更新统一通过 artifact_updates 处理，禁用 spec_anchor 直写。
         if task_content is not None:  # 关键分支：子代理才需要写工单
             task_file = _task_file_for_agent(decision["next_agent"])  # 关键变量：目标工单路径
             task_file.parent.mkdir(parents=True, exist_ok=True)
@@ -3891,6 +4685,14 @@ def workflow_loop(
             user_choice, user_comment = _prompt_user_for_decision(iteration=iteration, decision=user_decision, ui=ui)  # type: ignore[arg-type]
             _clear_resume_state()
 
+            if _is_spec_confirmation_pending():
+                _apply_spec_user_choice(
+                    user_choice=user_choice,
+                    iteration=iteration,
+                    accept_reason="user_accept_spec",
+                    refine_reason="user_refine_spec",
+                )
+
             # 【新增】USER 决策后立即更新决策模式文档
             try:
                 _update_user_decision_patterns(
@@ -3944,13 +4746,14 @@ def workflow_loop(
             last_subagent = "VALIDATE"
             continue
 
-        # Context-centric 架构：处理 IMPLEMENTER 决策
-        if decision["next_agent"] == "IMPLEMENTER":
+        # Context-centric 架构：处理 IMPLEMENTER/SPEC_ANALYZER 决策
+        if decision["next_agent"] in {"IMPLEMENTER", "SPEC_ANALYZER"}:
+            subagent_name = decision["next_agent"]
             # 2) 子代理：只读工单并输出报告（报告由 --output-last-message 落盘）
             sub_started = time.monotonic()
             sub_session_id, task_file, report_path = _run_subagent_stage(
                 iteration=iteration,
-                next_agent="IMPLEMENTER",
+                next_agent=subagent_name,
                 sandbox_mode=sandbox_mode,
                 approval_policy=approval_policy,
                 ui=ui,
@@ -3959,11 +4762,11 @@ def workflow_loop(
 
             # ========== 记录子代理会话 token 使用情况 ==========
             if sub_session_id:
-                sub_cli_name = get_cli_for_agent("IMPLEMENTER")
+                sub_cli_name = get_cli_for_agent(subagent_name)
                 sub_token_info = get_session_token_info(sub_session_id, sub_cli_name)
                 if sub_token_info:
                     sub_token_msg = (
-                        f"orchestrator: iteration {iteration} IMPLEMENTER context: "
+                        f"orchestrator: iteration {iteration} {subagent_name} context: "
                         f"{format_token_info(sub_token_info)}\n"
                     )
                     _append_log_line(sub_token_msg)
@@ -3975,14 +4778,14 @@ def workflow_loop(
                 "stage_complete",
                 trace_id=trace_id,
                 iteration=iteration,
-                stage="IMPLEMENTER",
+                stage=subagent_name,
                 duration_ms=int((time.monotonic() - sub_started) * 1000),
             )
 
             _write_resume_state(
                 iteration=iteration,
                 phase="after_subagent",
-                next_agent="IMPLEMENTER",
+                next_agent=subagent_name,
                 main_session_id=main_session_id,
                 subagent_session_id=sub_session_id,
                 last_compact_iteration=last_compact_iteration,
@@ -3991,15 +4794,21 @@ def workflow_loop(
             # 写入迭代元数据（同步，极快）- 用于替代 SUMMARY 历史的依赖
             _append_iteration_metadata(
                 iteration=iteration,
-                agent="IMPLEMENTER",
+                agent=subagent_name,
                 session_id=sub_session_id,
                 report_file=report_path,
             )
 
+            if subagent_name == "SPEC_ANALYZER":
+                _mark_spec_confirmation_pending(
+                    iteration=iteration,
+                    reason="spec_analyzer_rerun",
+                )
+
             # SUMMARY 改为后台执行后主流程等待，保证归档只包含本轮完整产物
             supervisor_future = _submit_supervisor_task(
                 iteration=iteration,
-                next_agent="IMPLEMENTER",
+                next_agent=subagent_name,
                 main_session_id=main_session_id,
                 subagent_session_id=sub_session_id,
                 task_file=task_file,
@@ -4008,21 +4817,21 @@ def workflow_loop(
                 approval_policy=approval_policy,
                 ui=ui,
             )
-            log_event("summary_wait_start", trace_id=trace_id, iteration=iteration, stage="IMPLEMENTER")
+            log_event("summary_wait_start", trace_id=trace_id, iteration=iteration, stage=subagent_name)
             supervisor_future.result()
-            log_event("summary_wait_end", trace_id=trace_id, iteration=iteration, stage="IMPLEMENTER")
-            log_event("artifact_archive_start", trace_id=trace_id, iteration=iteration, stage="IMPLEMENTER")
-            archive_dir = _backup_iteration_artifacts(iteration=iteration, stage="IMPLEMENTER")
+            log_event("summary_wait_end", trace_id=trace_id, iteration=iteration, stage=subagent_name)
+            log_event("artifact_archive_start", trace_id=trace_id, iteration=iteration, stage=subagent_name)
+            archive_dir = _backup_iteration_artifacts(iteration=iteration, stage=subagent_name)
             log_event(
                 "artifact_archive_end",
                 trace_id=trace_id,
                 iteration=iteration,
-                stage="IMPLEMENTER",
+                stage=subagent_name,
                 archived=archive_dir is not None,
             )
 
             _clear_resume_state()
-            last_subagent = "IMPLEMENTER"
+            last_subagent = subagent_name
             continue
 
         # 未知的 next_agent

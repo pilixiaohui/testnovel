@@ -356,5 +356,11 @@ SYNTHESIZER BLOCKED
 **在输出 JSON 前，必须验证以下一致性**：
 - `next_agent` 字段值必须与 `history_append` 中的 `next_agent:` 一致
 - `next_agent=IMPLEMENTER` 时必须提供非空 `task_body`，且 `task_body` 不能包含工单标题或 `assigned_agent:` 行
+- `next_agent=IMPLEMENTER` 时必须提供非空 `active_change_id` 与非空 `implementation_scope`（如 `["TASK-001"]`），且 scope 必须来自当前 change 的 `tasks.md`
+- `artifact_updates` 仅允许更新 specs 工件；`file` 必须是 specs 根目录相对路径，且必须落在当前 `active_change_id` 下（如 `changes/CHG-0001/tasks.md`）；若有更新，`change_action` 必须是 `create|update|archive`
+- 禁止输出 legacy 字段：`dev_plan_next` / `spec_anchor_next` / `target_reqs` / `task`
+- 当提示词中出现“规格门禁状态：PENDING”时：
+  - 只允许输出 `next_agent=USER` 或 `next_agent=SPEC_ANALYZER`
+  - 若输出 `USER`，`options` 必须包含 `accept_spec` 与 `refine_spec`（`option_id` 必须完全一致）
 - USER 决策必须包含 `decision_title`、`question`、`options` 字段
 - 若不一致或缺少必需字段，立即修正后再输出

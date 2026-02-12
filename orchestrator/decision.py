@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from queue import Empty
 
@@ -20,6 +21,39 @@ def _extract_json_object(raw_json: str) -> str | None:
     if start == -1 or end == -1 or end <= start:
         return None
     return raw_json[start : end + 1]
+
+
+_ALLOWED_SPEC_ARTIFACT_FILES = frozenset({
+    "proposal.md",
+    "design.md",
+    "delta_spec.md",
+    "tasks.md",
+    "validation.md",
+    "questions.md",
+    "proofs.md",
+    "meta.json",
+})
+_CHANGE_ID_RE = re.compile(r"^CHG-\d{4,}$")
+
+
+def _validate_artifact_update_file_for_change(*, normalized_file: str, active_change_id: str, idx: int) -> None:
+    expected_change_id = active_change_id.strip().upper()
+    parts = normalized_file.split("/")
+    if len(parts) != 3 or parts[0] != "changes":
+        raise ValueError(
+            f"Invalid artifact_updates[{idx}].file: must be under changes/{expected_change_id}/"
+        )
+
+    if parts[1].upper() != expected_change_id:
+        raise ValueError(
+            f"Invalid artifact_updates[{idx}].file: must target active change {expected_change_id!r}"
+        )
+
+    if parts[2] not in _ALLOWED_SPEC_ARTIFACT_FILES:
+        allowed = ", ".join(sorted(_ALLOWED_SPEC_ARTIFACT_FILES))
+        raise ValueError(
+            f"Invalid artifact_updates[{idx}].file: unsupported artifact {parts[2]!r}, allowed: {allowed}"
+        )
 
 
 def _extract_option_description(opt: dict) -> str | None:
@@ -77,7 +111,7 @@ def _parse_main_decision_payload(decision: dict) -> MainDecision:
     reason = decision.get("reason")  # 关键变量：决策理由
 
     # Context-centric 架构：IMPLEMENTER 合并 TEST+DEV，VALIDATE 触发并行验证
-    allowed: set[str] = {"IMPLEMENTER", "VALIDATE", "FINISH", "USER"}
+    allowed: set[str] = {"IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE", "FINISH", "USER"}
     if next_agent not in allowed:  # 关键分支：非法代理
         raise ValueError(f"Invalid next_agent: {next_agent!r}, allowed: {sorted(allowed)}")
     if not isinstance(reason, str) or not reason.strip():  # 关键分支：理由缺失
@@ -155,29 +189,154 @@ def _parse_main_output(raw_json: str, *, strict: bool = False) -> MainOutput:
     if not isinstance(history_append, str) or not history_append.strip():  # 关键分支：历史缺失
         raise ValueError("Invalid history_append: must be a non-empty string")
 
-    dev_plan_next = payload.get("dev_plan_next")  # 关键变量：计划草案（可为空）
-    if dev_plan_next is not None:  # 关键分支：存在草案才校验
-        if not isinstance(dev_plan_next, str) or not dev_plan_next.strip():  # 关键分支：草案为空
-            raise ValueError("Invalid dev_plan_next: must be a non-empty string or null")
+    # 硬切旧协议：发现旧字段立即失败，避免旧流程残留继续运行
+    for legacy_field in ("task", "dev_plan_next", "spec_anchor_next", "target_reqs"):
+        if legacy_field in payload:
+            raise ValueError(f"Invalid {legacy_field}: legacy field is not allowed in spec-driven protocol")
 
     task_body = payload.get("task_body")  # 关键变量：工单正文（可为空）
-    legacy_task = payload.get("task")  # 关键变量：废弃字段 task（仅用于快速失败）
+    if task_body is not None and (not isinstance(task_body, str) or not task_body.strip()):
+        raise ValueError("Invalid task_body: must be a non-empty string or null")
+
+    active_change_id = payload.get("active_change_id")  # 关键变量：当前变更单 id
+    if active_change_id is not None:
+        if not isinstance(active_change_id, str) or not active_change_id.strip():
+            raise ValueError("Invalid active_change_id: must be a non-empty string or null")
+        active_change_id = active_change_id.strip().upper()
+        if not _CHANGE_ID_RE.match(active_change_id):
+            raise ValueError("Invalid active_change_id: must match CHG-<digits>")
+
+    implementation_scope_payload = payload.get("implementation_scope")  # 关键变量：任务范围
+    implementation_scope: list[str] | None = None
+    if implementation_scope_payload is not None:
+        if not isinstance(implementation_scope_payload, list):
+            raise ValueError("Invalid implementation_scope: must be a list of task ids or null")
+        parsed_scope: list[str] = []
+        seen_scope: set[str] = set()
+        for idx, item in enumerate(implementation_scope_payload, start=1):
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(
+                    f"Invalid implementation_scope[{idx}]: must be a non-empty string"
+                )
+            task_id = item.strip().upper()
+            if task_id in seen_scope:
+                raise ValueError(
+                    f"Invalid implementation_scope[{idx}]: duplicated task id {task_id!r}"
+                )
+            seen_scope.add(task_id)
+            parsed_scope.append(task_id)
+        implementation_scope = parsed_scope
+
+    change_action = payload.get("change_action")  # 关键变量：变更动作
+    if change_action is not None:
+        if change_action not in {"create", "update", "archive", "none"}:
+            raise ValueError(
+                "Invalid change_action: must be create/update/archive/none or null"
+            )
+
+    artifact_updates_payload = payload.get("artifact_updates")  # 关键变量：规格工件更新
+    artifact_updates = None
+    if artifact_updates_payload is not None:
+        if not isinstance(artifact_updates_payload, list):
+            raise ValueError("Invalid artifact_updates: must be a list or null")
+        parsed_updates: list[dict] = []
+        for idx, patch in enumerate(artifact_updates_payload, start=1):
+            if not isinstance(patch, dict):
+                raise ValueError(f"Invalid artifact_updates[{idx}]: must be an object")
+
+            file_path = patch.get("file")
+            action = patch.get("action")
+            content = patch.get("content")
+            reason = patch.get("reason")
+
+            if not isinstance(file_path, str) or not file_path.strip():
+                raise ValueError(
+                    f"Invalid artifact_updates[{idx}].file: must be a non-empty string"
+                )
+            normalized_file = file_path.strip().replace('\\', '/')
+            if normalized_file.startswith('/') or '..' in normalized_file.split('/'):
+                raise ValueError(
+                    f"Invalid artifact_updates[{idx}].file: must be a safe relative path"
+                )
+            if not isinstance(active_change_id, str):
+                raise ValueError(
+                    f"Invalid artifact_updates[{idx}].file: requires active_change_id"
+                )
+            _validate_artifact_update_file_for_change(
+                normalized_file=normalized_file,
+                active_change_id=active_change_id,
+                idx=idx,
+            )
+
+            if action not in {"append", "replace", "insert"}:
+                raise ValueError(
+                    f"Invalid artifact_updates[{idx}].action: must be append/replace/insert"
+                )
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError(
+                    f"Invalid artifact_updates[{idx}].content: must be a non-empty string"
+                )
+
+            parsed_patch = {
+                "file": normalized_file,
+                "action": action,
+                "content": content,
+            }
+
+            if reason is not None:
+                if not isinstance(reason, str) or not reason.strip():
+                    raise ValueError(
+                        f"Invalid artifact_updates[{idx}].reason: must be a non-empty string"
+                    )
+                parsed_patch["reason"] = reason.strip()
+
+            if action == "replace":
+                old_content = patch.get("old_content")
+                if not isinstance(old_content, str) or not old_content:
+                    raise ValueError(
+                        f"Invalid artifact_updates[{idx}].old_content: replace requires non-empty old_content"
+                    )
+                parsed_patch["old_content"] = old_content
+
+            if action == "insert":
+                after_marker = patch.get("after_marker")
+                if not isinstance(after_marker, str) or not after_marker.strip():
+                    raise ValueError(
+                        f"Invalid artifact_updates[{idx}].after_marker: insert requires non-empty after_marker"
+                    )
+                parsed_patch["after_marker"] = after_marker
+
+            parsed_updates.append(parsed_patch)
+        artifact_updates = parsed_updates
+
     next_agent = decision["next_agent"]  # 关键变量：目标代理
 
-    if legacy_task is not None and isinstance(legacy_task, str) and legacy_task.strip():
-        raise ValueError("Invalid task: legacy field 'task' is deprecated, use 'task_body' instead")
-
-    if task_body is not None and not isinstance(task_body, str):
-        raise ValueError("Invalid task_body: must be a string or null")
-
-    # Context-centric 架构：IMPLEMENTER 需要 task_body
-    if next_agent == "IMPLEMENTER":
+    # 规格驱动协议：实现类任务必须绑定 change id；FINISH/VALIDATE/USER 禁止 task_body
+    if next_agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:
         if not isinstance(task_body, str) or not task_body.strip():
             raise ValueError(f"Invalid task_body: must be a non-empty string when next_agent={next_agent}")
+        if not isinstance(active_change_id, str) or not active_change_id.strip():
+            raise ValueError(
+                f"Invalid active_change_id: must be a non-empty string when next_agent={next_agent}"
+            )
     else:
-        # VALIDATE/FINISH/USER 不需要 task_body
         if task_body is not None:
             raise ValueError(f"Invalid task_body: must be null when next_agent={next_agent}")
+
+    if next_agent == "IMPLEMENTER":
+        if not implementation_scope:
+            raise ValueError(
+                "Invalid implementation_scope: must be a non-empty list when next_agent=IMPLEMENTER"
+            )
+    elif implementation_scope is not None:
+        raise ValueError(
+            f"Invalid implementation_scope: must be null when next_agent={next_agent}"
+        )
+
+    if change_action in {"create", "update", "archive"} and not active_change_id:
+        raise ValueError("Invalid change_action: create/update/archive requires active_change_id")
+    if change_action in {None, "none"} and artifact_updates is not None:
+        raise ValueError("Invalid artifact_updates: requires change_action=create/update/archive")
 
     # 解析文档修正建议（仅 USER 决策时）
     doc_patches = None
@@ -215,7 +374,10 @@ def _parse_main_output(raw_json: str, *, strict: bool = False) -> MainOutput:
         "decision": decision,
         "history_append": history_append,
         "task_body": task_body if isinstance(task_body, str) else None,
-        "dev_plan_next": dev_plan_next if isinstance(dev_plan_next, str) else None,
+        "active_change_id": active_change_id if isinstance(active_change_id, str) else None,
+        "implementation_scope": implementation_scope,
+        "artifact_updates": artifact_updates,
+        "change_action": change_action if isinstance(change_action, str) else None,
         "doc_patches": doc_patches,
     }
 

@@ -21,7 +21,7 @@
 
 ## 禁止行为
 
-- ✅ 允许只读 `./.orchestrator_ctx/**/*.md`（镜像目录）
+- ✅ 允许只读 `./.orchestrator_ctx/**/*.{md,json}`（镜像目录）
 - ❌ 禁止深入分析实现代码
 - ❌ 禁止修改生产代码
 - ❌ 禁止读取 `orchestrator/` 目录

@@ -29,7 +29,7 @@ grep -rn "TODO\|FIXME\|XXX\|HACK" {代码目录}          # 必须返回空
 
 **核心优势**：你同时理解测试设计意图和实现决策，不会出现"电话游戏"式的上下文丢失。
 
-**重要**：所有需要的上下文（工单、需求、dev_plan）已注入到提示词中，禁止读取 `orchestrator/` 目录下的任何文件；如需查看黑板文档，仅允许只读 `./.orchestrator_ctx/` 下的 markdown 镜像。
+**重要**：所有需要的上下文（工单、需求、dev_plan）已注入到提示词中，禁止读取 `orchestrator/` 目录下的任何文件；如需查看黑板文档，仅允许只读 `./.orchestrator_ctx/` 下的黑板镜像（md/json）。
 
 ## TDD 工作流程
 
@@ -192,7 +192,7 @@ kill $VITE_PID 2>/dev/null
 
 - ✅ 新增/修改测试代码（`**/tests/**`、`**/*.spec.ts`、`**/test_*.py`）
 - ✅ 新增/修改实现代码
-- ✅ 只读 `./.orchestrator_ctx/**/*.md`（镜像目录，只读）
+- ✅ 只读 `./.orchestrator_ctx/**/*.{md,json}`（镜像目录，只读）
 - ❌ 禁止读取 `orchestrator/` 目录
 - ❌ 禁止写入 `orchestrator/reports/`
 - ❌ 禁止修改 `./.orchestrator_ctx/` 目录

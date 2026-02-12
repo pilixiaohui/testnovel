@@ -14,6 +14,19 @@ def test_build_main_prompt_injects_doc_refs(monkeypatch, tmp_path: Path) -> None
     monkeypatch.setattr(workflow, "_build_project_tree", lambda _project_dir: "tree")
     monkeypatch.setattr(workflow, "_extract_recent_user_decisions", lambda lookback=5: [])
 
+    monkeypatch.setattr(
+        workflow,
+        "_load_spec_workflow_state",
+        lambda: {
+            "schema_version": 2,
+            "active_change_id": None,
+            "phase": "DISCOVERY",
+            "user_confirmed": False,
+            "last_updated_iteration": 0,
+            "notes": "test",
+        },
+    )
+
     def _fake_doc_injection(refs: list[str]) -> list[str]:
         captured.append(refs)
         return [f"[doc] {ref}" for ref in refs]
@@ -41,6 +54,19 @@ def test_build_main_prompt_doc_injection_failure_fast(monkeypatch, tmp_path: Pat
     monkeypatch.setattr(workflow, "_resolve_target_agent_root", lambda: tmp_path)
     monkeypatch.setattr(workflow, "_build_project_tree", lambda _project_dir: "tree")
     monkeypatch.setattr(workflow, "_extract_recent_user_decisions", lambda lookback=5: [])
+
+    monkeypatch.setattr(
+        workflow,
+        "_load_spec_workflow_state",
+        lambda: {
+            "schema_version": 2,
+            "active_change_id": None,
+            "phase": "DISCOVERY",
+            "user_confirmed": False,
+            "last_updated_iteration": 0,
+            "notes": "test",
+        },
+    )
 
     def _raise_doc_missing(_refs: list[str]) -> list[str]:
         raise ValueError("doc missing")

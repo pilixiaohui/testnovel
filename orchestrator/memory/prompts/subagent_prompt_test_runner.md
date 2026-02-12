@@ -111,7 +111,7 @@ browser_network_requests(includeStatic=false)
 
 ## 禁止行为
 
-- ✅ 允许只读 `./.orchestrator_ctx/**/*.md`（镜像目录）
+- ✅ 允许只读 `./.orchestrator_ctx/**/*.{md,json}`（镜像目录）
 - ❌ 禁止阅读源代码
 - ❌ 禁止分析测试逻辑
 - ❌ 禁止修改任何文件

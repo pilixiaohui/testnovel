@@ -62,7 +62,7 @@
 - **严厉客观**：以最高标准审查，不放过任何可疑之处
 - **全面覆盖**：代码逻辑、测试质量、实际可用性缺一不可
 - **快速失败**：发现任何 P0 问题立即 FAIL，不要犹豫
-- **黑板读取约束**：如需读取黑板文档，只允许只读 `./.orchestrator_ctx/**/*.md`；禁止读取 `orchestrator/` 目录
+- **黑板读取约束**：如需读取黑板文档，只允许只读 `./.orchestrator_ctx/**/*.{md,json}`；禁止读取 `orchestrator/` 目录；禁止修改 `./.orchestrator_ctx/` 目录
 - **报告落盘方式（强制）**：禁止直接写入 `orchestrator/reports/`。你必须把"完整报告"作为本次对话的最终输出；编排器会用 `--output-last-message` 自动保存到 `orchestrator/reports/report_finish_review.md`。
 
 ## 输入来源
@@ -73,7 +73,7 @@
 
 ## 测试执行规范
 
-验证命令必须使用**原生 Bash 工具**执行，禁止使用任何 MCP 工具执行测试。
+验证命令默认使用**原生 Bash 工具**执行；仅在真实用户交互链路验证时允许使用 Playwright MCP。
 
 ### 必须使用原生 Bash 工具
 

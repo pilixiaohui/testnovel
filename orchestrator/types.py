@@ -8,16 +8,18 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import NotRequired, Required
 
-NextAgent = Literal["IMPLEMENTER", "VALIDATE", "FINISH", "USER"]  # 关键变量：调度目标枚举（Context-centric 架构）
+NextAgent = Literal["IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE", "FINISH", "USER"]  # 关键变量：调度目标枚举（Context-centric 架构）
 ResumePhase = Literal["after_main", "after_subagent", "after_main_validate", "awaiting_user"]  # 关键变量：续跑阶段枚举
 TaskType = Literal["feature", "bugfix", "refactor", "chore"]  # 关键变量：任务类型标记（dev_plan 可选字段）
+
+RequirementStatus = Literal["VERIFIED", "IN_PROGRESS", "NOT_STARTED", "FAILED", "UNKNOWN"]  # 关键变量：需求状态枚举
 
 
 class ResumeState(TypedDict):
     schema_version: int  # 关键变量：续跑状态版本
     iteration: int  # 关键变量：迭代号
     phase: ResumePhase  # 关键变量：续跑阶段
-    next_agent: Literal["IMPLEMENTER", "VALIDATE", "USER"]  # 关键变量：续跑目标（Context-centric 架构）
+    next_agent: Literal["IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE", "USER"]  # 关键变量：续跑目标（Context-centric 架构）
     main_session_id: str  # 关键变量：MAIN 会话 id
     subagent_session_id: str | None  # 关键变量：子代理会话 id
     blackboard_digest: str  # 关键变量：黑板摘要
@@ -40,7 +42,7 @@ class DocPatch(TypedDict, total=False):
 
 
 class MainDecisionDispatch(TypedDict):
-    next_agent: Literal["IMPLEMENTER", "VALIDATE", "FINISH"]  # 关键变量：下一代理（Context-centric 架构）
+    next_agent: Literal["IMPLEMENTER", "SPEC_ANALYZER", "VALIDATE", "FINISH"]  # 关键变量：下一代理（Context-centric 架构）
     reason: str  # 关键变量：决策理由
 
 
@@ -92,11 +94,23 @@ class CodexRunResult(TypedDict):
     session_id: str | None  # 关键变量：会话 id（可空）
 
 
+class ArtifactPatch(TypedDict, total=False):
+    file: str  # 关键变量：目标工件路径（相对 orchestrator/memory/specs）
+    action: Literal["append", "replace", "insert"]  # 关键变量：更新动作
+    content: str  # 关键变量：更新内容
+    old_content: str  # 关键变量：replace 时的原内容（可选）
+    after_marker: str  # 关键变量：insert 时的锚点（可选）
+    reason: str  # 关键变量：更新原因（可选）
+
+
 class MainOutput(TypedDict, total=False):
     decision: Required[MainDecision]  # 关键变量：决策对象
     history_append: Required[str]  # 关键变量：历史追加内容
     task_body: str | None  # 关键变量：工单正文（可空，头部由编排器生成）
-    dev_plan_next: str | None  # 关键变量：计划草案（可空）
+    active_change_id: str | None  # 关键变量：当前变更单 ID
+    implementation_scope: list[str] | None  # 关键变量：实现任务范围（TASK IDs）
+    artifact_updates: list[ArtifactPatch] | None  # 关键变量：规格工件更新提案
+    change_action: Literal["create", "update", "archive", "none"] | None  # 关键变量：变更动作
     doc_patches: list[DocPatch] | None  # 关键变量：文档修正建议（可空，仅 USER 决策时）
 
 
@@ -156,6 +170,10 @@ class CodeChanges(TypedDict, total=False):
     coverage: float  # 关键变量：覆盖率百分比
 
 
+class RequirementMatrix(TypedDict):
+    requirements: dict[str, RequirementStatus]  # 关键变量：需求状态矩阵（Req ID -> 状态）
+
+
 class IterationSummary(TypedDict, total=False):
     iteration: Required[int]  # 关键变量：迭代号（必填）
     main_session_id: Required[str | None]  # 关键变量：MAIN 会话 id（必填）
@@ -169,6 +187,8 @@ class IterationSummary(TypedDict, total=False):
     verdict: str  # 关键变量：本轮结论 PASS/FAIL/BLOCKED（可选）
     key_findings: list[str]  # 关键变量：关键发现列表（可选）
     changes: CodeChanges  # 关键变量：代码变更信息（可选，仅 IMPLEMENTER）
+    requirement_matrix: RequirementMatrix  # 关键变量：需求状态矩阵（可选）
+    proof_coverage_rate: float  # 关键变量：证据覆盖率百分比（可选）
     user_insight: dict  # 关键变量：用户洞察信息（可选）
 
 

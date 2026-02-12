@@ -20,7 +20,10 @@
 - **用户原始需求**（Task Goal 段落，已注入）
 - **用户决策历史**（如存在，已注入）
 
-注意：默认不需要自行读取文件；如确需读取黑板文档，仅允许只读 `./.orchestrator_ctx/**/*.md`。
+注意：默认不需要自行读取文件；如确需读取黑板文档，仅允许只读 `./.orchestrator_ctx/**/*.{md,json}`。
+- 禁止读取 `orchestrator/` 目录下的源黑板文件。
+- 禁止修改 `./.orchestrator_ctx/` 目录。
+- 禁止直接写入 `orchestrator/reports/`（由编排器通过 `--output-last-message` 落盘）。
 
 ## 强制输出格式
 - 只输出 **一行 JSON**，不得包含任何其它文本或 Markdown。
@@ -75,7 +78,7 @@
   - `report_summary`: string（<= 150 字符，说明结论和关键发现）
 - `steps`: array（3~8 步）
   - `step`: number
-  - `actor`: "MAIN" | "ORCHESTRATOR" | "IMPLEMENTER" | "VALIDATE" | "SYNTHESIZER"
+  - `actor`: "MAIN" | "ORCHESTRATOR" | "IMPLEMENTER" | "SPEC_ANALYZER" | "VALIDATE" | "SYNTHESIZER"
   - `detail`: string（<= 100 字符）
 - `summary`: string（<= 100 字符，本轮一句话总览）
 - `artifacts`: object（路径必须与输入一致）
@@ -92,6 +95,9 @@
   - `files_modified`: array - 修改的文件列表
   - `tests_passed`: boolean - 自测是否通过
   - `coverage`: number - 覆盖率百分比
+- `requirement_matrix`: object - 需求状态矩阵（建议在可追踪需求时提供）
+  - `requirements`: object - 键为需求 ID（如 `REQ-001`），值为状态：`VERIFIED|IN_PROGRESS|NOT_STARTED|FAILED|UNKNOWN`
+- `proof_coverage_rate`: number - 证据覆盖率（0-100，表示已提供证据的目标需求占比）
 - `progress`: object（从 dev_plan 统计任务状态）
   - `total_tasks`: number
   - `completed_tasks`: number（DONE + VERIFIED）
@@ -236,6 +242,8 @@
 ## 输出示例
 
 IMPLEMENTER 成功示例（包含 requirement_analysis 和 decision_habits）：
+
+说明：示例中的 `artifacts` 路径是编排器元数据路径（用于审计与追踪），不是子代理运行时可直接读写的路径。
 ```
 {"iteration":2,"main_session_id":"abc-123","subagent_session_id":"def-456","main_decision":{"next_agent":"IMPLEMENTER","reason":"实现后端接口对齐"},"subagent":{"agent":"IMPLEMENTER","task_summary":"对齐 feedback 接口路径和数据契约","report_summary":"修改 main.py 和 models.py，自测通过，覆盖率 85%"},"verdict":"PASS","key_findings":["新增 /api/v1/simulation/feedback 端点","更新 SceneView/EntityView 字段"],"changes":{"files_modified":["app/main.py","app/models.py"],"tests_passed":true,"coverage":85},"steps":[{"step":1,"actor":"MAIN","detail":"派发 IMPLEMENTER 执行后端接口对齐"},{"step":2,"actor":"IMPLEMENTER","detail":"修改 main.py 和 models.py"},{"step":3,"actor":"IMPLEMENTER","detail":"自测通过，覆盖率 85%"}],"summary":"IMPLEMENTER 完成后端接口对齐，自测通过","progress":{"total_tasks":10,"completed_tasks":4,"verified_tasks":2,"in_progress_tasks":1,"blocked_tasks":0,"todo_tasks":5,"completion_percentage":40,"verification_percentage":20,"current_milestone":"M1","milestones":[{"milestone_id":"M0","milestone_name":"引导与黑板契约","total_tasks":2,"completed_tasks":2,"verified_tasks":2,"percentage":100},{"milestone_id":"M1","milestone_name":"前端基础骨架","total_tasks":4,"completed_tasks":2,"verified_tasks":0,"percentage":50}]},"user_insight":{"behavior_check":{"task_alignment":{"score":95,"status":"good","detail":"IMPLEMENTER 按工单要求完成接口对齐"},"decision_quality":{"status":"compliant","issues":[]},"scope_control":{"status":"normal","detail":"仅修改目标文件"},"efficiency":{"status":"normal","repeated_failures":0,"same_agent_streak":1}},"recommendations":[],"requirement_analysis":{"task_goal_summary":"修复前端 40 个问题，重点解决数据持久化缺失","coverage":{"completed":["后端项目列表端点","前端 project store"],"in_progress":["HomeView 集成"],"not_started":["编辑功能","组件集成"]},"alignment_score":85,"alignment_status":"good","deviation_warning":null},"decision_habits":{"total_decisions":1,"recommendation_adoption_rate":1.0,"adoption_tendency":"high","decision_style":"balanced","common_concerns":[]}},"artifacts":{"main_decision_file":"orchestrator/reports/report_main_decision.json","task_file":"orchestrator/workspace/implementer/current_task.md","report_file":"orchestrator/reports/report_implementer.md","summary_file":"orchestrator/reports/report_iteration_summary.json"}}
 ```

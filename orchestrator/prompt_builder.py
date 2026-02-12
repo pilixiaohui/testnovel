@@ -188,6 +188,31 @@ def _inject_doc_references(refs: list[str]) -> list[str]:
     return injections
 
 
+def _build_blackboard_access_rules(*, forbid_reports_write: bool) -> list[str]:
+    rules = [
+        "重要：如需读取黑板文档，只允许读取 `./.orchestrator_ctx/**/*.{md,json}`（只读镜像），禁止读取 `orchestrator/` 目录下的源黑板文件。",
+        "重要：禁止修改 `./.orchestrator_ctx/` 目录。",
+    ]
+    if forbid_reports_write:
+        rules.append("重要：禁止直接写入 `orchestrator/reports/`（由编排器自动保存）。")
+    return rules
+
+
+def _build_dispatch_path_contract(*, agent_cwd: Path, active_change_id: str | None) -> str:
+    mirror_root = agent_cwd / ".orchestrator_ctx"
+    specs_visible_root = mirror_root / "memory" / "specs"
+    change_hint = active_change_id.strip() if isinstance(active_change_id, str) and active_change_id.strip() else "<change_id>"
+    return "\n".join([
+        "[路径协议]",
+        f"- agent_cwd: {agent_cwd.as_posix()}",
+        f"- mirror_root: {mirror_root.as_posix()}",
+        f"- specs_visible_root: {specs_visible_root.as_posix()}",
+        f"- artifact_updates.file 示例: changes/{change_hint}/tasks.md",
+        "- 说明：artifact_updates.file 必须是 specs 根目录相对路径，禁止写 orchestrator/memory/specs/... 前缀。",
+        "- 说明：orchestrator/reports/... 仅是编排器元数据路径，不是子代理可读写路径。",
+    ])
+
+
 def _inject_project_history_recent(
     *, last_iterations: int, max_tokens: int | None = None, include_milestones: bool = True
 ) -> str:
@@ -267,8 +292,8 @@ def _load_system_prompt(agent_name: str) -> str:
 
 
 def _task_file_for_agent(agent: NextAgent) -> Path:
-    # Context-centric 架构：IMPLEMENTER 合并 TEST+DEV，VALIDATE 触发并行验证
-    if agent == "IMPLEMENTER":  # 关键分支：IMPLEMENTER 工单
+    # Context-centric 架构：IMPLEMENTER/SPEC_ANALYZER 为可执行子代理，VALIDATE 触发并行验证
+    if agent in {"IMPLEMENTER", "SPEC_ANALYZER"}:  # 关键分支：可执行子代理工单
         return CONFIG.get_task_file(agent)
     if agent == "VALIDATE":  # 关键分支：VALIDATE 无工单（验证器工单由编排器自动生成）
         raise ValueError("VALIDATE triggers parallel validators, no single task file")

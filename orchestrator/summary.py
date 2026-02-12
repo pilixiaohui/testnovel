@@ -12,10 +12,46 @@ from .config import (
 )
 from .decision import _load_json_object, _parse_main_decision_payload
 from .file_ops import _rel_path, _append_log_line, _atomic_write_text
-from .types import IterationSummary, ProgressInfo, SubagentSummary, SummaryStep
+from .types import IterationSummary, ProgressInfo, RequirementMatrix, RequirementStatus, SubagentSummary, SummaryStep
 
 # Context-centric 架构：IMPLEMENTER 合并原 TEST+DEV，FINISH_REVIEW 为最终审阅
-_ALLOWED_ACTORS = {"MAIN", "ORCHESTRATOR", "IMPLEMENTER", "FINISH_REVIEW"}
+_ALLOWED_ACTORS = {"MAIN", "ORCHESTRATOR", "IMPLEMENTER", "SPEC_ANALYZER", "FINISH_REVIEW"}
+_ALLOWED_REQUIREMENT_STATUSES: set[RequirementStatus] = {"VERIFIED", "IN_PROGRESS", "NOT_STARTED", "FAILED", "UNKNOWN"}
+
+
+def _parse_requirement_matrix(payload: object) -> RequirementMatrix | None:
+    if payload is None:
+        return None
+    if not isinstance(payload, dict):
+        raise ValueError("摘要 requirement_matrix 必须是对象或 null")
+
+    requirements_payload = payload.get("requirements")
+    if not isinstance(requirements_payload, dict):
+        raise ValueError("摘要 requirement_matrix.requirements 必须是对象")
+
+    parsed_requirements: dict[str, RequirementStatus] = {}
+    for req_id, status in requirements_payload.items():
+        if not isinstance(req_id, str) or not req_id.strip():
+            raise ValueError("摘要 requirement_matrix.requirements 的 key 必须为非空字符串")
+        if not isinstance(status, str) or status not in _ALLOWED_REQUIREMENT_STATUSES:
+            raise ValueError(
+                "摘要 requirement_matrix.requirements 的状态非法："
+                f"{status!r}，允许值 {sorted(_ALLOWED_REQUIREMENT_STATUSES)}"
+            )
+        parsed_requirements[req_id.strip()] = status
+
+    return {"requirements": parsed_requirements}
+
+
+def _parse_proof_coverage_rate(payload: object) -> float | None:
+    if payload is None:
+        return None
+    if not isinstance(payload, (int, float)):
+        raise ValueError("摘要 proof_coverage_rate 必须为数字或 null")
+    value = float(payload)
+    if not (0 <= value <= 100):
+        raise ValueError("摘要 proof_coverage_rate 必须在 0-100 之间")
+    return value
 
 
 def _parse_progress(payload: object) -> ProgressInfo | None:
@@ -260,6 +296,9 @@ def _parse_iteration_summary(
                 parsed_changes["coverage"] = float(coverage)
             changes = parsed_changes if parsed_changes else None
 
+    requirement_matrix = _parse_requirement_matrix(payload.get("requirement_matrix"))
+    proof_coverage_rate = _parse_proof_coverage_rate(payload.get("proof_coverage_rate"))
+
     result: dict = {
         "iteration": summary_iteration,
         "main_session_id": summary_main_session_id,
@@ -279,6 +318,10 @@ def _parse_iteration_summary(
         result["key_findings"] = key_findings
     if changes:
         result["changes"] = changes
+    if requirement_matrix is not None:
+        result["requirement_matrix"] = requirement_matrix
+    if proof_coverage_rate is not None:
+        result["proof_coverage_rate"] = proof_coverage_rate
 
     # 解析并保留 user_insight 字段（可选）
     user_insight = _parse_user_insight(payload)

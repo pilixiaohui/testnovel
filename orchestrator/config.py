@@ -38,6 +38,7 @@ RESUME_STATE_FILE = CODEX_STATE_DIR / "resume_state.json"  # 关键变量：中�
 
 # 子代理会话文件（用于 resume）- Context-centric 架构
 IMPLEMENTER_SESSION_ID_FILE = CODEX_STATE_DIR / "implementer_session_id.txt"  # 关键变量：IMPLEMENTER 会话文件
+SPEC_ANALYZER_SESSION_ID_FILE = CODEX_STATE_DIR / "spec_analyzer_session_id.txt"  # 关键变量：SPEC_ANALYZER 会话文件
 
 # 从配置获取路径（保持全局变量兼容性）
 MEMORY_DIR = CONFIG.memory_dir  # 关键变量：memory 目录
@@ -48,13 +49,25 @@ REPORTS_DIR = CONFIG.reports_dir  # 关键变量：reports 目录
 PROJECT_HISTORY_FILE = CONFIG.project_history_file  # 关键变量：历史文件
 GLOBAL_CONTEXT_FILE = CONFIG.global_context_file  # 关键变量：全局上下文文件
 DEV_PLAN_FILE = CONFIG.dev_plan_file  # 关键变量：计划文件
+
+# Spec-Driven V2 工件路径
+SPECS_DIR = CONFIG.specs_dir  # 关键变量：规格工件根目录
+SPECS_CONSTITUTION_FILE = CONFIG.specs_constitution_file  # 关键变量：规格宪章
+SPECS_BASELINE_DIR = CONFIG.specs_baseline_dir  # 关键变量：基线规格目录
+SPECS_CHANGES_DIR = CONFIG.specs_changes_dir  # 关键变量：变更目录
+SPECS_ARCHIVE_DIR = CONFIG.specs_archive_dir  # 关键变量：归档目录
+SPECS_STATE_FILE = CONFIG.specs_state_file  # 关键变量：规格工作流状态
+
+
 FINISH_REVIEW_CONFIG_FILE = CONFIG.finish_review_config_file  # 关键变量：最终审阅配置文件
 VERIFICATION_POLICY_FILE = CONFIG.verification_policy_file  # 关键变量：验证策略配置文件
 DEV_PLAN_STAGED_FILE = CONFIG.dev_plan_staged_file  # 关键变量：计划暂存文件
 
-# Context-centric 架构：IMPLEMENTER 工单和报告
+# Context-centric 架构：IMPLEMENTER/SPEC_ANALYZER 工单和报告
 IMPLEMENTER_TASK_FILE = WORKSPACE_DIR / "implementer" / "current_task.md"  # 关键变量：IMPLEMENTER 工单
+SPEC_ANALYZER_TASK_FILE = WORKSPACE_DIR / "spec_analyzer" / "current_task.md"  # 关键变量：SPEC_ANALYZER 工单
 REPORT_IMPLEMENTER_FILE = REPORTS_DIR / "report_implementer.md"  # 关键变量：IMPLEMENTER 报告
+REPORT_SPEC_ANALYZER_FILE = REPORTS_DIR / "report_spec_analyzer.md"  # 关键变量：SPEC_ANALYZER 报告
 
 # Context-centric 架构：验证器工作区和报告
 VALIDATOR_WORKSPACE_DIR = WORKSPACE_DIR / "validators"  # 关键变量：验证器工作区目录
@@ -259,6 +272,12 @@ CLI_CONFIG: dict[str, dict[str, str | list[str] | bool]] = {
         "extra_args": ["--model", "gpt-5.3-codex"],
         "enable_resume": True,    # 启用 resume（codex 内部自动 compact）
     },
+    # 规格分析代理：负责代码感知的规格草案产出
+    "SPEC_ANALYZER": {
+        "cli": "codex",
+        "extra_args": ["--model", "gpt-5.3-codex"],
+        "enable_resume": False,
+    },
     # Context-centric 架构：并行验证器（轻量级）
     "TEST_RUNNER": {
         "cli": "codex",
@@ -303,7 +322,7 @@ CLI_CONFIG: dict[str, dict[str, str | list[str] | bool]] = {
 MCP_TOOLS_GUIDE_FILE = PROMPTS_DIR / "mcp_tools_guide.md"  # 关键变量：MCP 工具指南文件
 
 # 需要注入 MCP 工具指南的代理列表（Context-centric 架构）
-MCP_TOOLS_INJECT_AGENTS: set[str] = {"IMPLEMENTER", "FINISH_REVIEW"}
+MCP_TOOLS_INJECT_AGENTS: set[str] = {"IMPLEMENTER", "SPEC_ANALYZER", "FINISH_REVIEW"}
 
 
 def get_cli_for_agent(agent: str) -> str:

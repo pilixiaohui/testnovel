@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 
-ProjectAgent = Literal["IMPLEMENTER"]
+ProjectAgent = Literal["IMPLEMENTER", "SPEC_ANALYZER"]
 
 
 class ProjectConfig:
@@ -36,15 +36,27 @@ class ProjectConfig:
         self.project_history_file = self.memory_dir / "project_history.md"
         self.global_context_file = self.memory_dir / "global_context.md"
         self.dev_plan_file = self.memory_dir / "dev_plan.md"
+
+        # Spec-Driven V2 工件目录（OpenSpec 对齐）
+        self.specs_dir = self.memory_dir / "specs"
+        self.specs_constitution_file = self.specs_dir / "constitution.md"
+        self.specs_baseline_dir = self.specs_dir / "baseline"
+        self.specs_changes_dir = self.specs_dir / "changes"
+        self.specs_archive_dir = self.specs_dir / "archive"
+        self.specs_state_file = self.specs_dir / "state.json"
+
+
         self.finish_review_config_file = self.memory_dir / "finish_review_config.json"
         self.verification_policy_file = self.memory_dir / "verification_policy.json"
         self.dev_plan_staged_file = self.workspace_dir / "main/dev_plan_next.md"
 
         # 工单文件（Context-centric 架构）
         self.implementer_task_file = self.workspace_dir / "implementer/current_task.md"
+        self.spec_analyzer_task_file = self.workspace_dir / "spec_analyzer/current_task.md"
 
         # 报告文件（Context-centric 架构）
         self.report_implementer_file = self.reports_dir / "report_implementer.md"
+        self.report_spec_analyzer_file = self.reports_dir / "report_spec_analyzer.md"
         self.report_finish_review_file = self.reports_dir / "report_finish_review.md"
         self.report_main_decision_file = self.reports_dir / "report_main_decision.json"
         self.report_iteration_summary_file = self.reports_dir / "report_iteration_summary.json"
@@ -76,7 +88,7 @@ class ProjectConfig:
         )
 
         # 代理列表（Context-centric 架构）
-        self.agents: list[ProjectAgent] = ["IMPLEMENTER"]
+        self.agents: list[ProjectAgent] = ["IMPLEMENTER", "SPEC_ANALYZER"]
         self.editable_md_skip_dirs = {
             ".git",
             ".codex",
@@ -90,12 +102,16 @@ class ProjectConfig:
         """获取指定代理的工单文件"""
         if agent == "IMPLEMENTER":
             return self.implementer_task_file
+        if agent == "SPEC_ANALYZER":
+            return self.spec_analyzer_task_file
         raise ValueError(f"Unknown agent: {agent}")
 
     def get_report_file(self, agent: str) -> Path:
         """获取指定代理的报告文件"""
         if agent == "IMPLEMENTER":
             return self.report_implementer_file
+        if agent == "SPEC_ANALYZER":
+            return self.report_spec_analyzer_file
         raise ValueError(f"Unknown agent: {agent}")
 
     def get_prompt_file(self, agent: str) -> Path:
@@ -207,6 +223,149 @@ class ProjectTemplates:
   - 进度核实：逐条对照 dev_plan 的任务给出 PASS/FAIL 与证据
 - evidence:
 """
+
+    @staticmethod
+    def specs_constitution() -> str:
+        """Spec 宪章模板（长期稳定约束）"""
+        return """
+# Constitution
+
+## Workflow
+- 模式：spec-driven (OpenSpec style)
+- 变更入口：`orchestrator/memory/specs/changes/<change_id>/`
+- 执行入口：仅允许从 `tasks.md` 的任务 ID 派发 IMPLEMENTER
+
+## Non-goals
+- 禁止在运行时使用 legacy `spec_anchor/spec_gate` 门禁链路
+- 禁止无 change_id 的实现任务
+
+## Quality Gates
+- 实现前：spec 草案必须经过用户确认
+- 实现后：验证阶段必须产出可追溯证据
+"""
+
+    @staticmethod
+    def specs_state() -> str:
+        """Spec 工作流状态模板（JSON）"""
+        return """{
+  "schema_version": 2,
+  "active_change_id": null,
+  "phase": "DISCOVERY",
+  "user_confirmed": false,
+  "last_updated_iteration": 0,
+  "notes": "bootstrap"
+}
+"""
+
+    @staticmethod
+    def change_proposal(*, change_id: str = "CHG-0001") -> str:
+        """变更提案模板"""
+        return f"""
+# Proposal: {change_id}
+
+## 背景
+- 来自用户需求的目标与约束
+
+## 问题陈述
+- 当前系统存在的问题
+
+## 变更范围
+- in_scope:
+  - <必须完成>
+- out_of_scope:
+  - <明确不做>
+
+## 风险与依赖
+- <风险>
+"""
+
+    @staticmethod
+    def change_design(*, change_id: str = "CHG-0001") -> str:
+        """变更设计模板"""
+        return f"""
+# Design: {change_id}
+
+## 架构与模块影响
+- <模块>
+
+## 数据流与接口
+- <调用链>
+
+## 关键权衡
+- <tradeoff>
+"""
+
+    @staticmethod
+    def change_tasks(*, change_id: str = "CHG-0001") -> str:
+        """变更任务模板（实现范围锚点）"""
+        return f"""
+# Tasks: {change_id}
+
+- [ ] TASK-001 | status: TODO | title: 规格确认后实现最小闭环
+- [ ] TASK-002 | status: TODO | title: 补齐验证与证据
+"""
+
+    @staticmethod
+    def change_delta_spec(*, change_id: str = "CHG-0001") -> str:
+        """需求增量模板"""
+        return f"""
+# Delta Spec: {change_id}
+
+## Requirements
+- REQ-001: <可验证需求>
+- REQ-002: <可验证需求>
+
+## Acceptance
+- REQ-001: <通过标准>
+- REQ-002: <通过标准>
+"""
+
+    @staticmethod
+    def change_validation(*, change_id: str = "CHG-0001") -> str:
+        """验证计划模板"""
+        return f"""
+# Validation Plan: {change_id}
+
+## Checks
+- TEST_RUNNER: <检查点>
+- REQUIREMENT_VALIDATOR: <检查点>
+- ANTI_CHEAT_DETECTOR: <检查点>
+- EDGE_CASE_TESTER: <检查点>
+"""
+
+    @staticmethod
+    def change_proofs(*, change_id: str = "CHG-0001") -> str:
+        """证据模板"""
+        return f"""
+# Proofs: {change_id}
+
+## Evidence Map
+- TASK-001 -> <证据链接>
+- TASK-002 -> <证据链接>
+"""
+
+    @staticmethod
+    def change_questions(*, change_id: str = "CHG-0001") -> str:
+        """待确认问题模板"""
+        return f"""
+# Questions: {change_id}
+
+1. <需要用户确认的问题>
+2. <需要用户确认的问题>
+"""
+
+    @staticmethod
+    def change_meta(*, change_id: str = "CHG-0001") -> str:
+        """变更元信息模板（JSON）"""
+        return f"""{{
+  "change_id": "{change_id}",
+  "status": "draft",
+  "owner": "SPEC_ANALYZER",
+  "created_at": "1970-01-01T00:00:00",
+  "updated_at": "1970-01-01T00:00:00"
+}}
+"""
+
 
     @staticmethod
     def finish_review_config() -> str:

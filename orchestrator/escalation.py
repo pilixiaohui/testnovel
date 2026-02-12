@@ -404,5 +404,8 @@ details: {json.dumps(escalation.details, ensure_ascii=False)}"""
         "recommended_option_id": recommended,
         "history_append": history_append,
         "task_body": None,
-        "dev_plan_next": None,
+        "active_change_id": None,
+        "implementation_scope": None,
+        "artifact_updates": None,
+        "change_action": "none",
     }

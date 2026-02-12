@@ -19,7 +19,7 @@ def _prepare_source_tree(repo_root: Path) -> None:
     _write_text(source_root / "memory" / "verification_policy.json", "{}")
 
 
-def test_sync_project_markdown_mirror_copies_md_to_agent_root(monkeypatch, tmp_path: Path) -> None:
+def test_sync_project_blackboard_mirror_copies_md_and_json_to_agent_root(monkeypatch, tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     agent_root = repo_root / "project"
     agent_root.mkdir(parents=True, exist_ok=True)
@@ -28,7 +28,7 @@ def test_sync_project_markdown_mirror_copies_md_to_agent_root(monkeypatch, tmp_p
     monkeypatch.setattr(blackboard_mirror, "PROJECT_ROOT", repo_root)
 
     context = SimpleNamespace(agent_root=agent_root)
-    result = blackboard_mirror.sync_project_markdown_mirror(
+    result = blackboard_mirror.sync_project_blackboard_mirror(
         context=context,
         iteration=3,
         triggered_by="dispatch:IMPLEMENTER",
@@ -39,10 +39,13 @@ def test_sync_project_markdown_mirror_copies_md_to_agent_root(monkeypatch, tmp_p
     assert (mirror_root / "memory" / "global_context.md").is_file()
     assert (mirror_root / "workspace" / "implementer" / "current_task.md").is_file()
     assert (mirror_root / "reports" / "report_implementer.md").is_file()
-    assert not (mirror_root / "memory" / "verification_policy.json").exists()
+    assert (mirror_root / "memory" / "verification_policy.json").is_file()
 
     manifest = mirror_root / ".sync_manifest.json"
     assert manifest.is_file()
+    manifest_payload = manifest.read_text(encoding="utf-8")
+    assert '"schema_version": 2' in manifest_payload
+    assert '".json"' in manifest_payload
 
     blackboard_mirror.assert_project_mirror_unchanged(
         mirror_root=mirror_root,
@@ -61,7 +64,7 @@ def test_assert_project_mirror_unchanged_detects_mutation(monkeypatch, tmp_path:
     monkeypatch.setattr(blackboard_mirror, "PROJECT_ROOT", repo_root)
     context = SimpleNamespace(agent_root=agent_root)
 
-    result = blackboard_mirror.sync_project_markdown_mirror(
+    result = blackboard_mirror.sync_project_blackboard_mirror(
         context=context,
         iteration=5,
         triggered_by="dispatch:VALIDATE",
