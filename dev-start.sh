@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Orchestrator 工作流启动脚本（仓库内模式）
+# Orchestrator V2 工作流启动脚本
 # 用法:
-#   ./dev-start.sh
+#   ./dev-start.sh          # 启动 UI 监控
+#   ./dev-start.sh team     # 启动完整 agent 团队（含 UI）
 
 set -e
 
@@ -15,25 +16,13 @@ UI_HOST="127.0.0.1"
 UI_PORT="8766"
 ORCH_PID=""
 
-if [ $# -ne 0 ]; then
-    echo "❌ 不支持参数。"
-    echo "用法: ./dev-start.sh"
-    exit 1
-fi
-
-if [ -n "${AINOVEL_ORCHESTRATOR_HOME:-}" ] || [ -n "${AINOVEL_ORCHESTRATOR_SOURCE_ROOT:-}" ]; then
-    echo "❌ 检测到已废弃 runtime 环境变量：AINOVEL_ORCHESTRATOR_HOME / AINOVEL_ORCHESTRATOR_SOURCE_ROOT"
-    echo "请先执行: unset AINOVEL_ORCHESTRATOR_HOME AINOVEL_ORCHESTRATOR_SOURCE_ROOT"
-    exit 1
-fi
+MODE="${1:-ui}"
 
 cleanup() {
     echo ""
     echo "🛑 停止服务..."
     if [ -n "$ORCH_PID" ] && kill -0 "$ORCH_PID" 2>/dev/null; then
-        if ! kill "$ORCH_PID"; then
-            echo "❌ 停止失败 (PID: $ORCH_PID)"
-        fi
+        kill "$ORCH_PID" 2>/dev/null || true
     fi
     rm -f "$PID_FILE"
     echo "✅ 已停止"
@@ -43,7 +32,7 @@ cleanup() {
 trap cleanup INT TERM
 
 echo "=========================================="
-echo "  Orchestrator 工作流启动"
+echo "  Orchestrator V2 工作流启动"
 echo "=========================================="
 echo ""
 
@@ -52,59 +41,73 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! command -v curl >/dev/null 2>&1; then
-    echo "❌ 错误: 未找到 curl"
-    exit 1
-fi
-
 echo "✅ Python: $(python3 --version)"
+echo "   模式: $MODE"
 echo ""
 
-echo "将启动服务:"
-echo "  模式: 仓库内运行"
-echo "  UI: http://$UI_HOST:$UI_PORT"
-echo ""
-echo "停止: 按 Ctrl+C 或 ./dev-stop.sh"
-echo ""
-echo "=========================================="
-echo ""
+# 确保项目已初始化
+cd "$PROJECT_ROOT"
+python3 -m orchestrator_v2 init 2>/dev/null || true
 
 mkdir -p "$TMP_DIR"
 if [ -f "$PID_FILE" ]; then
-    echo "❌ 检测到已有 PID 文件，请先运行 ./dev-stop.sh"
-    exit 1
+    OLD_PID=$(cat "$PID_FILE")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "❌ 检测到已有运行实例 (PID: $OLD_PID)，请先运行 ./dev-stop.sh"
+        exit 1
+    fi
+    rm -f "$PID_FILE"
 fi
 
-echo "📡 启动 Orchestrator UI..."
-cd "$PROJECT_ROOT"
-nohup env -u AINOVEL_ORCHESTRATOR_HOME -u AINOVEL_ORCHESTRATOR_SOURCE_ROOT \
-  python3 orchestrator.py --ui --ui-host "$UI_HOST" --ui-port "$UI_PORT" > "$LOG_FILE" 2>&1 &
+if [ "$MODE" = "team" ]; then
+    echo "📡 启动 Agent 团队 + UI..."
+    shift
+    nohup python3 -m orchestrator_v2 team "$@" > "$LOG_FILE" 2>&1 &
+else
+    echo "📡 启动 UI 监控..."
+    nohup python3 -m orchestrator_v2 ui --host "$UI_HOST" --port "$UI_PORT" > "$LOG_FILE" 2>&1 &
+fi
+
 ORCH_PID=$!
 echo "$ORCH_PID" > "$PID_FILE"
 echo "   PID: $ORCH_PID"
 
-echo "   等待 UI 启动..."
-ui_ready=0
+echo "   等待服务启动..."
+ready=0
 for i in {1..10}; do
-    if curl -fsS "http://$UI_HOST:$UI_PORT/" > /dev/null 2>&1; then
-        ui_ready=1
+    if ! kill -0 "$ORCH_PID" 2>/dev/null; then
+        echo "❌ 进程已退出"
+        echo ""
+        echo "日志内容:"
+        cat "$LOG_FILE"
+        rm -f "$PID_FILE"
+        exit 1
+    fi
+    if command -v curl >/dev/null 2>&1 && curl -fsS "http://$UI_HOST:$UI_PORT/" > /dev/null 2>&1; then
+        ready=1
         break
     fi
     sleep 1
 done
-if [ "$ui_ready" -ne 1 ]; then
-    echo "❌ UI 启动超时"
-    echo ""
-    echo "日志内容:"
-    cat "$LOG_FILE"
-    kill "$ORCH_PID"
-    rm -f "$PID_FILE"
-    exit 1
+
+if [ "$ready" -ne 1 ]; then
+    # 进程还活着但 UI 没响应 — team 模式下 UI 可能还在初始化，不算失败
+    if [ "$MODE" = "team" ]; then
+        echo "   ⚠️  UI 尚未就绪（团队模式下可能需要更长时间）"
+    else
+        echo "❌ UI 启动超时"
+        echo ""
+        echo "日志内容:"
+        cat "$LOG_FILE"
+        kill "$ORCH_PID" 2>/dev/null || true
+        rm -f "$PID_FILE"
+        exit 1
+    fi
+else
+    echo "   ✅ UI 已启动"
 fi
 
-echo "   ✅ UI 已启动"
 echo ""
-
 echo "=========================================="
 echo "  ✅ 启动成功"
 echo "=========================================="

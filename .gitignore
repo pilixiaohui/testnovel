@@ -33,3 +33,9 @@ backend/.env
 orchestrator/ui/frontend/node_modules/
 project/.orchestrator_ctx/
 .orchestrator_ctx/
+
+# 编排器基础设施 — 不进入 git，agent 通过 Docker 镜像获取
+orchestrator_v2/
+orchestrator/
+.agent-upstream.git/
+.agent-logs/

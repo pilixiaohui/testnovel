@@ -1,0 +1,89 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]: AI Novel
+    - menubar [ref=e7]:
+      - menuitem "首页" [ref=e8] [cursor=pointer]
+      - menuitem "雪花流程" [ref=e9] [cursor=pointer]
+      - menuitem "推演控制台" [ref=e10] [cursor=pointer]
+      - menuitem "编辑器" [ref=e11] [cursor=pointer]
+      - menuitem "世界观" [ref=e12] [cursor=pointer]
+      - menuitem "设置" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 导航
+        - menubar [ref=e19]:
+          - menuitem "首页" [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]: 首页
+          - menuitem "雪花流程" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: 雪花流程
+          - menuitem "推演控制台" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]: 推演控制台
+          - menuitem "编辑器" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: 编辑器
+          - menuitem "世界观" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: 世界观
+          - menuitem "设置" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: 设置
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "Simulation Console" [level=1] [ref=e36]
+            - paragraph [ref=e37]: "Status: running"
+          - generic [ref=e38]:
+            - button "Start" [ref=e39] [cursor=pointer]
+            - button "Stop" [ref=e40] [cursor=pointer]
+            - button "Reset" [ref=e41] [cursor=pointer]
+        - generic [ref=e43]: Request failed with status 500
+        - generic [ref=e44]:
+          - heading "Scenes" [level=2] [ref=e45]
+          - generic [ref=e46]:
+            - strong [ref=e47]: Project context required.
+            - paragraph [ref=e48]: Select a project and branch to load scenes.
+        - generic [ref=e49]:
+          - button "Step" [active] [ref=e50] [cursor=pointer]
+          - button "Scene" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]:
+          - heading "Logs" [level=2] [ref=e53]
+          - generic [ref=e55]:
+            - generic [ref=e56]: round-1
+            - generic [ref=e57]: Loaded round-1
+        - generic [ref=e58]:
+          - heading "Rounds" [level=2] [ref=e59]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - button "上一轮" [ref=e64] [cursor=pointer]:
+                - generic [ref=e65]: 上一轮
+              - button "下一轮" [ref=e66] [cursor=pointer]:
+                - generic [ref=e67]: 下一轮
+              - button "播放" [ref=e68] [cursor=pointer]:
+                - generic [ref=e69]: 播放
+            - generic [ref=e70]:
+              - generic [ref=e71]: 当前回合 1 / 1
+              - generic [ref=e72]:
+                - button "decrease number" [ref=e73]:
+                  - img [ref=e75]
+                - button "increase number" [ref=e77]:
+                  - img [ref=e79]
+                - spinbutton [ref=e83]: "1"
+          - generic [ref=e86]:
+            - generic [ref=e87]: Action Timeline
+            - list [ref=e88]:
+              - listitem [ref=e89]:
+                - generic [ref=e93]:
+                  - generic [ref=e94]:
+                    - generic [ref=e95]: Round round-1
+                    - generic [ref=e97]: info +0
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: Agent Actions
+                    - list
+        - generic [ref=e100]:
+          - heading "Agents" [level=2] [ref=e101]
+          - generic [ref=e102]:
+            - strong [ref=e103]: Project context required.
+            - paragraph [ref=e104]: Select a project and branch to load agents.
+```

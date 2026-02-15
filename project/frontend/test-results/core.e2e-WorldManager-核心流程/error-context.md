@@ -1,0 +1,59 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]: AI Novel
+    - menubar [ref=e7]:
+      - menuitem "首页" [ref=e8] [cursor=pointer]
+      - menuitem "雪花流程" [ref=e9] [cursor=pointer]
+      - menuitem "推演控制台" [ref=e10] [cursor=pointer]
+      - menuitem "编辑器" [ref=e11] [cursor=pointer]
+      - menuitem "世界观" [ref=e12] [cursor=pointer]
+      - menuitem "设置" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 导航
+        - menubar [ref=e19]:
+          - menuitem "首页" [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]: 首页
+          - menuitem "雪花流程" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: 雪花流程
+          - menuitem "推演控制台" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]: 推演控制台
+          - menuitem "编辑器" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: 编辑器
+          - menuitem "世界观" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: 世界观
+          - menuitem "设置" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: 设置
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "World Manager" [level=1] [ref=e36]
+            - paragraph [ref=e37]: Manage worlds, entities, and anchor points.
+          - generic [ref=e38]:
+            - button "Create World" [ref=e39] [cursor=pointer]
+            - button "Load" [active] [ref=e40] [cursor=pointer]
+            - button "Create Entity" [ref=e41] [cursor=pointer]
+            - button "Update Entity" [ref=e42] [cursor=pointer]
+            - button "Delete Entity" [ref=e43] [cursor=pointer]
+            - button "Show Relations" [ref=e44] [cursor=pointer]
+        - generic [ref=e46]: root_id is required
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - heading "State Extract" [level=2] [ref=e50]
+            - paragraph [ref=e51]: Extract changes from the latest narrative context.
+          - button "提取图信息" [ref=e53] [cursor=pointer]
+        - generic [ref=e54]:
+          - heading "Worlds" [level=2] [ref=e55]
+          - generic [ref=e56]:
+            - strong [ref=e57]: Unable to load worlds.
+            - paragraph [ref=e58]: Please retry after checking the project service.
+          - list
+        - generic [ref=e59]:
+          - strong [ref=e60]: Select a world.
+          - paragraph [ref=e61]: Choose a world to load entities, anchors, and relations.
+```

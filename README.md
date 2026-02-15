@@ -1,13 +1,14 @@
 # AI Novel V3 - 多智能体工作流系统
 
-基于黑板模式的多智能体编排系统，用于开发 AI 小说生成引擎（Snowflake Engine）。
+基于 **Git + Docker + Bare Repo** 的多智能体编排系统，用于开发 AI 小说生成引擎（Snowflake Engine）。
 
 ## 📁 项目结构
 
 ```
 ainovel_v3/
 │
-├── orchestrator.py              # 🎯 多智能体编排器（通用框架）
+├── orchestrator/                # 🎯 Agent Team Orchestrator（Git + Docker）
+├── orchestrator.py              # 🎯 Orchestrator CLI 入口（等价于 `python -m orchestrator`）
 ├── test_project_module.py       # ✅ 模块测试脚本
 │
 ├── project/                     # 📦 AI 小说项目（具体实现）
@@ -23,40 +24,25 @@ ainovel_v3/
 │   │
 │   └── scripts/                 # 测试和检查脚本
 │
-├── memory/                      # 🧠 Orchestrator 长期记忆
-│   ├── global_context.md        # 全局上下文
-│   ├── project_history.md       # 项目历史（追加）
-│   ├── dev_plan.md              # 开发计划快照
-│   └── subagent_prompt_*.md     # 各代理提示词
-│
-├── workspace/                   # 📋 Orchestrator 工作区
-│   ├── main/                    # MAIN 代理工作区
-│   ├── test/                    # TEST 代理工单
-│   ├── dev/                     # DEV 代理工单
-│   └── review/                  # REVIEW 代理工单
-│
-└── reports/                     # 📊 Orchestrator 报告输出
-    ├── report_test.md           # TEST 代理报告
-    ├── report_dev.md            # DEV 代理报告
-    ├── report_review.md         # REVIEW 代理报告
-    └── orchestrator.log         # 编排器日志
+└── doc/                         # 📚 文档（含博客原文与对标说明）
 ```
 
 ## 🎯 核心概念
 
 ### 1. Orchestrator（通用框架）
 
-基于**黑板模式（Blackboard Pattern）**的多智能体编排器：
+基于 **Bare upstream git repo + 多容器并行 agent** 的编排器（对标 `doc/多智能体团队最新博客.md` 的 harness 思路）：
 
-- **MAIN**：指挥官 + 记录员，负责读黑板、写日志、写工单、输出调度 JSON
-- **TEST/DEV/REVIEW**：无状态执行者，只读取各自工单文件执行并输出报告
-- **Orchestrator**：搬运工，只负责触发 `codex exec`、落盘最后消息、解析 JSON、控制循环
+- **implementer / quality / docs**：角色分工（实现 / 质量 / 文档）
+- **同步原语**：通过 `.agent-upstream.git`（bare repo）进行 pull/push，同步状态与变更
+- **并行去重**：通过 `current_tasks/` 轻量锁 + `tasks/` 重量级任务队列协调
+- **测试反馈**：真实跑测试，输出 `ERROR:` / `STATS:` / `TOP_FAILURES:` 等高密度摘要，便于 LLM 自主导航
 
 **特点**：
 - ✅ 完全通用，可用于任何项目
 - ✅ 快速失败（Fail Fast）设计
 - ✅ 提供 Web UI 界面
-- ✅ 会话持久化和恢复
+- ✅ Fast-then-Full 测试策略 + 失败学习（tasks/failures）
 
 ### 2. Project（具体实现）
 
@@ -94,24 +80,26 @@ uvicorn app.main:app --reload --port 8000
 ### 2. 运行 Orchestrator
 
 ```bash
-# 启动 Web UI（推荐）
-./dev-start.sh
-# 访问 http://127.0.0.1:8766
+# 初始化（生成 project_env.json、tasks/、current_tasks/、PROGRESS.md，并创建 bare upstream + CI gate）
+python -m orchestrator init
 
-# 或命令行模式
-python orchestrator.py --max-iterations 10 --task "实现新功能"
+# 启动团队（需要 docker；并在环境中设置 OPENAI_API_KEY/ANTHROPIC_API_KEY）
+python -m orchestrator team --build --roles implementer:2,quality:1,docs:1
 
-# 或新任务模式
-python orchestrator.py --new-task --task "修复 bug XYZ"
+# 添加任务（可选）
+python -m orchestrator add-task "修复 bug XYZ" --role implementer --priority 1 --description "..."
+
+# 查看状态
+python -m orchestrator status
 ```
 
 ### 2.1 运行隔离策略
 
 ```bash
-# MAIN 在仓库 orchestrator/ 目录执行
-# 子代理在 project_env.json 中 code_root/frontend_root 的共同父目录执行（agent_root）
-# 编排黑板 markdown 会在派发前同步到：<agent_root>/.orchestrator_ctx/
-# 该目录是只读镜像，手工修改会在下一次派发被覆盖
+# 每个 agent 在独立 Docker 容器内运行：
+# - /upstream: 挂载 bare upstream repo
+# - /workspace: agent 自己的 clone，用于开发/测试/提交
+# 细节见：doc/agent_team_orchestrator.md
 ```
 
 ### 3. 运行测试
@@ -129,7 +117,8 @@ python project/scripts/cyberpunk_integration_test.py
 
 ## 📚 文档
 
-- [Orchestrator 重构总结](REFACTORING_SUMMARY.md) - 代码重构详细说明
+- [Agent Team Orchestrator 使用说明](doc/agent_team_orchestrator.md)
+- [多智能体团队博客原文](doc/多智能体团队最新博客.md)
 - [Project 模块文档](project/README.md) - AI 小说项目文档
 - [Backend 文档](project/backend/README.md) - 后端服务文档
 
@@ -141,9 +130,9 @@ python project/scripts/cyberpunk_integration_test.py
 ┌─────────────────────────────────────┐
 │   Orchestrator Framework (通用)     │
 │   - orchestrator.py                 │
-│   - memory/                         │
-│   - workspace/                      │
-│   - reports/                        │
+│   - orchestrator/                   │
+│   - tasks/ + current_tasks/         │
+│   - .agent-upstream.git             │
 └─────────────────────────────────────┘
               ↑ 使用配置
               │
@@ -156,26 +145,21 @@ python project/scripts/cyberpunk_integration_test.py
 └─────────────────────────────────────┘
 ```
 
-### 黑板模式
+### Git + Docker 并行模式（对标博客）
 
 ```
-memory/project_history.md  ←─┐
-memory/dev_plan.md         ←─┼─ 黑板（共享状态）
-workspace/*/current_task.md ←┘
+current_tasks/*.md  ←─┐
+tasks/*.md           ←┼─ 共享状态（通过 bare upstream repo 同步）
+PROGRESS.md          ←┘
 
-    ↓ 读取          ↓ 写入
+    ↓ pull/merge     ↓ push
 
 ┌────────┐      ┌────────┐
-│  MAIN  │ ───→ │工单文件│
+│ Agent  │ ───→ │ upstream│
 └────────┘      └────────┘
                      ↓
               ┌──────────────┐
-              │ TEST/DEV/    │
-              │ REVIEW       │
-              └──────────────┘
-                     ↓
-              ┌──────────────┐
-              │ 报告文件      │
+              │ 其他 agents  │
               └──────────────┘
 ```
 
@@ -204,22 +188,20 @@ workspace/*/current_task.md ←┘
 
 ### 添加新代理
 
-1. 修改 `project/config.py` 添加代理名称
-2. 创建提示词文件 `memory/subagent_prompt_<agent>.md`
-3. orchestrator 自动支持
+1. 在 `orchestrator/agents/prompts/` 添加角色 prompt
+2. 在 `orchestrator/core/config.py` 中为 role 选择 CLI 与 extra_args
 
 ### 自定义项目配置
 
-1. 编辑 `orchestrator/memory/project_env.json`
-2. 修改 `orchestrator/memory/prompts/*.md`
-3. 使用 `./dev-start.sh` 启动（仓库内模式）
+1. 编辑 `project_env.json`（重点是 `commands.test/test_fast/ci`）
+2. 参考 `doc/agent_team_orchestrator.md`
 
 ### 迁移到新项目
 
-1. 复制 `orchestrator.py` 到新项目
-2. 复制 `project/` 目录并修改配置
-3. 创建 `memory/` 初始文件
-4. 运行！
+1. 复制 `orchestrator/` + `orchestrator.py` + `pyproject.toml`
+2. 在新项目根目录运行 `python -m orchestrator init`
+3. 配好 `project_env.json` 的 `commands.*`（测试/CI/Oracle）
+4. `python -m orchestrator team --build`
 
 ## 📝 许可证
 

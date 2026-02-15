@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 停止 Orchestrator 工作流脚本（仓库内模式）
+# 停止 Orchestrator V2 工作流脚本
 # 用法:
 #   ./dev-stop.sh
 
@@ -8,7 +8,6 @@ set -e
 
 TMP_DIR="/tmp/orchestrator-dev"
 PID_FILE="$TMP_DIR/orchestrator.pid"
-ORCH_PID=""
 
 if [ $# -ne 0 ]; then
     echo "❌ 不支持参数。"
@@ -16,7 +15,7 @@ if [ $# -ne 0 ]; then
     exit 1
 fi
 
-echo "🛑 正在停止 Orchestrator..."
+echo "🛑 正在停止 Orchestrator V2..."
 echo ""
 
 if [ ! -f "$PID_FILE" ]; then
@@ -32,16 +31,13 @@ if [ -z "$ORCH_PID" ]; then
 fi
 
 if ! kill -0 "$ORCH_PID" 2>/dev/null; then
-    echo "❌ 进程不存在 (PID: $ORCH_PID)"
+    echo "⚠️  进程已不存在 (PID: $ORCH_PID)，清理 PID 文件"
     rm -f "$PID_FILE"
-    exit 1
+    exit 0
 fi
 
-echo "停止 Orchestrator (PID: $ORCH_PID)..."
-if ! kill "$ORCH_PID"; then
-    echo "❌ 停止失败 (PID: $ORCH_PID)"
-    exit 1
-fi
+echo "停止进程 (PID: $ORCH_PID)..."
+kill "$ORCH_PID" 2>/dev/null || true
 
 for i in {1..5}; do
     if ! kill -0 "$ORCH_PID" 2>/dev/null; then
@@ -49,10 +45,12 @@ for i in {1..5}; do
     fi
     sleep 1
 done
+
 if kill -0 "$ORCH_PID" 2>/dev/null; then
-    echo "❌ 停止超时 (PID: $ORCH_PID)"
-    exit 1
+    echo "⚠️  SIGTERM 超时，发送 SIGKILL..."
+    kill -9 "$ORCH_PID" 2>/dev/null || true
+    sleep 1
 fi
 
 rm -f "$PID_FILE"
-echo "✅ Orchestrator 已停止"
+echo "✅ Orchestrator V2 已停止"

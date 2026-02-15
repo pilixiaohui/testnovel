@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 ainovel-orchestrator = "orchestrator.main:main"
+ainovel-orchestrator-v2 = "orchestrator_v2.main:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -27,3 +28,11 @@ orchestrator = [
   "ui/frontend/dist/*",
   "ui/frontend/dist/assets/*",
 ]
+orchestrator_v2 = [
+  "agents/prompts/*.md",
+  "ui/frontend/dist/*",
+  "ui/frontend/dist/assets/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["orchestrator/tests", "orchestrator_v2/tests"]

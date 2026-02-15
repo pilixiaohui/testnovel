@@ -1,0 +1,15 @@
+@use './variables.scss' as *;
+@use './reset.scss';
+
+body {
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}

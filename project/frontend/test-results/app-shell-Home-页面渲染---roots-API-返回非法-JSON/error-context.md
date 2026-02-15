@@ -1,0 +1,100 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]: AI Novel
+    - menubar [ref=e7]:
+      - menuitem "首页" [ref=e8] [cursor=pointer]
+      - menuitem "雪花流程" [ref=e9] [cursor=pointer]
+      - menuitem "推演控制台" [ref=e10] [cursor=pointer]
+      - menuitem "编辑器" [ref=e11] [cursor=pointer]
+      - menuitem "世界观" [ref=e12] [cursor=pointer]
+      - menuitem "设置" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 导航
+        - menubar [ref=e19]:
+          - menuitem "首页" [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]: 首页
+          - menuitem "雪花流程" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: 雪花流程
+          - menuitem "推演控制台" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]: 推演控制台
+          - menuitem "编辑器" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: 编辑器
+          - menuitem "世界观" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: 世界观
+          - menuitem "设置" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: 设置
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "项目概览" [level=1] [ref=e36]
+            - paragraph [ref=e37]: 从首页进入雪花流程、推演、编辑器与世界观。
+          - generic [ref=e38]:
+            - button "开始雪花流程" [ref=e39] [cursor=pointer]:
+              - generic [ref=e40]: 开始雪花流程
+            - button "系统设置" [ref=e41] [cursor=pointer]:
+              - generic [ref=e42]: 系统设置
+        - generic [ref=e44]: Loading...
+        - generic [ref=e45]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 当前项目
+            - generic [ref=e50]: Project
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - img [ref=e55]
+              - paragraph [ref=e72]: 暂无项目，建议从雪花流程开始创建。
+            - button "开始雪花流程" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: 开始雪花流程
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - heading "项目列表" [level=2] [ref=e79]
+              - generic [ref=e81]: Roots
+            - generic [ref=e82]:
+              - textbox "输入项目名称" [ref=e83]
+              - button "创建项目" [disabled] [ref=e84]:
+                - generic [ref=e85]: 创建项目
+          - generic [ref=e87]:
+            - img [ref=e89]
+            - paragraph [ref=e106]: 暂无项目，建议从雪花流程开始创建。
+        - generic [ref=e107]:
+          - heading "快速入口" [level=2] [ref=e108]
+          - generic [ref=e109]:
+            - generic [ref=e112]:
+              - generic [ref=e113]:
+                - generic [ref=e114]: 雪花流程
+                - paragraph [ref=e115]: 从想法到锚点，完成六步结构化设计。
+              - generic [ref=e116]:
+                - button "进入" [ref=e117] [cursor=pointer]:
+                  - generic [ref=e118]: 进入
+                - generic [ref=e120]: Step 1-6
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - generic [ref=e125]: 推演控制台
+                - paragraph [ref=e126]: 查看回合行动、裁决与收敛进度。
+              - generic [ref=e127]:
+                - button "进入" [ref=e128] [cursor=pointer]:
+                  - generic [ref=e129]: 进入
+                - generic [ref=e131]: Simulation
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: 编辑器
+                - paragraph [ref=e137]: 编辑场景正文、渲染结果与版本。
+              - generic [ref=e138]:
+                - button "进入" [ref=e139] [cursor=pointer]:
+                  - generic [ref=e140]: 进入
+                - generic [ref=e142]: Editor
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - generic [ref=e147]: 世界观
+                - paragraph [ref=e148]: 维护实体、关系、锚点与支线。
+              - generic [ref=e149]:
+                - button "进入" [ref=e150] [cursor=pointer]:
+                  - generic [ref=e151]: 进入
+                - generic [ref=e153]: World
+```

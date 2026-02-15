@@ -1,0 +1,5 @@
+services:
+  memgraph:
+    image: ${MEMGRAPH_IMAGE:-memgraph/memgraph:latest}
+    ports:
+      - "7687:7687"

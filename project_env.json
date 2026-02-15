@@ -1,0 +1,13 @@
+{
+  "cli": "claude",
+  "commands": {
+    "install": "cd project/backend && pip install -e '.[dev]' && cd ../frontend && npm install",
+    "test": "cd project/backend && python -m pytest tests/ -q && cd ../frontend && npx vitest run",
+    "test_fast": "cd project/backend && python -m pytest tests/ -q --timeout=30",
+    "ci": "cd project/backend && python -m pytest tests/ -q && cd ../frontend && npx vitest run"
+  },
+  "test_timeout": 120,
+  "test_timeout_fast": 60,
+  "max_fix_iterations": 3,
+  "baseline_on_session_start": true
+}

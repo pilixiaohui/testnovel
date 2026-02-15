@@ -1,0 +1,107 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]: AI Novel
+    - menubar [ref=e7]:
+      - menuitem "首页" [ref=e8] [cursor=pointer]
+      - menuitem "雪花流程" [ref=e9] [cursor=pointer]
+      - menuitem "推演控制台" [ref=e10] [cursor=pointer]
+      - menuitem "编辑器" [ref=e11] [cursor=pointer]
+      - menuitem "世界观" [ref=e12] [cursor=pointer]
+      - menuitem "设置" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - complementary [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 导航
+        - menubar [ref=e19]:
+          - menuitem "首页" [ref=e20] [cursor=pointer]:
+            - generic [ref=e21]: 首页
+          - menuitem "雪花流程" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: 雪花流程
+          - menuitem "推演控制台" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]: 推演控制台
+          - menuitem "编辑器" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: 编辑器
+          - menuitem "世界观" [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: 世界观
+          - menuitem "设置" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: 设置
+    - main [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "Snowflake Flow" [level=1] [ref=e36]
+            - paragraph [ref=e37]: Build the six-step outline from idea to anchors.
+          - generic [ref=e38]:
+            - button "Add Step" [ref=e39] [cursor=pointer]
+            - button "Save" [ref=e40] [cursor=pointer]
+            - button "Reset" [ref=e41] [cursor=pointer]
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - heading "Prompt Settings" [level=2] [ref=e44]
+            - generic [ref=e45]:
+              - button "Save Prompts" [ref=e46] [cursor=pointer]
+              - button "Reset Prompts" [ref=e47] [cursor=pointer]
+          - paragraph [ref=e48]: Customize the system prompts for each snowflake step.
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - heading "State Extract" [level=2] [ref=e52]
+            - paragraph [ref=e53]: Extract changes from the latest narrative context.
+          - button "提取图信息" [ref=e55] [cursor=pointer]
+        - generic [ref=e56]:
+          - heading "Six-Step Outline" [level=2] [ref=e57]
+          - list [ref=e58]:
+            - listitem [ref=e59]: Step 1 · Logline (1)
+            - listitem [ref=e60]: Step 2 · Root (empty)
+            - listitem [ref=e61]: Step 3 · Characters (0)
+            - listitem [ref=e62]: Step 4 · Scenes (0)
+            - listitem [ref=e63]: Step 5 · Acts/Chapters (0/0)
+            - listitem [ref=e64]: Step 6 · Anchors (0)
+        - generic [ref=e65]:
+          - heading "Step 1 · Logline" [level=3] [ref=e66]
+          - generic [ref=e67]:
+            - generic [ref=e68]: Prompt
+            - textbox "Edit prompt for step 1" [ref=e69]
+          - textbox "Describe your story idea" [ref=e70]: idea
+          - button "Run Step 1" [active] [ref=e71] [cursor=pointer]
+          - textbox [ref=e73]: A lone hero defies fate
+        - generic [ref=e74]:
+          - heading "Step 2 · Root" [level=3] [ref=e75]
+          - generic [ref=e76]:
+            - generic [ref=e77]: Prompt
+            - textbox "Edit prompt for step 2" [ref=e78]
+          - combobox [ref=e79]:
+            - option "A lone hero defies fate" [selected]
+          - button "Run Step 2" [ref=e80] [cursor=pointer]
+          - paragraph
+        - generic [ref=e81]:
+          - heading "Step 3 · Characters" [level=3] [ref=e82]
+          - generic [ref=e83]:
+            - generic [ref=e84]: Prompt
+            - textbox "Edit prompt for step 3" [ref=e85]
+          - button "Run Step 3" [ref=e86] [cursor=pointer]
+          - list
+        - generic [ref=e87]:
+          - heading "Step 4 · Scenes" [level=3] [ref=e88]
+          - generic [ref=e89]:
+            - generic [ref=e90]: Prompt
+            - textbox "Edit prompt for step 4" [ref=e91]
+          - button "Run Step 4" [ref=e92] [cursor=pointer]
+          - list
+        - generic [ref=e93]:
+          - heading "Step 5 · Acts & Chapters" [level=3] [ref=e94]
+          - generic [ref=e95]:
+            - generic [ref=e96]: Prompt
+            - textbox "Edit prompt for step 5" [ref=e97]
+          - button "Run Step 5" [ref=e98] [cursor=pointer]
+          - paragraph [ref=e99]: "Acts: 0, Chapters: 0"
+        - generic [ref=e100]:
+          - heading "Step 6 · Anchors" [level=3] [ref=e101]
+          - generic [ref=e102]:
+            - generic [ref=e103]: Prompt
+            - textbox "Edit prompt for step 6" [ref=e104]
+          - button "Run Step 6" [ref=e105] [cursor=pointer]
+          - paragraph [ref=e106]: "Anchors: 0"
+```
