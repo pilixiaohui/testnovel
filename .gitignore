@@ -39,3 +39,4 @@ orchestrator_v2/
 orchestrator/
 .agent-upstream.git/
 .agent-logs/
+Dockerfile.agent
