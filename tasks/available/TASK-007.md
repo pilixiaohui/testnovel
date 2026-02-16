@@ -1,10 +1,10 @@
 ---
 id: TASK-007
-title: [add-login] 3 Add login API endpoint POST /api/auth/login
+title: [e2e-test-refactor] 4 测试 Step 1：故事创意输入与核心生成
 role: implementer
 priority: 1
-dependencies: []
-refs: [openspec/changes/add-login/proposal.md, openspec/changes/add-login/specs/authentication/spec.md, openspec/changes/add-login/specs/oauth/spec.md]
+dependencies: [TASK-004, TASK-005, TASK-006]
+refs: [openspec/changes/e2e-test-refactor/proposal.md, openspec/changes/e2e-test-refactor/design.md, openspec/changes/e2e-test-refactor/specs/chapter-generation/spec.md, openspec/changes/e2e-test-refactor/specs/creation-flow/spec.md, openspec/changes/e2e-test-refactor/specs/review-feedback/spec.md, openspec/changes/e2e-test-refactor/specs/story-export/spec.md, openspec/changes/e2e-test-refactor/specs/world-state/spec.md]
 ---
 
-Add login API endpoint POST /api/auth/login
+测试 Step 1：故事创意输入与核心生成

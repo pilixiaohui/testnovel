@@ -1,10 +1,10 @@
 ---
 id: TASK-011
-title: [add-login] 8 Configure OAuth2 provider credentials
+title: [e2e-test-refactor] 8 测试 Step 5：首章生成与质量验证
 role: implementer
 priority: 1
-dependencies: [TASK-008, TASK-009, TASK-010]
-refs: [openspec/changes/add-login/proposal.md, openspec/changes/add-login/specs/authentication/spec.md, openspec/changes/add-login/specs/oauth/spec.md]
+dependencies: [TASK-004, TASK-005, TASK-006]
+refs: [openspec/changes/e2e-test-refactor/proposal.md, openspec/changes/e2e-test-refactor/design.md, openspec/changes/e2e-test-refactor/specs/chapter-generation/spec.md, openspec/changes/e2e-test-refactor/specs/creation-flow/spec.md, openspec/changes/e2e-test-refactor/specs/review-feedback/spec.md, openspec/changes/e2e-test-refactor/specs/story-export/spec.md, openspec/changes/e2e-test-refactor/specs/world-state/spec.md]
 ---
 
-Configure OAuth2 provider credentials
+测试 Step 5：首章生成与质量验证
