@@ -22,7 +22,7 @@ PROJECT_ENV_FILE = PROJECT_ROOT / "project_env.json"
 
 # ============= CLI（所有角色统一使用同一个 CLI） =============
 DEFAULT_CLI = "codex"
-CLI_TIMEOUT_SECONDS = 900
+CLI_TIMEOUT_SECONDS = 10800  # 3 hours
 
 # ============= Docker =============
 AGENT_IMAGE_NAME = "orchestrator-agent"
@@ -30,7 +30,7 @@ AGENT_CONTAINER_PREFIX = "orch-agent"
 DOCKER_NETWORK = "orchestrator-net"
 
 # ============= 监控 =============
-TASK_CLAIM_TIMEOUT_MINUTES = 30
+TASK_CLAIM_TIMEOUT_MINUTES = 200  # slightly above CLI_TIMEOUT_SECONDS / 60
 MONITOR_CHECK_INTERVAL = 60  # seconds
 
 # ============= 重试与退避（供 core.backoff 使用） =============
