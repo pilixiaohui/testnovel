@@ -40,3 +40,4 @@ orchestrator/
 .agent-upstream.git/
 .agent-logs/
 Dockerfile.agent
+.codex-agent/
