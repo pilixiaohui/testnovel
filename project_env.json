@@ -1,11 +1,10 @@
 {
   "cli": "codex",
   "commands": {
-    "install": "cd project/backend && pip install -e '.[dev]' && cd ../frontend && npm install",
-    "test": "cd project/backend && python -m pytest tests/ -q && cd ../frontend && npx vitest run",
-    "test_fast": "cd project/backend && python -m pytest tests/ -q --timeout=30",
-    "ci": "cd project/backend && pip install -e '.[dev]' && python -m pytest tests/ -q && cd ../frontend && npm install && npx vitest run"
+    "install": "cd project/backend && ${VENV_PYTHON:-/home/agent/.venv/bin/python} -m pip install -e '.[dev]' -q && cd ../frontend && npm install",
+    "test": "cd project/backend && ${VENV_PYTHON:-/home/agent/.venv/bin/python} -m pytest tests/ -q && cd ../frontend && npx vitest run"
   },
+  "test_fast_sample_rate": 0.1,
   "test_timeout": 120,
   "test_timeout_fast": 60,
   "max_fix_iterations": 3,

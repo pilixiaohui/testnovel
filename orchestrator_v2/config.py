@@ -10,6 +10,8 @@ import os
 from .infra.paths import PROJECT_ROOT
 
 # ============= 路径（全部相对于 PROJECT_ROOT） =============
+VENV_DIR = PROJECT_ROOT / ".venv"          # 宿主机 venv，挂载进容器共享
+VENV_MOUNT_PATH = "/home/agent/.venv"      # 容器内挂载点
 WORKSPACES_DIR = PROJECT_ROOT / ".agent-workspaces"
 UPSTREAM_REPO = PROJECT_ROOT / ".agent-upstream.git"
 TASKS_DIR = PROJECT_ROOT / "tasks"

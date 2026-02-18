@@ -16,7 +16,7 @@ from ..config import (
     AGENT_CONTAINER_PREFIX, AGENT_IMAGE_NAME, DOCKER_NETWORK, UPSTREAM_REPO,
     ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY as CFG_ANTHROPIC_KEY,
     OPENAI_API_KEY as CFG_OPENAI_KEY, OPENAI_BASE_URL,
-    CLAUDE_MODEL,
+    CLAUDE_MODEL, WORKSPACES_DIR, VENV_DIR, VENV_MOUNT_PATH,
 )
 from ..scm.sync import setup_upstream
 
@@ -70,7 +70,16 @@ RUN pip3 install --no-cache-dir --break-system-packages anthropic
 RUN mkdir -p /home/agent/.codex && chmod -R 777 /home/agent
 COPY .codex-agent/config.toml /home/agent/.codex/config.toml
 COPY orchestrator_v2/ /opt/orchestrator_v2/
-ENV PYTHONPATH=/opt HOME=/home/agent
+# venv-pip: 带文件锁的 pip 包装脚本，供 implementer 安装包时使用
+RUN printf '#!/usr/bin/env python3\\n\
+import fcntl, subprocess, sys\\n\
+LOCK = "/home/agent/.venv/.install.lock"\\n\
+with open(LOCK, "w") as lf:\\n\
+    fcntl.flock(lf, fcntl.LOCK_EX)\\n\
+    r = subprocess.run(["/home/agent/.venv/bin/pip"] + sys.argv[1:])\\n\
+sys.exit(r.returncode)\\n\
+' > /usr/local/bin/venv-pip && chmod +x /usr/local/bin/venv-pip
+ENV PYTHONPATH=/opt HOME=/home/agent VENV_PYTHON=/home/agent/.venv/bin/python
 ENTRYPOINT ["python3", "-m", "orchestrator_v2.harness.entrypoint", "agent"]
 """
     dockerfile = project_root / "Dockerfile.agent"
@@ -140,12 +149,18 @@ def _spawn_one(
         capture_output=True, text=True,
     )
 
+    # 确保宿主机 workspace 目录存在，用于持久化日志
+    workspace_host = WORKSPACES_DIR / agent_id
+    workspace_host.mkdir(parents=True, exist_ok=True)
+
     cmd = [
         "docker", "run", "-d",
         "--name", container_name,
         "--network", DOCKER_NETWORK,
         "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{upstream_path}:{UPSTREAM_MOUNT_PATH}:rw",
+        "-v", f"{workspace_host}:{WORKSPACE_PATH_IN_CONTAINER}:rw",
+        "-v", f"{VENV_DIR}:{VENV_MOUNT_PATH}:{'rw' if role == 'implementer' else 'ro'}",
         "-e", f"AGENT_ID={agent_id}",
         "-e", f"AGENT_ROLE={role}",
         "-e", f"UPSTREAM_PATH={UPSTREAM_MOUNT_PATH}",

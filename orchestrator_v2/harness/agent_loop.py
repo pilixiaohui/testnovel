@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import subprocess
@@ -496,7 +497,8 @@ def _run_cli(
     runner = create_cli_runner(cli_name)
     approval_policy = "never" if cli_name == "codex" else "full-auto"
 
-    output_file = log_file.parent / "cli_output.md"
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    output_file = log_file.parent / f"cli_output_{ts}.md"
     config = CLIConfig(
         sandbox_mode="danger-full-access",
         approval_policy=approval_policy,
