@@ -41,4 +41,3 @@ orchestrator/
 .agent-logs/
 Dockerfile.agent
 .codex-agent/
-.agent-workspaces/
