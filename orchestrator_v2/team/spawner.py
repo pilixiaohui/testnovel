@@ -17,6 +17,7 @@ from ..config import (
     ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY as CFG_ANTHROPIC_KEY,
     OPENAI_API_KEY as CFG_OPENAI_KEY, OPENAI_BASE_URL,
     CLAUDE_MODEL, WORKSPACES_DIR, VENV_DIR, VENV_MOUNT_PATH,
+    AGENT_LOG_DIR,
 )
 from ..scm.sync import setup_upstream
 
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 UPSTREAM_MOUNT_PATH = "/upstream"
 WORKSPACE_PATH_IN_CONTAINER = "/home/agent/workspace"
+LOG_MOUNT_PATH = "/agent-logs"
 
 
 @dataclass
@@ -153,6 +155,9 @@ def _spawn_one(
     workspace_host = WORKSPACES_DIR / agent_id
     workspace_host.mkdir(parents=True, exist_ok=True)
 
+    # 确保宿主机 log 目录存在
+    AGENT_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
     cmd = [
         "docker", "run", "-d",
         "--name", container_name,
@@ -161,10 +166,12 @@ def _spawn_one(
         "-v", f"{upstream_path}:{UPSTREAM_MOUNT_PATH}:rw",
         "-v", f"{workspace_host}:{WORKSPACE_PATH_IN_CONTAINER}:rw",
         "-v", f"{VENV_DIR}:{VENV_MOUNT_PATH}:{'rw' if role == 'implementer' else 'ro'}",
+        "-v", f"{AGENT_LOG_DIR}:{LOG_MOUNT_PATH}:rw",
         "-e", f"AGENT_ID={agent_id}",
         "-e", f"AGENT_ROLE={role}",
         "-e", f"UPSTREAM_PATH={UPSTREAM_MOUNT_PATH}",
         "-e", f"WORKSPACE_PATH={WORKSPACE_PATH_IN_CONTAINER}",
+        "-e", f"AGENT_LOG_DIR={LOG_MOUNT_PATH}",
         "-e", f"OPENAI_API_KEY={CFG_OPENAI_KEY}",
         "-e", f"ANTHROPIC_API_KEY={CFG_ANTHROPIC_KEY}",
         "-e", f"ANTHROPIC_AUTH_TOKEN={ANTHROPIC_AUTH_TOKEN}",
