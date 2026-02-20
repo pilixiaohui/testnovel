@@ -28,6 +28,7 @@ CLI_TIMEOUT_SECONDS = 10800  # 3 hours
 AGENT_IMAGE_NAME = "orchestrator-agent"
 AGENT_CONTAINER_PREFIX = "orch-agent"
 DOCKER_NETWORK = "orchestrator-net"
+COMPOSE_INFRA_FILE = "docker-compose.infra.yml"
 
 # ============= 监控 =============
 TASK_CLAIM_TIMEOUT_MINUTES = 200  # slightly above CLI_TIMEOUT_SECONDS / 60

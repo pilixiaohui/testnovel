@@ -249,7 +249,8 @@ def git_push(workspace: Path, *, remote: str = "origin") -> GitOpResult:
         logger.warning("git push failed: %s", (r.stderr or "").strip())
 
         # 某些环境下本地仓库与 bare 仓库对象迁移会触发 EXDEV，本地路径迁移走 fetch 可避开该问题。
-        if "unable to migrate objects to permanent storage" in combined:
+        if ("unable to migrate objects to permanent storage" in combined
+                or "unable to create temporary object directory" in combined):
             fallback = _fallback_push_with_fetch(workspace, branch)
             if fallback.ok:
                 return fallback

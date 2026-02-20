@@ -24,8 +24,8 @@
         }
       ],
       "total_crash_count": 3,
-      "is_suspended": false,
-      "assistant_task_id": null
+      "is_suspended": true,
+      "assistant_task_id": "TASK-002"
     }
   ]
 }

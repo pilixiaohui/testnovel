@@ -17,7 +17,7 @@ from ..config import (
     ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY as CFG_ANTHROPIC_KEY,
     OPENAI_API_KEY as CFG_OPENAI_KEY, OPENAI_BASE_URL,
     CLAUDE_MODEL, WORKSPACES_DIR,
-    AGENT_LOG_DIR,
+    AGENT_LOG_DIR, COMPOSE_INFRA_FILE,
 )
 from ..scm.sync import setup_upstream
 
@@ -33,6 +33,54 @@ class DockerAgent:
     container_id: str
     agent_id: str
     role: str
+
+
+def _start_infra(project_root: Path) -> None:
+    """启动 docker-compose 基础设施（Memgraph 等），阻塞直到 healthcheck 通过。"""
+    compose_file = project_root / COMPOSE_INFRA_FILE
+    if not compose_file.exists():
+        logger.warning("compose file not found: %s, skipping infra start", compose_file)
+        return
+
+    result = subprocess.run(
+        ["docker", "compose", "-f", str(compose_file), "up", "-d", "--wait"],
+        capture_output=True, text=True, timeout=120,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"docker compose up failed: {result.stderr}")
+    logger.info("started infrastructure services via compose")
+
+
+def _stop_infra(project_root: Path) -> None:
+    """停止 docker-compose 基础设施。"""
+    compose_file = project_root / COMPOSE_INFRA_FILE
+    if not compose_file.exists():
+        return
+
+    subprocess.run(
+        ["docker", "compose", "-f", str(compose_file), "down"],
+        capture_output=True, text=True, timeout=60,
+    )
+    logger.info("stopped infrastructure services")
+
+
+def _load_backend_env(project_root: Path) -> dict[str, str]:
+    """解析 project/backend/.env 文件，返回环境变量字典。"""
+    env_file = project_root / "project" / "backend" / ".env"
+    if not env_file.exists():
+        logger.warning("backend .env not found: %s", env_file)
+        return {}
+
+    env_vars: dict[str, str] = {}
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        env_vars[key.strip()] = value.strip()
+    return env_vars
 
 
 def _needs_rebuild(project_root: Path) -> bool:
@@ -81,7 +129,7 @@ disable_response_storage = true
 
 [model_providers.codex]
 name = "codex"
-base_url = "http://152.53.165.53:3000/v1"
+base_url = "https://code.ppchat.vip/v1"
 wire_api = "responses"
 env_key = "OPENAI_API_KEY"
 
@@ -162,11 +210,8 @@ def spawn_team(
     img = image or AGENT_IMAGE_NAME
     agents: list[DockerAgent] = []
 
-    # 确保 Docker 网络存在
-    subprocess.run(
-        ["docker", "network", "create", DOCKER_NETWORK],
-        capture_output=True, text=True,
-    )
+    # 启动基础设施（Memgraph 等）
+    _start_infra(project_root)
 
     for role, count in roles.items():
         for i in range(1, count + 1):
@@ -176,6 +221,7 @@ def spawn_team(
                 role=role,
                 upstream_path=upstream,
                 image=img,
+                project_root=project_root,
             )
             agents.append(agent)
 
@@ -189,6 +235,7 @@ def _spawn_one(
     role: str,
     upstream_path: Path,
     image: str,
+    project_root: Path,
 ) -> DockerAgent:
     """启动单个 agent 容器。"""
     container_name = f"{AGENT_CONTAINER_PREFIX}-{agent_id}"
@@ -205,6 +252,9 @@ def _spawn_one(
 
     # 确保宿主机 log 目录存在
     AGENT_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 加载后端环境变量
+    backend_env = _load_backend_env(project_root)
 
     cmd = [
         "docker", "run", "-d",
@@ -223,6 +273,9 @@ def _spawn_one(
         "-e", f"ANTHROPIC_API_KEY={CFG_ANTHROPIC_KEY}",
         "-e", f"ANTHROPIC_AUTH_TOKEN={ANTHROPIC_AUTH_TOKEN}",
         "-e", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1",
+        # Memgraph 连接信息
+        "-e", "MEMGRAPH_HOST=memgraph",
+        "-e", "MEMGRAPH_PORT=7687",
     ]
     # 第三方代理 base URL
     if ANTHROPIC_BASE_URL:
@@ -231,6 +284,12 @@ def _spawn_one(
         cmd += ["-e", f"OPENAI_BASE_URL={OPENAI_BASE_URL}"]
     if CLAUDE_MODEL:
         cmd += ["-e", f"CLAUDE_MODEL={CLAUDE_MODEL}"]
+
+    # 传递后端环境变量
+    for key, value in backend_env.items():
+        if key not in ("MEMGRAPH_HOST", "MEMGRAPH_PORT"):  # 避免覆盖容器内配置
+            cmd += ["-e", f"{key}={value}"]
+
     cmd += [
         image,
         "--role", role,
@@ -252,13 +311,17 @@ def _spawn_one(
     )
 
 
-def shutdown_team(agents: list[DockerAgent]) -> None:
+def shutdown_team(agents: list[DockerAgent], project_root: Path | None = None) -> None:
     """停止并删除所有容器。"""
     for agent in agents:
         container_name = f"{AGENT_CONTAINER_PREFIX}-{agent.agent_id}"
         subprocess.run(["docker", "stop", container_name], capture_output=True, text=True)
         subprocess.run(["docker", "rm", container_name], capture_output=True, text=True)
         logger.info("stopped %s", agent.agent_id)
+
+    # 停止基础设施
+    if project_root:
+        _stop_infra(project_root)
 
 
 def restart_agent(agent: DockerAgent, project_root: Path, image: str | None = None) -> DockerAgent:
@@ -272,6 +335,7 @@ def restart_agent(agent: DockerAgent, project_root: Path, image: str | None = No
         role=agent.role,
         upstream_path=upstream if upstream.exists() else UPSTREAM_REPO,
         image=image or AGENT_IMAGE_NAME,
+        project_root=project_root,
     )
 
 
