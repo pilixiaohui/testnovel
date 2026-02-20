@@ -118,7 +118,7 @@ COPY project/backend/pyproject.toml project/backend/setup.cfg* project/backend/
 RUN cd project/backend && pip install -e '.[dev]' -q
 
 COPY project/frontend/package.json project/frontend/package-lock.json* project/frontend/
-RUN cd project/frontend && npm ci --ignore-scripts
+RUN cd project/frontend && npm ci --ignore-scripts --legacy-peer-deps
 
 # Layer 5: orchestrator 代码 + codex config
 RUN mkdir -p /home/agent/.codex && chmod -R 777 /home/agent
