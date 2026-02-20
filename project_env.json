@@ -1,13 +1,22 @@
 {
   "cli": "codex",
   "commands": {
-    "install": "cd project/backend && python3 -m pip install -e '.[dev]' -q && cd ../frontend && npm install",
-    "test": "cd project/backend && python3 -m pytest tests/ -q && cd ../frontend && npx vitest run",
-    "ci": "cd project/backend && python3 -m pytest tests/ -q"
+    "install": "cd project/backend && pip install -e '.[dev]' -q && cd ../frontend && npm ci",
+    "ci": "cd project/backend && python -m pytest tests/ -q"
   },
-  "test_fast_sample_rate": 0.1,
+  "test_stages": [
+    "cd project/backend && python -m pytest tests/ -q",
+    "cd project/frontend && npx vitest run"
+  ],
+  "test_fast_stages": [
+    "cd project/backend && python -m pytest tests/ -q --lf --maxfail=5",
+    "cd project/frontend && npx vitest run --bail 5"
+  ],
   "test_timeout": 120,
   "test_timeout_fast": 60,
   "max_fix_iterations": 3,
-  "baseline_on_session_start": true
+  "baseline_on_session_start": true,
+  "uat_enabled": false,
+  "uat_max_attempts": 2,
+  "assistant_dispatch_enabled": false
 }

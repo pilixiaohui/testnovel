@@ -16,7 +16,7 @@ from ..config import (
     AGENT_CONTAINER_PREFIX, AGENT_IMAGE_NAME, DOCKER_NETWORK, UPSTREAM_REPO,
     ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ANTHROPIC_API_KEY as CFG_ANTHROPIC_KEY,
     OPENAI_API_KEY as CFG_OPENAI_KEY, OPENAI_BASE_URL,
-    CLAUDE_MODEL, WORKSPACES_DIR, VENV_DIR, VENV_MOUNT_PATH,
+    CLAUDE_MODEL, WORKSPACES_DIR,
     AGENT_LOG_DIR,
 )
 from ..scm.sync import setup_upstream
@@ -35,8 +35,42 @@ class DockerAgent:
     role: str
 
 
-def build_agent_image(project_root: Path) -> str:
-    """构建 agent Docker 镜像。"""
+def _needs_rebuild(project_root: Path) -> bool:
+    """检查依赖文件或 orchestrator 代码是否比镜像新，决定是否需要重建。"""
+    dep_files = [
+        project_root / "project" / "backend" / "pyproject.toml",
+        project_root / "project" / "frontend" / "package.json",
+    ]
+    # orchestrator 全目录变更都需要重建（镜像 COPY orchestrator_v2/，含 prompts/*.md 等）
+    orch_dir = project_root / "orchestrator_v2"
+    if orch_dir.is_dir():
+        dep_files.extend(f for f in orch_dir.rglob("*") if f.is_file())
+    max_dep_mtime = max((f.stat().st_mtime for f in dep_files if f.exists()), default=0)
+
+    result = subprocess.run(
+        ["docker", "inspect", "--format={{.Created}}", AGENT_IMAGE_NAME],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return True  # 镜像不存在
+
+    from datetime import datetime
+    try:
+        image_time = datetime.fromisoformat(result.stdout.strip().rstrip("Z"))
+        return max_dep_mtime > image_time.timestamp()
+    except (ValueError, OSError):
+        return True
+
+
+def build_agent_image(project_root: Path, *, force: bool = False) -> str:
+    """构建 agent Docker 镜像。
+
+    镜像即环境：所有依赖在构建时安装，agent 运行时不碰环境。
+    使用 Docker 分层缓存：依赖文件不变时秒级构建。
+    """
+    if not force and not _needs_rebuild(project_root):
+        logger.info("image %s is up-to-date, skipping rebuild", AGENT_IMAGE_NAME)
+        return AGENT_IMAGE_NAME
 
     # 生成容器内精简版 codex config
     codex_config_content = """\
@@ -66,23 +100,37 @@ hide_full_access_warning = true
 
     dockerfile_content = """\
 FROM node:20-bookworm-slim
-RUN apt-get update && apt-get install -y python3 python3-pip git curl && rm -rf /var/lib/apt/lists/*
+
+# Layer 1: 系统依赖（几乎不变）
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer 2: CLI 工具（很少变）
 RUN npm install -g @openai/codex@0.101.0 @anthropic-ai/claude-code @fission-ai/openspec
 RUN pip3 install --no-cache-dir --break-system-packages anthropic
+
+# Layer 3: 镜像内独立 venv（不依赖宿主机）
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Layer 4: 项目依赖（只有 pyproject.toml / package.json 变化时才重建）
+COPY project/backend/pyproject.toml project/backend/setup.cfg* project/backend/
+RUN cd project/backend && pip install -e '.[dev]' -q
+
+COPY project/frontend/package.json project/frontend/package-lock.json* project/frontend/
+RUN cd project/frontend && npm ci --ignore-scripts
+
+# Layer 5: orchestrator 代码 + codex config
 RUN mkdir -p /home/agent/.codex && chmod -R 777 /home/agent
 COPY .codex-agent/config.toml /home/agent/.codex/config.toml
 COPY orchestrator_v2/ /opt/orchestrator_v2/
-# venv-pip: 带文件锁的 pip 包装脚本，供 implementer 安装包时使用
-RUN printf '#!/usr/bin/env python3\\n\
-import fcntl, subprocess, sys\\n\
-LOCK = "/home/agent/.venv/.install.lock"\\n\
-with open(LOCK, "w") as lf:\\n\
-    fcntl.flock(lf, fcntl.LOCK_EX)\\n\
-    r = subprocess.run(["/home/agent/.venv/bin/pip"] + sys.argv[1:])\\n\
-sys.exit(r.returncode)\\n\
-' > /usr/local/bin/venv-pip && chmod +x /usr/local/bin/venv-pip
-ENV PYTHONPATH=/opt HOME=/home/agent VENV_PYTHON=/home/agent/.venv/bin/python
-ENTRYPOINT ["python3", "-m", "orchestrator_v2.harness.entrypoint", "agent"]
+
+# Layer 6: 冒烟测试 — 构建时就验证环境
+RUN python -c "import fastapi, pydantic, pytest; print('Python deps OK')"
+RUN node -e "try{require('/home/agent/workspace/project/frontend/node_modules/vitest/dist/node/index.js')}catch(e){console.log('WARN: vitest not importable (will be available after clone)')}"
+
+ENV PYTHONPATH=/opt HOME=/home/agent
+ENTRYPOINT ["python", "-m", "orchestrator_v2.harness.entrypoint", "agent"]
 """
     dockerfile = project_root / "Dockerfile.agent"
     dockerfile.write_text(dockerfile_content, encoding="utf-8")
@@ -165,7 +213,6 @@ def _spawn_one(
         "--user", f"{os.getuid()}:{os.getgid()}",
         "-v", f"{upstream_path}:{UPSTREAM_MOUNT_PATH}:rw",
         "-v", f"{workspace_host}:{WORKSPACE_PATH_IN_CONTAINER}:rw",
-        "-v", f"{VENV_DIR}:{VENV_MOUNT_PATH}:{'rw' if role == 'implementer' else 'ro'}",
         "-v", f"{AGENT_LOG_DIR}:{LOG_MOUNT_PATH}:rw",
         "-e", f"AGENT_ID={agent_id}",
         "-e", f"AGENT_ROLE={role}",

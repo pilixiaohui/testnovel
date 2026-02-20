@@ -405,9 +405,6 @@ def install_pre_receive_ci_hook(upstream_bare_repo: Path) -> Path:
     hooks_dir.mkdir(parents=True, exist_ok=True)
     hook_path = hooks_dir / "pre-receive"
 
-    # 宿主机 venv python 路径，注入到 CI 命令环境变量
-    host_venv_python = (upstream_bare_repo.resolve().parent / ".venv" / "bin" / "python")
-
     script = """#!/bin/bash
 set -uo pipefail
 
@@ -495,7 +492,7 @@ PY
   log="$LOG_DIR/ci_${ts}_${sha}.log"
 
   set +e
-  VENV_PYTHON="__HOST_VENV_PYTHON__" bash -lc "$ci_cmd" >"$log" 2>&1
+  bash -lc "$ci_cmd" >"$log" 2>&1
   local rc=$?
   set -e
   rm -rf "$tmp"
@@ -521,7 +518,7 @@ while read -r oldrev newrev refname; do
 done
 """
 
-    hook_path.write_text(script.replace("__HOST_VENV_PYTHON__", str(host_venv_python)), encoding="utf-8")
+    hook_path.write_text(script, encoding="utf-8")
     hook_path.chmod(0o755)
     logger.info("installed pre-receive CI hook at %s", hook_path)
     return hook_path

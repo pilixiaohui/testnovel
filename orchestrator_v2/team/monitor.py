@@ -176,21 +176,37 @@ def _check_once(
     # 1. 检查容器存活
     for i, agent in enumerate(agents):
         if not is_agent_alive(agent):
+            # 已暂停的 agent 不再重复处理（避免重复创建 blocked 任务）
+            if crash_tracker.should_restart(agent.agent_id) is False and \
+               agent.agent_id in crash_tracker.histories and \
+               crash_tracker.histories[agent.agent_id].is_suspended:
+                continue
+
             # 读取日志尾部
             log_tail = _read_agent_log_tail(project_root, agent.agent_id)
+
+            # 智能故障分类
+            failure_type = _classify_failure(log_tail)
 
             # 记录崩溃
             crash_tracker.record_crash(
                 agent_id=agent.agent_id,
                 role=agent.role,
-                reason="container_dead",
+                reason=failure_type,
                 log_tail=log_tail,
             )
 
+            # 环境类故障：输出可操作的建议
+            if failure_type.startswith("env_") and on_progress:
+                on_progress(
+                    f"⚠️ Agent {agent.agent_id} failed due to environment issue: {failure_type}\n"
+                    f"   Fix: rebuild image with `python -m orchestrator_v2 team --build`"
+                )
+
             # 判断是否应该重启
             if crash_tracker.should_restart(agent.agent_id):
-                logger.warning("agent %s is dead, restarting (crash count: %d)",
-                             agent.agent_id, len(crash_tracker.get_recent_crashes(agent.agent_id)))
+                logger.warning("agent %s is dead (%s), restarting (crash count: %d)",
+                             agent.agent_id, failure_type, len(crash_tracker.get_recent_crashes(agent.agent_id)))
                 agents[i] = restart_agent(agent, project_root, image)
                 if on_agent_crash:
                     on_agent_crash(agent.agent_id)
@@ -264,16 +280,21 @@ def _check_once(
                     if on_agent_crash:
                         on_agent_crash(agent.agent_id)
                 else:
-                    logger.error("agent %s timed out too many times, creating assistant task", agent.agent_id)
-                    task_id = _create_crash_analysis_task(
-                        project_root=project_root,
-                        agent_id=agent.agent_id,
-                        role=agent.role,
-                        crashes=crash_tracker.get_recent_crashes(agent.agent_id),
-                    )
-                    crash_tracker.suspend_agent(agent.agent_id, task_id)
-                    if on_progress:
-                        on_progress(f"⚠️ Agent {agent.agent_id} suspended after repeated timeouts. Created {task_id} for analysis.")
+                    # 已暂停的 agent 不再重复创建任务
+                    if agent.agent_id in crash_tracker.histories and \
+                       crash_tracker.histories[agent.agent_id].is_suspended:
+                        logger.debug("agent %s already suspended, skipping task creation", agent.agent_id)
+                    else:
+                        logger.error("agent %s timed out too many times, creating assistant task", agent.agent_id)
+                        task_id = _create_crash_analysis_task(
+                            project_root=project_root,
+                            agent_id=agent.agent_id,
+                            role=agent.role,
+                            crashes=crash_tracker.get_recent_crashes(agent.agent_id),
+                        )
+                        crash_tracker.suspend_agent(agent.agent_id, task_id)
+                        if on_progress:
+                            on_progress(f"⚠️ Agent {agent.agent_id} suspended after repeated timeouts. Created {task_id} for analysis.")
                 break
 
     # 3. 检查是否有需要人工决策的任务（去重：只通知新出现的）
@@ -395,6 +416,23 @@ def _read_agent_log_tail(project_root: Path, agent_id: str, lines: int = 100) ->
         return f"(failed to read log: {e})"
 
 
+def _classify_failure(log_tail: str) -> str:
+    """从日志尾部识别失败类型。"""
+    patterns = [
+        ("env_missing_key", "Missing environment variable"),
+        ("env_python_not_found", "python: not found"),
+        ("env_module_not_found", "ERR_MODULE_NOT_FOUND"),
+        ("env_import_error", "ModuleNotFoundError"),
+        ("env_npm_error", "npm ERR!"),
+        ("timeout_lock", "timeout"),
+        ("container_dead", ""),  # 默认
+    ]
+    for reason, pattern in patterns:
+        if pattern and pattern in log_tail:
+            return reason
+    return "container_dead"
+
+
 def _create_crash_analysis_task(
     *,
     project_root: Path,
@@ -404,7 +442,7 @@ def _create_crash_analysis_task(
 ) -> str:
     """创建 assistant 任务分析 agent 崩溃原因。"""
     from ..config import TASKS_DIR, UPSTREAM_REPO
-    from ..harness.task_picker import create_task, next_task_id
+    from ..harness.task_picker import next_task_id
     from ..scm.sync import git_commit_and_push
     from ..types import Task
 
@@ -461,13 +499,15 @@ def _create_crash_analysis_task(
         description=description,
         role="assistant",
         priority=0,  # 最高优先级
-        status="blocked",  # Mark as blocked
+        status="blocked",
     )
 
-    # Save to tasks/blocked/ instead of tasks/available/
+    # Write directly to tasks/blocked/ (create_task always writes to available/)
+    from ..harness.task_picker import serialize_task
     blocked_dir = TASKS_DIR / "blocked"
     blocked_dir.mkdir(parents=True, exist_ok=True)
-    create_task(TASKS_DIR, task, overwrite=False)
+    task_path = blocked_dir / f"{task_id}.md"
+    task_path.write_text(serialize_task(task), encoding="utf-8")
     git_commit_and_push(project_root, f"monitor: create crash analysis task {task_id}", remote=str(UPSTREAM_REPO))
 
     logger.info("created crash analysis task %s for agent %s", task_id, agent_id)

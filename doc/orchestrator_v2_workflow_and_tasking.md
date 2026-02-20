@@ -83,7 +83,7 @@
 - 推荐字段（`create_task()` 会生成）：
   - `id`：任务 ID（例如 `TASK-001`）
   - `title`：标题
-  - `role`：`implementer | quality | docs | any`
+  - `role`：`implementer | quality | docs | uat | assistant | performance | critic | dedup | any`
   - `priority`：整数，**越小越优先**
   - `dependencies`：列表（当前不参与调度，仅做信息）
   - `agent_id` / `claimed_at` / `completed_at` / `test_summary`：由系统/LLM补充
@@ -153,8 +153,8 @@ monitor 的超时检测优先使用 `heartbeat_at`，否则回退到 `started_at
 3) `prompt_builder` 组装 prompt（注入 Charter / locks / claimed / signals / progress / failures / commands / 当前任务）  
 4) 单次运行 LLM CLI（full-access）  
 5) 若自主模式且无任何 git 变更 → 视为 idle  
-6) 跑测试（implementer/quality：fast + full；docs：不跑）  
-7) 完成收尾：任务 `claimed -> done`、释放 lock  
+6) 跑测试（implementer/quality/performance/dedup：fast + full；docs/uat/assistant/critic：不跑）
+7) 完成收尾：任务 `claimed -> done`（UAT 任务由 harness 根据验收报告路由：PASS→done / FAIL→available 或 needs_input）、释放 lock  
 8) 单次 `git commit` + `git push`（推送本 session 的所有变更）
 
 ### 6.2 任务认领与锁（原子点）
@@ -186,11 +186,20 @@ monitor 的超时检测优先使用 `heartbeat_at`，否则回退到 `started_at
 建议约定：
 
 - `implementer`：新增/修改功能、修复 bug、重构（以交付代码为主）
-- `quality`：修复 failing tests、补最小必要测试、消除 flaky、提升可维护性
+- `quality`：清理 HACK/TODO/FIXME、补充异常处理、改善代码结构（不含重复代码合并）
 - `docs`：README / 文档一致性、示例修订（默认不跑测试）
+- `uat`：用户验收测试，通过公开接口验证功能（默认不跑测试）
+- `assistant`：用户交互、需求转化、系统操作（默认不跑测试）
+- `performance`：N+1 查询优化、慢路径识别、资源泄漏检测（可选角色，按需启用）
+- `critic`：架构审查、设计反模式识别（只审查不改代码，可选角色）
+- `dedup`：重复代码合并、配置常量统一（可选角色，按需启用）
 - `any`：任何人都可做的小任务（例如格式化、简单 README 补充）
 
 > harness 的挑选规则很简单：agent 只会领取 `role == 自己` 或 `role == any` 的任务。
+
+**默认团队组成**（`team` 命令）：`assistant:1,implementer:2,quality:1,docs:1,uat:1`（6 个 agent）
+**UI 自动启动默认**（`ui --auto-start`）：`implementer:2,quality:1,docs:1`（3 个 agent，不含 assistant/uat，因为 UI 本身充当用户界面）
+**可选角色**：performance、critic、dedup 通过 `--roles` 参数按需启用
 
 ### 7.2 优先级（priority）怎么用
 
@@ -200,11 +209,11 @@ monitor 的超时检测优先使用 `heartbeat_at`，否则回退到 `started_at
 
 ### 7.3 任务粒度（必须小）
 
-团队模式下 monitor 会对 `current_tasks/` 锁做超时释放（默认 30 分钟），而 v2 harness 不更新 heartbeat。
+团队模式下 monitor 会对 `current_tasks/` 锁做超时释放（默认 200 分钟），而 v2 harness 不更新 heartbeat。
 
 因此建议：
 
-- **把任务拆到可以在 30 分钟内完成/明显推进并 push 的粒度**；
+- **把任务拆到可以在 200 分钟内完成/明显推进并 push 的粒度**；
 - 或者显式调整 `TASK_CLAIM_TIMEOUT_MINUTES`（否则会被 monitor 当成 stale lock 重启/释放）。
 
 ### 7.4 任务描述写法（减少 LLM 走弯路）
@@ -263,14 +272,27 @@ monitor 的超时检测优先使用 `heartbeat_at`，否则回退到 `started_at
   "cli": "claude",
   "commands": {
     "install": "",
-    "test_fast": "",
-    "test": "",
     "ci": ""
-  }
+  },
+  "test_stages": [
+    "cd project/backend && python -m pytest tests/ -q",
+    "cd project/frontend && npx vitest run"
+  ],
+  "test_fast_stages": [
+    "cd project/backend && python -m pytest tests/ -q --lf --maxfail=5",
+    "cd project/frontend && npx vitest run --bail 5"
+  ],
+  "test_timeout": 120,
+  "test_timeout_fast": 60
 }
 ```
 
 - `cli`：`claude | codex | opencode`
-- `commands.test`：必须有（否则测试 runner 会返回失败摘要，agent 会被门禁阻挡）
-- `commands.test_fast`：可选；缺失时会走 per-agent 确定性采样（pytest 场景）
+- `test_stages`：多阶段测试命令数组（推荐），逐阶段执行，某阶段失败则停止后续阶段
+- `test_fast_stages`：快速测试命令数组（推荐），用于 session 开始时的基线捕获和快速门禁
+- `test_timeout` / `test_timeout_fast`：测试超时秒数（默认 120 / 60）
+- `commands.ci`：pre-receive hook 使用的 CI 命令（可选）
+- `commands.install`：依赖安装命令（可选）
+
+向后兼容：如果没有 `test_stages`，runner 会降级使用 `commands.test` / `commands.test_fast` 单条命令模式。
 

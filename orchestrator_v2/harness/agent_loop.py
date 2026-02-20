@@ -48,6 +48,23 @@ from .task_picker import (
 
 logger = logging.getLogger(__name__)
 
+# 环境预检标记（模块级，首次 session 检查一次）
+_env_checked = False
+
+
+def _check_env_or_die(workspace: Path) -> None:
+    """轻量级环境检查。失败则抛出 PermanentError，让容器退出。"""
+    checks = [
+        ("python", ["python", "--version"]),
+        ("pytest", ["python", "-c", "import pytest"]),
+        ("node", ["node", "--version"]),
+    ]
+    for name, cmd in checks:
+        try:
+            subprocess.run(cmd, capture_output=True, timeout=5, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            raise PermanentError(f"Environment check failed: {name} not available. Rebuild image.")
+
 
 @dataclass(frozen=True)
 class WorkItem:
@@ -99,10 +116,9 @@ def agent_loop(
             logger.warning("agent_loop temporary error for %s (%s): %s", agent_id, role, exc)
             time.sleep(30)
         except PermanentError as exc:
-            # 永久错误：记录日志，跳过当前任务，继续下一轮
+            # 永久错误（环境缺失等）：让容器退出，由 monitor 检测并处理。
             logger.error("agent_loop permanent error for %s (%s): %s", agent_id, role, exc)
-            idle_streak += 1
-            time.sleep(min(60, 10 * idle_streak))
+            raise
         except Exception as exc:
             # 快速失败：抛出错误，让容器由 monitor 重启。
             raise RuntimeError(f"agent_loop failed for {agent_id} ({role}): {exc}") from exc
@@ -118,7 +134,13 @@ def _run_one_session(
     log_file: Path,
 ) -> bool:
     """单次 session。返回 True 表示空转。"""
-    # 0. 若上次 session 留下未完成的 git 操作（rebase/merge），交给 LLM 处理。
+    # 0a. 环境快速检查（首次 session 时执行一次）
+    global _env_checked
+    if not _env_checked:
+        _check_env_or_die(workspace)
+        _env_checked = True
+
+    # 0b. 若上次 session 留下未完成的 git 操作（rebase/merge），交给 LLM 处理。
     if _git_operation_in_progress(workspace):
         return _run_conflict_resolution_session(
             role=role,
@@ -159,67 +181,46 @@ def _run_one_session(
         refs=(work.task.refs if work and work.task else None),
     )
 
-    # 4+6. RUN LLM + TEST 迭代循环
+    # 4+6. RUN LLM + TEST gate check
     project_env = _load_project_env(workspace)
-    max_fix_iters = int(project_env.get("max_fix_iterations", 3))
 
     # 捕获测试基线（可选，默认开启）
-    baseline_result = None
     if agent_role.run_tests_after and project_env.get("baseline_on_session_start", True):
-        baseline_result = run_tests(workspace, project_env, fast=True, agent_id=agent_id)
+        run_tests(workspace, project_env, fast=True, agent_id=agent_id)
 
-    cli_result = _run_cli(prompt, role=role, workspace=workspace,
-                          log_file=log_file, timeout_seconds=CLI_TIMEOUT_SECONDS)
+    _run_cli(prompt, role=role, workspace=workspace,
+             log_file=log_file, timeout_seconds=CLI_TIMEOUT_SECONDS)
 
     # 5. CHECK CHANGES（自主模式下无变更 = 空转）
     if work is None and not _has_uncommitted_changes(workspace) and not _has_commits_to_push(workspace):
         return True
 
     if agent_role.run_tests_after:
-        for fix_iter in range(max_fix_iters):
-            fast = run_tests(workspace, project_env, fast=True, agent_id=agent_id)
-            if not check_gate(fast):
-                if fix_iter < max_fix_iters - 1 and cli_result.session_id:
-                    follow_up = _build_test_feedback(fast.stdout_tail, fix_iter + 1, max_fix_iters,
-                                                     failure_history=(load_failure_history(workspace, work.task.id) if work and work.task else ""))
-                    if baseline_result:
-                        from ..testing.runner import compare_results, format_regression_info
-                        regression = compare_results(baseline_result, fast)
-                        regression_text = format_regression_info(regression)
-                        if regression_text:
-                            follow_up += f"\n\n## 回归分析\n{regression_text}"
-                    cli_result = _run_cli(follow_up, role=role, workspace=workspace,
-                                          log_file=log_file, timeout_seconds=CLI_TIMEOUT_SECONDS,
-                                          resume_session_id=cli_result.session_id)
-                    continue
-                _handle_test_failure(workspace, work, agent_id, fast.stdout_tail)
-                return False
+        fast = run_tests(workspace, project_env, fast=True, agent_id=agent_id)
+        if not check_gate(fast):
+            _handle_test_failure(workspace, work, agent_id, fast.stdout_tail)
+            return False
 
-            full = run_tests(workspace, project_env, fast=False, agent_id=agent_id)
-            if not check_gate(full):
-                if fix_iter < max_fix_iters - 1 and cli_result.session_id:
-                    follow_up = _build_test_feedback(full.stdout_tail, fix_iter + 1, max_fix_iters,
-                                                     failure_history=(load_failure_history(workspace, work.task.id) if work and work.task else ""))
-                    if baseline_result:
-                        from ..testing.runner import compare_results, format_regression_info
-                        regression = compare_results(baseline_result, full)
-                        regression_text = format_regression_info(regression)
-                        if regression_text:
-                            follow_up += f"\n\n## 回归分析\n{regression_text}"
-                    cli_result = _run_cli(follow_up, role=role, workspace=workspace,
-                                          log_file=log_file, timeout_seconds=CLI_TIMEOUT_SECONDS,
-                                          resume_session_id=cli_result.session_id)
-                    continue
-                _handle_test_failure(workspace, work, agent_id, full.stdout_tail)
-                return False
-
-            break  # 测试全部通过
+        full = run_tests(workspace, project_env, fast=False, agent_id=agent_id)
+        if not check_gate(full):
+            _handle_test_failure(workspace, work, agent_id, full.stdout_tail)
+            return False
 
     # 7. FINALIZE
     if work and work.task:
-        from .task_picker import mark_task_done
+        uat_enabled = project_env.get("uat_enabled", False)
 
-        mark_task_done(workspace, work.task, agent_id)
+        if uat_enabled and agent_role.run_tests_after and work.task.role != "uat":
+            # implementer 完成 → 送 UAT 验收
+            from .task_picker import send_task_to_uat
+            send_task_to_uat(workspace, work.task, agent_id,
+                             test_summary="implementer tests passed")
+        elif role == "uat":
+            # UAT agent：读取 LLM 写入的验收报告，由 harness 统一做状态流转
+            _finalize_uat_task(workspace, work.task, agent_id)
+        else:
+            from .task_picker import mark_task_done
+            mark_task_done(workspace, work.task, agent_id)
     if work and work.lock_key:
         release_lock(workspace, work.lock_key)
 
@@ -287,9 +288,18 @@ def _run_conflict_resolution_session(
             return False
 
     if work and work.task:
-        from .task_picker import mark_task_done
+        project_env = _load_project_env(workspace)
+        uat_enabled = project_env.get("uat_enabled", False)
 
-        mark_task_done(workspace, work.task, agent_id)
+        if uat_enabled and agent_role.run_tests_after and work.task.role != "uat":
+            from .task_picker import send_task_to_uat
+            send_task_to_uat(workspace, work.task, agent_id,
+                             test_summary="conflict-resolution tests passed")
+        elif role == "uat":
+            _finalize_uat_task(workspace, work.task, agent_id)
+        else:
+            from .task_picker import mark_task_done
+            mark_task_done(workspace, work.task, agent_id)
     if work and work.lock_key:
         release_lock(workspace, work.lock_key)
 
@@ -423,6 +433,68 @@ def _ensure_manual_lock(workspace: Path, lock_key: str, *, agent_id: str, role: 
     try_acquire_lock(workspace, lock)
 
 
+def _finalize_uat_task(workspace: Path, task: Task, agent_id: str) -> None:
+    """UAT agent 完成后，读取验收报告并路由任务状态。"""
+    from .task_picker import parse_task_file
+
+    project_env = _load_project_env(workspace)
+    max_uat_attempts = int(project_env.get("uat_max_attempts", 2))
+
+    tasks_dir = workspace / "tasks"
+    claimed_path = tasks_dir / "claimed" / f"{task.id}.md"
+
+    if not claimed_path.exists():
+        logger.warning("UAT task %s not found in claimed/, skipping finalize", task.id)
+        return
+
+    # 重新读取任务文件（LLM 已写入验收报告）
+    refreshed_task = parse_task_file(claimed_path, "claimed")
+    if not refreshed_task:
+        logger.error("Failed to parse UAT task %s after LLM session", task.id)
+        return
+
+    # 检测验收结果（在任务描述中查找 "**结果**: PASS" 或 "**结果**: FAIL"）
+    uat_passed = "**结果**: PASS" in refreshed_task.description or "**结果**: pass" in refreshed_task.description
+    uat_failed = "**结果**: FAIL" in refreshed_task.description or "**结果**: fail" in refreshed_task.description
+
+    if uat_passed:
+        # 验收通过 → done
+        from .task_picker import mark_task_done
+        mark_task_done(workspace, refreshed_task, agent_id, test_summary="UAT passed")
+        logger.info("UAT task %s passed, moved to done/", task.id)
+    elif uat_failed:
+        # 验收失败 → 根据重试次数决定
+        _uat_fail_or_escalate(workspace, task, refreshed_task, agent_id, max_uat_attempts)
+    else:
+        # 未检测到明确的 PASS/FAIL → 视为失败，走同样的重试/升级逻辑
+        logger.warning("UAT task %s has no clear PASS/FAIL result, treating as failed", task.id)
+        _uat_fail_or_escalate(workspace, task, refreshed_task, agent_id, max_uat_attempts)
+
+
+def _uat_fail_or_escalate(
+    workspace: Path, task: Task, refreshed_task: Task, agent_id: str, max_uat_attempts: int,
+) -> None:
+    """UAT 失败时根据重试次数决定回退 available 还是升级 needs_input。"""
+    from .task_picker import move_task, serialize_task
+
+    uat_attempt_count = refreshed_task.uat_attempt_count
+    if uat_attempt_count < max_uat_attempts:
+        refreshed_task.role = refreshed_task.original_role or "implementer"
+        refreshed_task.uat_attempt_count = uat_attempt_count + 1
+        refreshed_task.status = "available"
+        refreshed_task.agent_id = None
+        refreshed_task.claimed_at = None
+
+        dst = move_task(workspace, task.id, "claimed", "available")
+        dst.write_text(serialize_task(refreshed_task), encoding="utf-8")
+        logger.info("UAT task %s failed (attempt %d), moved back to available/", task.id, uat_attempt_count + 1)
+    else:
+        refreshed_task.status = "needs_input"
+        dst = move_task(workspace, task.id, "claimed", "needs_input")
+        dst.write_text(serialize_task(refreshed_task), encoding="utf-8")
+        logger.info("UAT task %s escalated to needs_input/ after %d attempts", task.id, uat_attempt_count)
+
+
 def _handle_test_failure(workspace: Path, work: WorkItem | None, agent_id: str, detail: str) -> None:
     if work is None or work.task is None:
         return
@@ -453,27 +525,6 @@ def _handle_test_failure(workspace: Path, work: WorkItem | None, agent_id: str, 
 
     # 丢弃本地失败改动，让 agent 回到干净工作区继续循环。
     git_revert_to_upstream(workspace)
-
-
-def _build_test_feedback(test_output: str, attempt: int, max_attempts: int, failure_history: str = "") -> str:
-    strategy_hints = {
-        1: "如果第一次修复没有解决问题，请换一种完全不同的方案，不要在同一方向继续。",
-        2: "最后一次机会。请考虑：(1) 是否理解错了需求？(2) 是否改错了文件？(3) 是否需要回滚部分改动？",
-    }
-    hint = strategy_hints.get(attempt, "")
-
-    parts = [f"## 测试失败（第 {attempt}/{max_attempts} 次修复机会）\n", test_output, ""]
-    if hint:
-        parts.extend([f"## 策略提示\n\n{hint}", ""])
-    if failure_history.strip():
-        parts.extend([
-            "## 此任务的历史失败记录",
-            "以下方法在之前的 session 中已尝试并失败：",
-            failure_history[:1500],
-            "",
-        ])
-    parts.append("请根据以上测试结果修复代码。只修复失败的部分，不要做无关改动。")
-    return "\n".join(parts)
 
 
 def _run_cli(
