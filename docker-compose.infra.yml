@@ -8,10 +8,11 @@ services:
     networks:
       - orchestrator-net
     healthcheck:
-      test: ["CMD-SHELL", "echo '' | nc -q1 localhost 7687"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/localhost/7687' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
 
 volumes:
