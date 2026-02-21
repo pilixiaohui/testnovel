@@ -216,6 +216,12 @@ def _count_rendered_chars(content: str) -> int:
     )
 
 
+def _validate_story_idea(raw_idea: str) -> None:
+    lowered = raw_idea.lower()
+    if "<script" in lowered or "drop table" in lowered:
+        raise ValueError("idea contains unsafe content")
+
+
 def _raise_upstream_http_error(exc: httpx.HTTPError) -> None:
     if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
         status_code = exc.response.status_code
@@ -354,6 +360,7 @@ async def generate_loglines_endpoint(  # pragma: no cover
     payload: IdeaPayload, manager: SnowflakeManager = Depends(get_snowflake_manager)
 ) -> List[str]:
     try:
+        _validate_story_idea(payload.idea)
         return await manager.execute_step_1_logline(payload.idea)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -850,14 +857,15 @@ async def generate_chapter_list_endpoint(  # pragma: no cover
             _raise_upstream_http_error(exc)
         if not generated:
             raise HTTPException(status_code=422, detail="step5b returned empty chapters")
+        for chapter in generated:
+            if not isinstance(chapter, Mapping):
+                raise HTTPException(status_code=422, detail="step5b chapter item must be object")
         total_count += len(generated)
         planned.append((act_id, generated))
     if total_count != 10:
         raise HTTPException(status_code=422, detail="chapter count must be 10")
     for act_id, generated in planned:
         for idx, chapter in enumerate(generated, start=1):
-            if not isinstance(chapter, Mapping):
-                raise HTTPException(status_code=422, detail="step5b chapter item must be object")
             title = chapter.get("title")
             focus = chapter.get("focus")
             pov_character_id = chapter.get("pov_character_id")
@@ -1152,7 +1160,7 @@ async def render_chapter_endpoint(  # pragma: no cover
     outline_requirement = (
         f"章节标题: {chapter.title}\n"
         f"章节焦点: {chapter.focus}\n"
-        "请写约2000字的章节正文，建议 1500-2600 字（不含标点空白），尽量接近 2000 字。"
+        "请写约2000字的章节正文，严格控制在 1800-2200 字（不含标点空白）。"
     )
     payload = SceneRenderPayload(
         voice_dna="neutral",
@@ -1166,15 +1174,17 @@ async def render_chapter_endpoint(  # pragma: no cover
         content = await gateway.render_scene(payload)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    suggested_min = 1500
-    suggested_max = 2600
+    suggested_min = 1800
+    suggested_max = 2200
     content_length = _count_rendered_chars(content)
     if content_length < suggested_min or content_length > suggested_max:
-        logger.warning(
-            "rendered_content length out of range: %s, expected %s-%s",
-            content_length,
-            suggested_min,
-            suggested_max,
+        detail_prefix = "字数不足" if content_length < suggested_min else "字数超限"
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{detail_prefix}: 当前 {content_length}，"
+                f"要求 {suggested_min}-{suggested_max}（不含标点空白）"
+            ),
         )
     chapter.rendered_content = content
     try:

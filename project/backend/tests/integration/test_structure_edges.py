@@ -910,9 +910,22 @@ def test_structure_edges_save_snowflake(memgraph_storage):
             self.ending = ending
 
     class _Character:
-        def __init__(self, entity_id: str, name: str) -> None:
+        def __init__(
+            self,
+            entity_id: str,
+            name: str,
+            *,
+            ambition: str,
+            conflict: str,
+            epiphany: str,
+            voice_dna: str,
+        ) -> None:
             self.entity_id = entity_id
             self.name = name
+            self.ambition = ambition
+            self.conflict = conflict
+            self.epiphany = epiphany
+            self.voice_dna = voice_dna
 
     class _Scene:
         def __init__(
@@ -942,7 +955,14 @@ def test_structure_edges_save_snowflake(memgraph_storage):
 
     root = _Root(logline="logline", theme="theme", ending="ending")
     characters = [
-        _Character(entity_id=str(uuid4()), name="Hero"),
+        _Character(
+            entity_id=str(uuid4()),
+            name="Hero",
+            ambition="守护师门",
+            conflict="旧仇未了",
+            epiphany="以义止戈",
+            voice_dna="沉稳克制",
+        ),
     ]
     scenes = [
         _Scene(

@@ -32,8 +32,8 @@ def memgraph_storage():
         "Expected: app.storage.memgraph_world_state.MemgraphWorldStateStorage"
     )
 
-    uri, username, password = _get_memgraph_connection_config()
     try:
+        uri, username, password = _get_memgraph_connection_config()
         storage = storage_cls(uri=uri, username=username, password=password)
     except Exception as exc:
         if os.getenv("REQUIRE_MEMGRAPH", "").lower() in {"1", "true", "yes"}:
@@ -88,6 +88,7 @@ def test_memgraph_storage_skips_with_guidance_when_unavailable(monkeypatch, requ
 
     fake_module.MemgraphWorldStateStorage = FakeStorage
     monkeypatch.setitem(sys.modules, "app.storage.memgraph_world_state", fake_module)
+    monkeypatch.setenv("MEMGRAPH_BOLT_URI", "bolt://example:7687")
     monkeypatch.delenv("REQUIRE_MEMGRAPH", raising=False)
 
     with pytest.raises(pytest.skip.Exception) as excinfo:
@@ -108,6 +109,7 @@ def test_memgraph_storage_raises_when_require_memgraph(monkeypatch, request):
 
     fake_module.MemgraphWorldStateStorage = FakeStorage
     monkeypatch.setitem(sys.modules, "app.storage.memgraph_world_state", fake_module)
+    monkeypatch.setenv("MEMGRAPH_BOLT_URI", "bolt://example:7687")
     monkeypatch.setenv("REQUIRE_MEMGRAPH", "1")
 
     with pytest.raises(RuntimeError, match="boom"):

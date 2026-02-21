@@ -46,6 +46,20 @@ def _build_round_result() -> SimulationRoundResult:
 
 
 class SimulationStub:
+    class _CharacterEngine:
+        async def decide(self, _agent_id, _scene_context):
+            return {
+                "agent_id": "agent-1",
+                "internal_thought": "wait",
+                "action_type": "wait",
+                "action_target": "",
+                "dialogue": None,
+                "action_description": "pause",
+            }
+
+    def __init__(self) -> None:
+        self.character_engine = self._CharacterEngine()
+
     async def run_round(self, scene_context, agents, config):
         return _build_round_result()
 

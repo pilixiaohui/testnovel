@@ -60,7 +60,11 @@ def client(monkeypatch):
 
 
 def test_simulation_round_endpoint_calls_engine(client):
-    engine = SimpleNamespace(run_round=AsyncMock(return_value=_build_round_result()))
+    character_engine = SimpleNamespace(decide=AsyncMock(return_value={"agent_id": "agent-1"}))
+    engine = SimpleNamespace(
+        run_round=AsyncMock(return_value=_build_round_result()),
+        character_engine=character_engine,
+    )
     app.dependency_overrides[main.get_simulation_engine] = lambda: engine
 
     payload = {
