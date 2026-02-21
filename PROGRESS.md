@@ -19,3 +19,5 @@ Agent team progress log.
 - [2026-02-21 07:25] implementer-1: TASK-001 -> IN_PROGRESS: added reusable wuxia journey e2e mock helper, frontend fast tests still green
 - [2026-02-21 07:26] implementer-1: TASK-001 -> IN_PROGRESS: added full wuxia journey Playwright scenario, frontend fast tests remain green
 - [2026-02-21 07:27] implementer-1: TASK-001 -> IN_PROGRESS: playwright run failed (chromium missing), installing browser runtime
+- [2026-02-21 07:33] implementer-1: TASK-001 -> IN_PROGRESS: completed wuxia e2e suite refactor; playwright execution blocked by browser download, test list verified
+- [2026-02-21 07:34] implementer-1: TASK-001 -> IN_PROGRESS: backend quick test command passed (472 passed, 1 skipped)
