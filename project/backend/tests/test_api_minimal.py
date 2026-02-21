@@ -13,6 +13,7 @@ from app.main import (
     get_topone_gateway,
 )
 from app.models import SceneNode, SnowflakeRoot
+from tests.shared_stubs import GraphStorageStub
 
 
 class DummyEngine:
@@ -146,257 +147,6 @@ class DummyGateway:
         return "Rendered text"
 
 
-class DummyStorage:
-    def __init__(self) -> None:
-        self.states: dict[str, dict] = {}
-        self.dirty: set[str] = set()
-        self.required: list[tuple[str, str]] = []
-        self.branches: set[str] = {DEFAULT_BRANCH_ID}
-        self.entity_counter = 0
-        self.entities: dict[str, dict] = {}
-        self.rendered: dict[str, str] = {}
-        self.completed: dict[str, dict] = {}
-        self.logic_exceptions: dict[tuple[str, str, str], str] = {}
-        self.logic_world_state_calls: list[tuple[str, str, str]] = []
-        self.local_fixes: list[tuple[str, str, str, int]] = []
-        self.future_dirty_calls: list[tuple[str, str, str]] = []
-        self.created_project_name: str | None = None
-        self.deleted_root_id: str | None = None
-
-    def require_root(self, *, root_id: str, branch_id: str) -> None:
-        self.required.append((root_id, branch_id))
-
-    def get_entity_semantic_states(
-        self, *, root_id: str, branch_id: str, entity_id: str
-    ) -> dict:
-        return self.states.get(entity_id, {}).copy()
-
-    def build_logic_check_world_state(
-        self, *, root_id: str, branch_id: str, scene_id: str
-    ) -> dict:
-        self.logic_world_state_calls.append((root_id, branch_id, scene_id))
-        return {"root_id": root_id, "branch_id": branch_id, "scene_id": scene_id}
-
-    def mark_scene_logic_exception(
-        self, *, root_id: str, branch_id: str, scene_id: str, reason: str
-    ) -> None:
-        self.logic_exceptions[(root_id, branch_id, scene_id)] = reason
-
-    def is_scene_logic_exception(
-        self, *, root_id: str, branch_id: str, scene_id: str
-    ) -> bool:
-        return (root_id, branch_id, scene_id) in self.logic_exceptions
-
-    def apply_local_scene_fix(
-        self, *, root_id: str, branch_id: str, scene_id: str, limit: int = 3
-    ) -> list[str]:
-        self.local_fixes.append((root_id, branch_id, scene_id, limit))
-        return [scene_id]
-
-    def mark_future_scenes_dirty(
-        self, *, root_id: str, branch_id: str, scene_id: str
-    ) -> list[str]:
-        self.future_dirty_calls.append((root_id, branch_id, scene_id))
-        return [scene_id]
-
-    def apply_semantic_states_patch(
-        self, *, root_id: str, branch_id: str, entity_id: str, patch: dict
-    ) -> dict:
-        current = self.states.get(entity_id, {})
-        updated = {**current, **patch}
-        self.states[entity_id] = updated
-        return updated
-
-    def mark_scene_dirty(self, *, scene_id: str, branch_id: str) -> None:
-        self.dirty.add(scene_id)
-
-    def list_dirty_scenes(self, *, root_id: str, branch_id: str) -> list[str]:
-        return sorted(self.dirty)
-
-    def create_branch(self, *, root_id: str, branch_id: str) -> None:
-        if branch_id in self.branches:
-            raise ValueError("already exists")
-        self.branches.add(branch_id)
-
-    def list_branches(self, *, root_id: str) -> list[str]:
-        return sorted(self.branches)
-
-    def require_branch(self, *, root_id: str, branch_id: str) -> None:
-        if branch_id not in self.branches:
-            raise KeyError(f"branch not found: {branch_id}")
-
-    def merge_branch(self, *, root_id: str, branch_id: str) -> None:
-        if branch_id not in self.branches:
-            raise KeyError(f"branch not found: {branch_id}")
-
-    def revert_branch(self, *, root_id: str, branch_id: str) -> None:
-        if branch_id not in self.branches:
-            raise KeyError(f"branch not found: {branch_id}")
-
-    def fork_from_commit(
-        self,
-        *,
-        root_id: str,
-        source_commit_id: str,
-        new_branch_id: str,
-        parent_branch_id: str | None = None,
-        fork_scene_origin_id: str | None = None,
-    ) -> None:
-        self.branches.add(new_branch_id)
-
-    def fork_from_scene(
-        self,
-        *,
-        root_id: str,
-        source_branch_id: str,
-        scene_origin_id: str,
-        new_branch_id: str,
-        commit_id: str | None = None,
-    ) -> None:
-        self.branches.add(new_branch_id)
-
-    def reset_branch_head(
-        self, *, root_id: str, branch_id: str, commit_id: str
-    ) -> None:
-        return
-
-    def get_branch_history(
-        self, *, root_id: str, branch_id: str, limit: int = 50
-    ) -> list[dict]:
-        return [
-            {
-                "id": "commit-1",
-                "parent_id": None,
-                "root_id": root_id,
-                "created_at": "2025-01-01T00:00:00Z",
-                "message": "commit",
-            }
-        ]
-
-    def get_root_snapshot(self, *, root_id: str, branch_id: str) -> dict:
-        return {
-            "root_id": root_id,
-            "branch_id": branch_id,
-            "logline": "logline",
-            "theme": "theme",
-            "ending": "ending",
-            "characters": [],
-            "scenes": [],
-            "relations": [],
-        }
-
-    def create_entity(
-        self,
-        *,
-        root_id: str,
-        branch_id: str,
-        name: str,
-        entity_type: str,
-        tags: list[str],
-        arc_status: str | None,
-        semantic_states: dict,
-    ) -> str:
-        self.entity_counter += 1
-        entity_id = f"entity-{self.entity_counter}"
-        self.entities[entity_id] = {
-            "entity_id": entity_id,
-            "name": name,
-            "entity_type": entity_type,
-            "tags": tags,
-            "arc_status": arc_status,
-            "semantic_states": semantic_states,
-        }
-        return entity_id
-
-    def list_entities(self, *, root_id: str, branch_id: str) -> list[dict]:
-        return list(self.entities.values())
-
-    def upsert_entity_relation(
-        self,
-        *,
-        root_id: str,
-        branch_id: str,
-        from_entity_id: str,
-        to_entity_id: str,
-        relation_type: str,
-        tension: int,
-    ) -> None:
-        return
-
-    def get_scene_context(self, *, scene_id: str, branch_id: str) -> dict:
-        return {
-            "root_id": "root",
-            "branch_id": branch_id,
-            "expected_outcome": "Outcome 1",
-            "semantic_states": {},
-            "summary": "Summary 1",
-            "scene_entities": [],
-            "characters": [],
-            "relations": [],
-            "prev_scene_id": None,
-            "next_scene_id": None,
-        }
-
-    def diff_scene_versions(
-        self, *, scene_origin_id: str, from_commit_id: str, to_commit_id: str
-    ) -> dict:
-        return {"actual_outcome": {"from": "", "to": "updated"}}
-
-    def commit_scene(
-        self,
-        *,
-        root_id: str,
-        branch_id: str,
-        scene_origin_id: str,
-        content: dict,
-        message: str,
-        expected_head_version: int | None = None,
-    ) -> dict:
-        return {"commit_id": "commit-1", "scene_version_ids": ["version-1"]}
-
-    def create_scene_origin(
-        self,
-        *,
-        root_id: str,
-        branch_id: str,
-        title: str,
-        parent_act_id: str,
-        content: dict,
-    ) -> dict:
-        return {
-            "commit_id": "commit-1",
-            "scene_origin_id": "origin-1",
-            "scene_version_id": "version-1",
-        }
-
-    def delete_scene_origin(
-        self, *, root_id: str, branch_id: str, scene_origin_id: str, message: str
-    ) -> dict:
-        return {"commit_id": "commit-2", "scene_version_ids": []}
-
-    def gc_orphan_commits(self, *, retention_days: int) -> dict:
-        return {
-            "deleted_commit_ids": ["commit-1"],
-            "deleted_scene_version_ids": ["version-1"],
-        }
-
-    def save_snowflake(self, root, characters, scenes) -> str:
-        self.created_project_name = root.logline
-        return "root-created"
-
-    def delete_root(self, root_id: str) -> None:
-        self.deleted_root_id = root_id
-
-    def save_scene_render(self, *, scene_id: str, branch_id: str, content: str) -> None:
-        self.rendered[scene_id] = content
-
-    def complete_scene(
-        self, *, scene_id: str, branch_id: str, actual_outcome: str, summary: str
-    ) -> None:
-        self.completed[scene_id] = {
-            "actual_outcome": actual_outcome,
-            "summary": summary,
-        }
 
 
 def test_step2_generate_structure_endpoint(monkeypatch):
@@ -643,7 +393,7 @@ def test_topone_generate_rejects_timeout_less_than_600(monkeypatch):
 
 def test_create_project_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -662,7 +412,7 @@ def test_create_project_endpoint(monkeypatch):
 
 def test_delete_project_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -690,7 +440,7 @@ def test_simulation_agents_endpoint_returns_empty_agents(monkeypatch):
 
 def test_logic_check_rejects_non_gemini(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    app.dependency_overrides[get_graph_storage] = lambda: DummyStorage()
+    app.dependency_overrides[get_graph_storage] = lambda: GraphStorageStub()
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
 
     client = TestClient(app)
@@ -710,7 +460,7 @@ def test_logic_check_rejects_non_gemini(monkeypatch):
 
 def test_state_extract_returns_gateway_result_without_root(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "gemini")
-    app.dependency_overrides[get_graph_storage] = lambda: DummyStorage()
+    app.dependency_overrides[get_graph_storage] = lambda: GraphStorageStub()
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
 
     client = TestClient(app)
@@ -727,7 +477,7 @@ def test_state_extract_returns_gateway_result_without_root(monkeypatch):
 
 def test_state_extract_local_mode_returns_basic_proposals(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -751,7 +501,7 @@ def test_state_extract_local_mode_returns_basic_proposals(monkeypatch):
 
 def test_state_commit_applies_patch(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -777,7 +527,7 @@ def test_state_commit_applies_patch(monkeypatch):
 
 def test_dirty_endpoints_roundtrip(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -798,7 +548,7 @@ def test_dirty_endpoints_roundtrip(monkeypatch):
 
 def test_branch_endpoints_roundtrip(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -826,7 +576,7 @@ def test_branch_endpoints_roundtrip(monkeypatch):
 
 def test_root_graph_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -844,7 +594,7 @@ def test_root_graph_endpoint(monkeypatch):
 
 def test_entity_endpoints_roundtrip(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -876,7 +626,7 @@ def test_entity_endpoints_roundtrip(monkeypatch):
 
 def test_relation_upsert_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -900,7 +650,7 @@ def test_relation_upsert_endpoint(monkeypatch):
 
 def test_scene_context_and_diff_endpoints(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -924,7 +674,7 @@ def test_scene_context_and_diff_endpoints(monkeypatch):
 
 def test_commit_scene_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -950,7 +700,7 @@ def test_commit_scene_endpoint(monkeypatch):
 
 def test_create_and_delete_scene_origin_endpoints(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -986,7 +736,7 @@ def test_create_and_delete_scene_origin_endpoints(monkeypatch):
 
 def test_gc_commits_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -1000,7 +750,7 @@ def test_gc_commits_endpoint(monkeypatch):
 
 def test_scene_render_and_complete_endpoints(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "gemini")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
 
@@ -1035,7 +785,7 @@ def test_scene_render_and_complete_endpoints(monkeypatch):
 
 def test_fork_and_reset_branch_endpoints(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -1070,7 +820,7 @@ def test_fork_and_reset_branch_endpoints(monkeypatch):
 
 def test_branch_history_endpoint(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
@@ -1088,7 +838,7 @@ def test_branch_history_endpoint(monkeypatch):
 
 def test_logic_check_with_root_applies_impact_level(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "gemini")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
 
@@ -1114,7 +864,7 @@ def test_logic_check_with_root_applies_impact_level(monkeypatch):
 
 def test_state_extract_enriches_when_root_provided(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "gemini")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     storage.states["entity-1"] = {"hp": "100%"}
     app.dependency_overrides[get_graph_storage] = lambda: storage
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
@@ -1139,7 +889,7 @@ def test_state_extract_enriches_when_root_provided(monkeypatch):
 
 def test_complete_scene_orchestrated_force_execute(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "gemini")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
     app.dependency_overrides[get_topone_gateway] = lambda: DummyGateway()
 
@@ -1182,7 +932,7 @@ def test_complete_scene_orchestrated_force_execute(monkeypatch):
 
 def test_merge_and_revert_branch_endpoints(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     storage.branches.add("dev")
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
@@ -1287,7 +1037,7 @@ def test_llm_settings_rejects_malicious_model_values() -> None:
 
 def test_step1_returns_503_when_engine_missing(monkeypatch):
     monkeypatch.delenv("SNOWFLAKE_ENGINE", raising=False)
-    app.dependency_overrides[get_graph_storage] = lambda: DummyStorage()
+    app.dependency_overrides[get_graph_storage] = lambda: GraphStorageStub()
 
     client = TestClient(app)
     try:
@@ -1344,7 +1094,7 @@ def test_step1_rejects_malicious_or_overlong_idea(monkeypatch):
 
 def test_create_project_rejects_blank_name(monkeypatch):
     monkeypatch.setenv("SNOWFLAKE_ENGINE", "local")
-    storage = DummyStorage()
+    storage = GraphStorageStub()
     app.dependency_overrides[get_graph_storage] = lambda: storage
 
     client = TestClient(app)
