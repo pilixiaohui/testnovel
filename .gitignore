@@ -39,5 +39,10 @@ orchestrator_v2/
 orchestrator/
 .agent-upstream.git/
 .agent-logs/
+.agent-workspaces/
+.agent-crash-history.json
 Dockerfile.agent
 .codex-agent/
+docker-compose.infra.yml
+analysis_workflow_issues.md
+prompt_size_analysis.md
