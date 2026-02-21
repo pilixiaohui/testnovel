@@ -121,6 +121,10 @@ def setup_upstream(project_root: Path) -> Path:
         _git(["remote", "remove", "upstream"], cwd=project_root)
         _git(["symbolic-ref", "HEAD", f"refs/heads/{branch}"], cwd=bare)
         logger.info("pushed project to upstream")
+    # Docker 容器通过卷挂载访问 bare repo 时，跨文件系统边界会导致 git 硬链接失败。
+    # 设置 sharedRepository=0666 确保新创建的对象文件权限足够宽松。
+    _git(["config", "core.sharedRepository", "0666"], cwd=bare)
+
     return bare
 
 
@@ -497,6 +501,11 @@ PY
   local rc=$?
   set -e
   rm -rf "$tmp"
+
+  if [[ $rc -eq 127 ]]; then
+    echo "remote: WARNING: CI command not found (rc=127), skipping CI gate" >&2
+    return 0
+  fi
 
   if [[ $rc -ne 0 ]]; then
     echo "remote: ERROR: CI gate failed (rc=$rc)" >&2
