@@ -16,3 +16,4 @@ Agent team progress log.
 - [2026-02-21 07:19] implementer-1: TASK-001 -> IN_PROGRESS: install command failed (pip permission denied), switching to frontend-only npm ci
 - [2026-02-21 07:20] implementer-1: TASK-001 -> IN_PROGRESS: npm ci failed on pinia peer conflict, retrying with legacy-peer-deps
 - [2026-02-21 07:21] implementer-1: TASK-001 -> IN_PROGRESS: frontend fast tests green after dependency install (52 files, 287 tests)
+- [2026-02-21 07:25] implementer-1: TASK-001 -> IN_PROGRESS: added reusable wuxia journey e2e mock helper, frontend fast tests still green
