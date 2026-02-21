@@ -18,3 +18,4 @@ Agent team progress log.
 - [2026-02-21 07:21] implementer-1: TASK-001 -> IN_PROGRESS: frontend fast tests green after dependency install (52 files, 287 tests)
 - [2026-02-21 07:25] implementer-1: TASK-001 -> IN_PROGRESS: added reusable wuxia journey e2e mock helper, frontend fast tests still green
 - [2026-02-21 07:26] implementer-1: TASK-001 -> IN_PROGRESS: added full wuxia journey Playwright scenario, frontend fast tests remain green
+- [2026-02-21 07:27] implementer-1: TASK-001 -> IN_PROGRESS: playwright run failed (chromium missing), installing browser runtime
