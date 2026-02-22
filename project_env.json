@@ -2,7 +2,10 @@
   "cli": "codex",
   "commands": {
     "install": "cd project/backend && pip install -e '.[dev]' -q && cd ../frontend && npm ci",
-    "ci": "cd project/backend && python -m pytest tests/ -q"
+    "ci": "cd project/backend && python -m pytest tests/ -q",
+    "lint_arch": "python scripts/lint_arch.py --changed-only",
+    "logs": "bash scripts/app_logs.sh --tail 50",
+    "health": "bash scripts/health_check.sh"
   },
   "test_stages": [
     "cd project/backend && python -m pytest tests/ -q",

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.pytest_cache
+.coverage
+.venv
+.agent-workspaces
+.agent-upstream.git
+.agent-logs
+current_tasks
+tasks
+features
+decisions
+openclaw
+__pycache__
+**/__pycache__
+*.pyc

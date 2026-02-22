@@ -1,44 +1,60 @@
-整个开发始终贯彻**快速失败**的编程思想，**禁止出现防御性编程**如各种兜底机制
+# 项目导航地图
 
-在整个工作流程中，你必须内化并严格遵循以下核心编程原则，确保你的每次输出和建议都体现这些理念：
+整个开发始终贯彻**快速失败**的编程思想，**禁止出现防御性编程**如各种兜底机制。
 
-- **简单至上 (KISS):** 追求代码和设计的极致简洁与直观，避免不必要的复杂性。
-- **精益求精 (YAGNI):** 仅实现当前明确所需的功能，抵制过度设计和不必要的未来特性预留。
-- **坚实基础 (SOLID):**
-  - **S (单一职责):** 各组件、类、函数只承担一项明确职责。
-  - **O (开放/封闭):** 功能扩展无需修改现有代码。
-  - **L (里氏替换):** 子类型可无缝替换其基类型。
-  - **I (接口隔离):** 接口应专一，避免“胖接口”。
-  - **D (依赖倒置):** 依赖抽象而非具体实现。
-- **杜绝重复 (DRY):** 识别并消除代码或逻辑中的重复模式，提升复用性。
+编码原则详见 `docs/coding-standards.md`。
 
-**请严格遵循以下工作流程和输出要求：**
+## 项目结构
 
-1.  **深入理解与初步分析（理解阶段）：**
+| 目录 | 用途 |
+|------|------|
+| `project/backend/` | Python 后端（FastAPI + 业务逻辑） |
+| `project/frontend/` | 前端应用 |
+| `orchestrator_v2/` | Agent 编排层（harness、CLI、SCM、测试） |
+| `tasks/` | 任务状态机（available/claimed/done/failed/needs_input/blocked） |
+| `features/` | Feature 列表（pending/done/blocked） |
+| `decisions/` | 用户决策记录（threads/facts） |
+| `docs/` | 项目知识库（设计文档、编码标准、架构约束、执行计划） |
+| `scripts/` | 工具脚本（架构 linter、日志查看、健康检查） |
 
-    - 详细审阅提供的[资料/代码/项目描述]，全面掌握其当前架构、核心组件、业务逻辑及痛点。
-    - 在理解的基础上，初步识别项目中潜在的**KISS, YAGNI, DRY, SOLID**原则应用点或违背现象。
+## 关键命令
 
-2.  **明确目标与迭代规划（规划阶段）：**
+所有命令定义在 `project_env.json` 的 `commands` 字段中：
 
-    - 基于用户需求和对现有项目的理解，清晰定义本次迭代的具体任务范围和可衡量的预期成果。
-    - 在规划解决方案时，优先考虑如何通过应用上述原则，实现更简洁、高效和可扩展的改进，而非盲目增加功能。
+- `install` — 安装依赖
+- `ci` — CI 门禁（pytest）
+- `lint_arch` — 架构约束检查
+- `logs` — 查看应用日志
+- `health` — 健康检查
 
-3.  **分步实施与具体改进（执行阶段）：**
+测试策略见 `project_env.json` 的 `test_stages` / `test_fast_stages`。
 
-    - 详细说明你的改进方案，并将其拆解为逻辑清晰、可操作的步骤。
-    - 针对每个步骤，具体阐述你将如何操作，以及这些操作如何体现**KISS, YAGNI, DRY, SOLID**原则。例如：
-      - “将此模块拆分为更小的服务，以遵循 SRP 和 OCP。”
-      - “为避免 DRY，将重复的 XXX 逻辑抽象为通用函数。”
-      - “简化了 Y 功能的用户流，体现 KISS 原则。”
-      - “移除了 Z 冗余设计，遵循 YAGNI 原则。”
-    - 重点关注[项目类型，例如：代码质量优化 / 架构重构 / 功能增强 / 用户体验提升 / 性能调优 / 可维护性改善 / Bug 修复]的具体实现细节。
+## 架构规则
 
-4.  **总结、反思与展望（汇报阶段）：**
-    - 提供一个清晰、结构化且包含**实际代码/设计变动建议（如果适用）**的总结报告。
-    - 报告中必须包含：
-      - **本次迭代已完成的核心任务**及其具体成果。
-      - **本次迭代中，你如何具体应用了** **KISS, YAGNI, DRY, SOLID** **原则**，并简要说明其带来的好处（例如，代码量减少、可读性提高、扩展性增强）。
-      - **遇到的挑战**以及如何克服。
-      - **下一步的明确计划和建议。**
----
+- 架构约束（文件大小、import 方向、命名）：`docs/architecture-constraints.md`
+- 编码标准（KISS/YAGNI/SOLID/DRY）：`docs/coding-standards.md`
+- push 时自动运行 `scripts/lint_arch.py`，违反约束会被拒绝
+
+## 代码定位
+
+| 内容 | 路径 |
+|------|------|
+| API routes | `project/backend/` |
+| 前端组件 | `project/frontend/` |
+| Agent prompts | `orchestrator_v2/agents/prompts/` |
+| Agent 角色定义 | `orchestrator_v2/agents/roles.py` |
+| 任务调度 | `orchestrator_v2/harness/task_picker.py` |
+| Agent 主循环 | `orchestrator_v2/harness/agent_loop.py` |
+| Prompt 组装 | `orchestrator_v2/harness/prompt_builder.py` |
+| Git 同步 | `orchestrator_v2/scm/sync.py` |
+| 测试 | `orchestrator_v2/tests/`、`project/backend/tests/`、`project/frontend/` |
+
+## 工作流文件
+
+| 文件 | 用途 |
+|------|------|
+| `PROGRESS.md` | 团队进度日志（agent 心跳记录） |
+| `SIGNALS.md` | 跨 agent 信号（发现需要其他 agent 关注的问题时写入） |
+| `DISCOVERIES.md` | Charter 未覆盖的发现 |
+| `PROJECT_CHARTER.md` | 项目目标、优先级和约束 |
+| `project_env.json` | 项目环境配置（CLI、命令、测试策略） |
